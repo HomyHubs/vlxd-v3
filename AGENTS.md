@@ -445,7 +445,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 **Profile công nghệ áp dụng (mục 0.0 và 1):** [x] Web app FE+BE — [ ] Không áp profile nào
 
-**Cổng gác thực tế của repo này (mục 4):** `pnpm -r check` và `pnpm contracts:check` — đã xác minh chạy được: [ ] cục bộ [ ] CI
+**Cổng gác thực tế của repo này (mục 4):** `pnpm check` và `pnpm contracts:check` — đã xác minh chạy được: [ ] cục bộ [ ] CI
 
 ### Task hiện tại
 
