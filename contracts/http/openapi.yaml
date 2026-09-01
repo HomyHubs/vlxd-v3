@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: vlxd-v3 API
+  version: 0.1.0
+  description: Contract for the vlxd-v3 construction-materials management API.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Check the full application and database path
+      responses:
+        "200":
+          description: Application and database are ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: Database is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthUnavailable"
+  /healthz:
+    get:
+      operationId: getLiveness
+      summary: Check whether the API process is alive
+      responses:
+        "200":
+          description: API process is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LivenessStatus"
+  /readyz:
+    get:
+      operationId: getReadiness
+      summary: Check whether the API is ready to receive traffic
+      responses:
+        "200":
+          description: API and database are ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: Database is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthUnavailable"
+components:
+  schemas:
+    LivenessStatus:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+    HealthStatus:
+      type: object
+      additionalProperties: false
+      required: [status, db]
+      properties:
+        status:
+          type: string
+          const: ok
+        db:
+          type: string
+          const: ok
+    HealthUnavailable:
+      type: object
+      additionalProperties: false
+      required: [status, db, code]
+      properties:
+        status:
+          type: string
+          const: unavailable
+        db:
+          type: string
+          const: unavailable
+        code:
+          type: string
+          const: DATABASE_UNAVAILABLE

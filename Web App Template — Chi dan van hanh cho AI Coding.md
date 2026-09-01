@@ -43,19 +43,19 @@ Khi user yêu cầu tạo app, AI agent phải hỏi hoặc xác nhận rõ lo�
 
 Không được mặc định mọi dự án là web app. Mỗi loại app có frontend, backend và database khác nhau về vị trí chạy.
 
-| Loại app | Frontend chạy ở đâu? | Backend chạy ở đâu? | Database nằm ở đâu? |
-| --- | --- | --- | --- |
-| Web App | Trình duyệt: Chrome, Safari, Edge | Server / Cloud | Cloud database |
-| Desktop App | Cửa sổ app trên máy tính | Local trong app hoặc Server / Cloud | SQLite local hoặc Cloud database |
-| Mobile App | App trên điện thoại | Local nhẹ trong app hoặc Server / Cloud | Local storage hoặc Cloud database |
+| Loại app    | Frontend chạy ở đâu?              | Backend chạy ở đâu?                     | Database nằm ở đâu?               |
+| ----------- | --------------------------------- | --------------------------------------- | --------------------------------- |
+| Web App     | Trình duyệt: Chrome, Safari, Edge | Server / Cloud                          | Cloud database                    |
+| Desktop App | Cửa sổ app trên máy tính          | Local trong app hoặc Server / Cloud     | SQLite local hoặc Cloud database  |
+| Mobile App  | App trên điện thoại               | Local nhẹ trong app hoặc Server / Cloud | Local storage hoặc Cloud database |
 
 ### Stack công nghệ khuyến nghị theo loại app
 
-| Loại app | Frontend | Backend | Database |
-| --- | --- | --- | --- |
-| Web App | React + Vite + TypeScript | Hono / Fastify + TypeScript | Supabase PostgreSQL |
-| Desktop App | Tauri + React hoặc Svelte + TypeScript | Tauri commands / Rust local logic | SQLite local |
-| Mobile App | React Native + Expo + TypeScript | Hono / Fastify + TypeScript | Supabase PostgreSQL |
+| Loại app    | Frontend                               | Backend                           | Database            |
+| ----------- | -------------------------------------- | --------------------------------- | ------------------- |
+| Web App     | React + Vite + TypeScript              | Hono / Fastify + TypeScript       | Supabase PostgreSQL |
+| Desktop App | Tauri + React hoặc Svelte + TypeScript | Tauri commands / Rust local logic | SQLite local        |
+| Mobile App  | React Native + Expo + TypeScript       | Hono / Fastify + TypeScript       | Supabase PostgreSQL |
 
 **Ghi chú quan trọng:** Supabase không thay thế hoàn toàn backend. Supabase nên được hiểu là dịch vụ hỗ trợ database, auth, storage và realtime. Backend vẫn là nơi viết logic nghiệp vụ: kiểm tra quyền, xử lý đơn hàng, gọi AI, xử lý thanh toán, đồng bộ dữ liệu và điều phối workflow.
 
@@ -97,49 +97,49 @@ Frontend nhỏ → Backend logic tối thiểu → Database tối thiểu → De
 
 ### Backend — `apps/api`
 
-| Hạng mục | Lựa chọn |
-| --- | --- |
-| Ngôn ngữ | TypeScript 5.9+, ESM |
-| Runtime | Node 24.x, pin 1 version cho toàn repo qua `.nvmrc` |
-| Package manager | pnpm 11.x + pnpm workspace |
-| HTTP framework | Fastify 5 + `fastify-type-provider-zod` |
-| Database | PostgreSQL 18.x |
-| Data access | Kysely trên `pg` |
-| Migration | dbmate, SQL thuần, reversible |
-| Validation | Zod 4 dùng chung qua `packages/shared` |
-| Auth | Opaque server-side session + capability-based authorization |
-| Logging | pino, bật redact PII, kèm request-id |
-| Observability | OpenTelemetry, endpoint `/healthz` và `/readyz` |
-| Security | helmet, rate-limit, cors |
-| Test | Vitest 4, testcontainers cho DB thật |
+| Hạng mục        | Lựa chọn                                                    |
+| --------------- | ----------------------------------------------------------- |
+| Ngôn ngữ        | TypeScript 5.9+, ESM                                        |
+| Runtime         | Node 24.x, pin 1 version cho toàn repo qua `.nvmrc`         |
+| Package manager | pnpm 11.x + pnpm workspace                                  |
+| HTTP framework  | Fastify 5 + `fastify-type-provider-zod`                     |
+| Database        | PostgreSQL 18.x                                             |
+| Data access     | Kysely trên `pg`                                            |
+| Migration       | dbmate, SQL thuần, reversible                               |
+| Validation      | Zod 4 dùng chung qua `packages/shared`                      |
+| Auth            | Opaque server-side session + capability-based authorization |
+| Logging         | pino, bật redact PII, kèm request-id                        |
+| Observability   | OpenTelemetry, endpoint `/healthz` và `/readyz`             |
+| Security        | helmet, rate-limit, cors                                    |
+| Test            | Vitest 4, testcontainers cho DB thật                        |
 
 ### Frontend — `apps/web`
 
-| Hạng mục | Lựa chọn |
-| --- | --- |
-| Framework | React 19 + TypeScript + Vite |
-| UI | MUI v6+, x-date-pickers, material-react-table |
-| Server state | TanStack React Query 5 |
-| Form | react-hook-form + Zod resolver |
-| Router | react-router-dom 7 với route-level lazy loading |
-| i18n | i18next + react-i18next |
-| API client | Sinh tự động từ OpenAPI vào `packages/api-client` |
-| Test | Vitest + Testing Library, Playwright + axe-core |
-| Mock API | MSW |
-| Gate | coverage v8, bundle budget, jsx-a11y |
+| Hạng mục     | Lựa chọn                                          |
+| ------------ | ------------------------------------------------- |
+| Framework    | React 19 + TypeScript + Vite                      |
+| UI           | MUI v6+, x-date-pickers, material-react-table     |
+| Server state | TanStack React Query 5                            |
+| Form         | react-hook-form + Zod resolver                    |
+| Router       | react-router-dom 7 với route-level lazy loading   |
+| i18n         | i18next + react-i18next                           |
+| API client   | Sinh tự động từ OpenAPI vào `packages/api-client` |
+| Test         | Vitest + Testing Library, Playwright + axe-core   |
+| Mock API     | MSW                                               |
+| Gate         | coverage v8, bundle budget, jsx-a11y              |
 
 ### Hạ tầng và CI/CD
 
-| Hạng mục | Lựa chọn |
-| --- | --- |
-| Local orchestration | `compose.dev.yml` gồm web, api, db, migrate, verify |
-| Môi trường | [compose.dev](http://compose.dev) / staging / production / ci |
-| Reverse proxy | nginx |
-| IaC | Terraform với remote state, plan bắt buộc trong PR |
-| Deploy | Cloud Run + Cloud SQL, single-VM chỉ cho prototype |
-| CI | Một pipeline GitHub Actions, cache pnpm + turbo remote cache |
-| Secret | GCP Secret Manager |
-| Supply chain | Renovate, pnpm audit, gitleaks |
+| Hạng mục            | Lựa chọn                                                      |
+| ------------------- | ------------------------------------------------------------- |
+| Local orchestration | `compose.dev.yml` gồm web, api, db, migrate, verify           |
+| Môi trường          | [compose.dev](http://compose.dev) / staging / production / ci |
+| Reverse proxy       | nginx                                                         |
+| IaC                 | Terraform với remote state, plan bắt buộc trong PR            |
+| Deploy              | Cloud Run + Cloud SQL, single-VM chỉ cho prototype            |
+| CI                  | Một pipeline GitHub Actions, cache pnpm + turbo remote cache  |
+| Secret              | GCP Secret Manager                                            |
+| Supply chain        | Renovate, pnpm audit, gitleaks                                |
 
 ---
 
@@ -263,46 +263,46 @@ pnpm contracts:check
 
 ## 5. Definition of Done
 
-- [ ]  Hành vi khớp OpenAPI spec đã cập nhật, client đã regenerate và commit
-- [ ]  Có unit test cho domain logic và integration test qua DB thật
-- [ ]  `pnpm -r check` xanh cục bộ và trên CI
-- [ ]  Không thêm secret, không thêm `any`, không thêm eslint-disable thiếu lý do
-- [ ]  Chuỗi UI đã i18n, component mới không tạo violation axe mới
-- [ ]  Log có structured field và request-id, lỗi trả về theo error code trong `packages/shared`
-- [ ]  Tài liệu, ADR, tiến độ đã cập nhật
-- [ ]  Migration reversible và đã test rollback
+- [ ] Hành vi khớp OpenAPI spec đã cập nhật, client đã regenerate và commit
+- [ ] Có unit test cho domain logic và integration test qua DB thật
+- [ ] `pnpm -r check` xanh cục bộ và trên CI
+- [ ] Không thêm secret, không thêm `any`, không thêm eslint-disable thiếu lý do
+- [ ] Chuỗi UI đã i18n, component mới không tạo violation axe mới
+- [ ] Log có structured field và request-id, lỗi trả về theo error code trong `packages/shared`
+- [ ] Tài liệu, ADR, tiến độ đã cập nhật
+- [ ] Migration reversible và đã test rollback
 
 ---
 
 ## 6. Anti-pattern cần tránh
 
-| Anti-pattern | Thay bằng |
-| --- | --- |
+| Anti-pattern                                 | Thay bằng                                             |
+| -------------------------------------------- | ----------------------------------------------------- |
 | Pin cứng tuyệt đối mọi dependency rồi để mục | Lockfile là nguồn sự thật + Renovate auto-merge patch |
-| Node version lệch giữa FE và BE | Một `.nvmrc` duy nhất |
-| Copy type hoặc schema giữa FE và BE | `packages/shared`  • client sinh từ OpenAPI |
-| Sửa tay code trong `generated/` | Sửa `openapi.yaml` rồi regenerate |
-| Hai pipeline CI song song | Một pipeline GitHub Actions |
-| Deploy single-VM cho sản phẩm cần scale | Cloud Run + Cloud SQL, blue/green |
-| `.env` chứa secret ở staging hoặc prod | Secret Manager, inject lúc runtime |
-| Không có observability | pino + OpenTelemetry + Sentry từ ngày đầu |
-| Test mô tả hành vi tự giả định | Xác minh contract trước khi viết test |
-| Refactor lớn kèm feature | Tách PR riêng |
+| Node version lệch giữa FE và BE              | Một `.nvmrc` duy nhất                                 |
+| Copy type hoặc schema giữa FE và BE          | `packages/shared` • client sinh từ OpenAPI            |
+| Sửa tay code trong `generated/`              | Sửa `openapi.yaml` rồi regenerate                     |
+| Hai pipeline CI song song                    | Một pipeline GitHub Actions                           |
+| Deploy single-VM cho sản phẩm cần scale      | Cloud Run + Cloud SQL, blue/green                     |
+| `.env` chứa secret ở staging hoặc prod       | Secret Manager, inject lúc runtime                    |
+| Không có observability                       | pino + OpenTelemetry + Sentry từ ngày đầu             |
+| Test mô tả hành vi tự giả định               | Xác minh contract trước khi viết test                 |
+| Refactor lớn kèm feature                     | Tách PR riêng                                         |
 
 ---
 
 ## 7. Trạng thái hiện tại (agent cập nhật mục này)
 
-- [ ]  Monorepo skeleton (pnpm workspace + turbo)
-- [ ]  contracts/http/openapi.yaml khởi tạo
-- [ ]  apps/api: Fastify bootstrap + /healthz
-- [ ]  apps/web: Vite + MUI + Router bootstrap
-- [ ]  db: migration đầu tiên + seed
-- [ ]  [compose.dev](http://compose.dev).yml chạy được end-to-end
-- [ ]  CI: check + contracts:check + gitleaks
-- [ ]  infra: Terraform Cloud Run + Cloud SQL
-- [ ]  Observability: pino + OTel + healthcheck
-- [ ]  e2e: Playwright smoke test
+- [ ] Monorepo skeleton (pnpm workspace + turbo)
+- [ ] contracts/http/openapi.yaml khởi tạo
+- [ ] apps/api: Fastify bootstrap + /healthz
+- [ ] apps/web: Vite + MUI + Router bootstrap
+- [ ] db: migration đầu tiên + seed
+- [ ] [compose.dev](http://compose.dev).yml chạy được end-to-end
+- [ ] CI: check + contracts:check + gitleaks
+- [ ] infra: Terraform Cloud Run + Cloud SQL
+- [ ] Observability: pino + OTel + healthcheck
+- [ ] e2e: Playwright smoke test
 
 <aside>
 ⚠️

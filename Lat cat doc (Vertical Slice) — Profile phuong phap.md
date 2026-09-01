@@ -24,12 +24,12 @@ UI (nút bấm)  →  API nhận request  →  Service xử lý  →  DB lưu  �
 
 Ví dụ: nút Đặt hàng → `POST /orders` → service tạo đơn (logic tối giản) → ghi 1 bản ghi → UI hiện "Đặt hàng thành công".
 
-| Tiêu chí | Lát cắt ngang (tránh) | Lát cắt dọc (áp dụng) |
-| --- | --- | --- |
-| Cách chia việc | Xong hết DB → xong hết API → mới làm UI | Mỗi lần một tính năng nhỏ, đủ mọi tầng |
-| Khi nào thấy được sản phẩm | Rất muộn, gần cuối | Sau mỗi 2–4 task |
-| Rủi ro tích hợp | Dồn vào cuối, dễ vỡ | Trả nợ liên tục, phát hiện sớm |
-| Khả năng nghiệm thu | Chỉ đọc code/test | Mở browser bấm thử được |
+| Tiêu chí                   | Lát cắt ngang (tránh)                   | Lát cắt dọc (áp dụng)                  |
+| -------------------------- | --------------------------------------- | -------------------------------------- |
+| Cách chia việc             | Xong hết DB → xong hết API → mới làm UI | Mỗi lần một tính năng nhỏ, đủ mọi tầng |
+| Khi nào thấy được sản phẩm | Rất muộn, gần cuối                      | Sau mỗi 2–4 task                       |
+| Rủi ro tích hợp            | Dồn vào cuối, dễ vỡ                     | Trả nợ liên tục, phát hiện sớm         |
+| Khả năng nghiệm thu        | Chỉ đọc code/test                       | Mở browser bấm thử được                |
 
 ---
 
@@ -49,16 +49,16 @@ Ví dụ: nút Đặt hàng → `POST /orders` → service tạo đơn (logic t�
 
 Mục này **cộng thêm** vào Definition of Done ở `AGENTS.md` gốc, không thay thế.
 
-- [ ]  Có đường đi hoàn chỉnh UI → API → service → DB → UI.
-- [ ]  Người dùng mở được màn hình và bấm được, thấy phản hồi thật (không phải mock ở frontend).
-- [ ]  Contract/spec API đã cập nhật trước khi code, client đã sinh lại nếu có.
-- [ ]  Input từ ngoài đã validate bằng schema.
-- [ ]  Xác thực và phân quyền enforce ở backend, không chỉ ẩn nút ở frontend.
-- [ ]  Migration mới đảo ngược được và đã test rollback.
-- [ ]  Có ít nhất 1 test cho luồng chính của slice.
-- [ ]  Toàn bộ cổng gác của repo xanh cả cục bộ và CI.
-- [ ]  Mọi stub đều có `TODO(slice-N)` và đã ghi vào Nợ kỹ thuật.
-- [ ]  Bảng Trạng thái slice đã cập nhật, đã commit.
+- [ ] Có đường đi hoàn chỉnh UI → API → service → DB → UI.
+- [ ] Người dùng mở được màn hình và bấm được, thấy phản hồi thật (không phải mock ở frontend).
+- [ ] Contract/spec API đã cập nhật trước khi code, client đã sinh lại nếu có.
+- [ ] Input từ ngoài đã validate bằng schema.
+- [ ] Xác thực và phân quyền enforce ở backend, không chỉ ẩn nút ở frontend.
+- [ ] Migration mới đảo ngược được và đã test rollback.
+- [ ] Có ít nhất 1 test cho luồng chính của slice.
+- [ ] Toàn bộ cổng gác của repo xanh cả cục bộ và CI.
+- [ ] Mọi stub đều có `TODO(slice-N)` và đã ghi vào Nợ kỹ thuật.
+- [ ] Bảng Trạng thái slice đã cập nhật, đã commit.
 
 ---
 
@@ -71,16 +71,16 @@ Thứ tự dưới đây là khung mặc định. Slice 0 luôn là **walking sk
 
 </aside>
 
-| Slice | Mục tiêu | Kết quả bấm được |
-| --- | --- | --- |
-| 0 | Walking skeleton: khởi tạo project, 1 endpoint sức khoẻ, 1 trang, 1 kết nối DB thật | Mở trang, bấm nút, thấy dữ liệu từ DB trả về |
-| 1 | Xác thực: đăng nhập/đăng xuất, session, trang được bảo vệ | Đăng nhập vào được, đăng xuất ra được |
-| 2 | Thực thể nghiệp vụ cốt lõi: danh sách + tạo mới | Tạo 1 bản ghi và thấy nó trong danh sách |
-| 3 | Thực thể phụ thuộc thứ nhất | Tạo và xem được |
-| 4 | Luồng giao dịch chính (write nhiều bảng) | Thực hiện giao dịch và thấy số liệu đổi |
-| 5 | Phân quyền: enforce theo vai trò, ẩn/chặn đúng chỗ | Tài khoản quyền thấp bị chặn thật ở backend |
-| 6 | Báo cáo/tổng hợp tối giản | Mở trang báo cáo, thấy số đúng |
-| 7+ | Trả nợ kỹ thuật: thay từng stub bằng logic thật | Hành vi đầy đủ, không còn `TODO(slice-N)` trọng yếu |
+| Slice | Mục tiêu                                                                            | Kết quả bấm được                                    |
+| ----- | ----------------------------------------------------------------------------------- | --------------------------------------------------- |
+| 0     | Walking skeleton: khởi tạo project, 1 endpoint sức khoẻ, 1 trang, 1 kết nối DB thật | Mở trang, bấm nút, thấy dữ liệu từ DB trả về        |
+| 1     | Xác thực: đăng nhập/đăng xuất, session, trang được bảo vệ                           | Đăng nhập vào được, đăng xuất ra được               |
+| 2     | Thực thể nghiệp vụ cốt lõi: danh sách + tạo mới                                     | Tạo 1 bản ghi và thấy nó trong danh sách            |
+| 3     | Thực thể phụ thuộc thứ nhất                                                         | Tạo và xem được                                     |
+| 4     | Luồng giao dịch chính (write nhiều bảng)                                            | Thực hiện giao dịch và thấy số liệu đổi             |
+| 5     | Phân quyền: enforce theo vai trò, ẩn/chặn đúng chỗ                                  | Tài khoản quyền thấp bị chặn thật ở backend         |
+| 6     | Báo cáo/tổng hợp tối giản                                                           | Mở trang báo cáo, thấy số đúng                      |
+| 7+    | Trả nợ kỹ thuật: thay từng stub bằng logic thật                                     | Hành vi đầy đủ, không còn `TODO(slice-N)` trọng yếu |
 
 ---
 
@@ -88,15 +88,16 @@ Thứ tự dưới đây là khung mặc định. Slice 0 luôn là **walking sk
 
 ```markdown
 ### Slice N — <tên tính năng nhỏ>
+
 **Mục tiêu bấm được:** <người dùng làm gì trên màn hình và thấy gì>
 **Thay đổi mục gốc:** <để trống, hoặc ghi ID slice bị sửa>
 
-| # | Task | Tầng | Ghi chú |
-|---|------|------|---------|
-| N.1 | ... | DB / migration | reversible |
-| N.2 | ... | contract + backend | khớp spec |
-| N.3 | ... | frontend | route + nút |
-| N.4 | ... | test + tài liệu | |
+| #   | Task | Tầng               | Ghi chú     |
+| --- | ---- | ------------------ | ----------- |
+| N.1 | ...  | DB / migration     | reversible  |
+| N.2 | ...  | contract + backend | khớp spec   |
+| N.3 | ...  | frontend           | route + nút |
+| N.4 | ...  | test + tài liệu    |             |
 
 **Stub cho phép:** <liệt kê + TODO(slice-N)>
 **Không được stub:** xác thực, phân quyền, hạn mức, chuỗi hiển thị
@@ -109,15 +110,15 @@ Thứ tự dưới đây là khung mặc định. Slice 0 luôn là **walking sk
 
 Dùng đúng bộ trạng thái ở mục 17.4 của `AGENTS.md` gốc.
 
-| Slice | Tên | Trạng thái | PR | Ghi chú / nợ kỹ thuật |
-| --- | --- | --- | --- | --- |
-| 0 | Walking skeleton | Chưa bắt đầu | — | — |
+| Slice | Tên              | Trạng thái   | PR  | Ghi chú / nợ kỹ thuật |
+| ----- | ---------------- | ------------ | --- | --------------------- |
+| 0     | Walking skeleton | Chưa bắt đầu | —   | —                     |
 
 ### Nợ kỹ thuật tích lũy
 
-| Marker | Vị trí | Nội dung còn stub | Dự kiến trả ở slice |
-| --- | --- | --- | --- |
-| *TODO(slice-N)* | *file:dòng* | *…* | *…* |
+| Marker          | Vị trí      | Nội dung còn stub | Dự kiến trả ở slice |
+| --------------- | ----------- | ----------------- | ------------------- |
+| _TODO(slice-N)_ | _file:dòng_ | _…_               | _…_                 |
 
 ---
 
@@ -144,16 +145,16 @@ Dùng đúng bộ trạng thái ở mục 17.4 của `AGENTS.md` gốc.
 
 ### 8.1 Quy tắc đánh số slice khi phạm vi đổi
 
-| Tình huống | Cách làm | Ví dụ |
-| --- | --- | --- |
-| Tính năng mới, làm sau cùng | Cấp số slice tiếp theo | Slice 8, Slice 9 |
-| Tính năng mới phải chèn giữa | Dùng số thập phân, không đẩy các slice sau | Slice 3.5 |
-| Slice vượt 4 task | Giữ số gốc, thêm hậu tố chữ | Slice 4 → 4a, 4b |
-| Thêm/sửa task ở slice `Chưa bắt đầu` | Sửa trực tiếp bảng task của slice đó | thêm task 3.4 |
-| Thêm/sửa task ở slice `Đang làm` | Chỉ sửa task **chưa code**; ghi lý do vào sổ thay đổi. Nếu vượt 4 task thì chuyển phần thêm sang slice mới | — |
-| Thêm/sửa task ở slice `Xong` | Giữ slice cũ nguyên vẹn làm lịch sử; tạo **slice sửa** riêng kèm dòng `Thay đổi mục gốc: Slice N` | Slice 2 → Slice 2.1 |
-| Bỏ tính năng chưa code | Đổi trạng thái `Đã huỷ`  • ghi lý do, giữ nguyên dòng trong bảng | — |
-| Bỏ tính năng đã code | Tạo **slice retire** riêng với checklist gỡ bỏ; slice gốc chuyển `Đã thay thế` | Slice 10 — Retire X |
+| Tình huống                           | Cách làm                                                                                                   | Ví dụ               |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ------------------- |
+| Tính năng mới, làm sau cùng          | Cấp số slice tiếp theo                                                                                     | Slice 8, Slice 9    |
+| Tính năng mới phải chèn giữa         | Dùng số thập phân, không đẩy các slice sau                                                                 | Slice 3.5           |
+| Slice vượt 4 task                    | Giữ số gốc, thêm hậu tố chữ                                                                                | Slice 4 → 4a, 4b    |
+| Thêm/sửa task ở slice `Chưa bắt đầu` | Sửa trực tiếp bảng task của slice đó                                                                       | thêm task 3.4       |
+| Thêm/sửa task ở slice `Đang làm`     | Chỉ sửa task **chưa code**; ghi lý do vào sổ thay đổi. Nếu vượt 4 task thì chuyển phần thêm sang slice mới | —                   |
+| Thêm/sửa task ở slice `Xong`         | Giữ slice cũ nguyên vẹn làm lịch sử; tạo **slice sửa** riêng kèm dòng `Thay đổi mục gốc: Slice N`          | Slice 2 → Slice 2.1 |
+| Bỏ tính năng chưa code               | Đổi trạng thái `Đã huỷ` • ghi lý do, giữ nguyên dòng trong bảng                                            | —                   |
+| Bỏ tính năng đã code                 | Tạo **slice retire** riêng với checklist gỡ bỏ; slice gốc chuyển `Đã thay thế`                             | Slice 10 — Retire X |
 
 ### 8.2 Ba loại thay đổi
 
@@ -167,23 +168,23 @@ Dùng đúng bộ trạng thái ở mục 17.4 của `AGENTS.md` gốc.
 
 **B. Sửa tính năng đã có trong danh sách task**
 
-| Trạng thái slice | Được phép | Không được phép |
-| --- | --- | --- |
-| Chưa bắt đầu | Sửa tự do nội dung task, thêm/bỏ/đổi thứ tự | Đổi số slice |
-| Đang làm | Sửa task chưa code, ghi lý do | Mở rộng vượt 4 task, đổi contract đã chốt |
-| Xong | Tạo slice sửa mới trỏ về slice gốc | Sửa lại bảng task đã ship (đó là lịch sử) |
+| Trạng thái slice | Được phép                                   | Không được phép                           |
+| ---------------- | ------------------------------------------- | ----------------------------------------- |
+| Chưa bắt đầu     | Sửa tự do nội dung task, thêm/bỏ/đổi thứ tự | Đổi số slice                              |
+| Đang làm         | Sửa task chưa code, ghi lý do               | Mở rộng vượt 4 task, đổi contract đã chốt |
+| Xong             | Tạo slice sửa mới trỏ về slice gốc          | Sửa lại bảng task đã ship (đó là lịch sử) |
 
 **C. Xóa tính năng**
 
 - **Chưa code:** đổi trạng thái `Đã huỷ` + ghi lý do. Không xoá dòng.
 - **Đã code:** tạo slice retire, checklist bắt buộc:
-    - [ ]  Xoá route/menu dẫn vào tính năng ở frontend.
-    - [ ]  Xoá endpoint khỏi spec API, sinh lại client.
-    - [ ]  Xoá module BE/FE và import trong điểm ghép, kiểm tra không còn ràng buộc.
-    - [ ]  Xoá quyền, feature flag, cấu hình và chuỗi hiển thị không còn dùng.
-    - [ ]  **Không drop bảng dữ liệu nghiệp vụ** — đánh dấu deprecated, migration đảo ngược được, giữ dữ liệu lịch sử.
-    - [ ]  Xoá `TODO(slice-N)` của slice bị bỏ khỏi bảng Nợ kỹ thuật.
-    - [ ]  Ghi ADR: lý do bỏ và cách xử lý dữ liệu cũ.
+  - [ ] Xoá route/menu dẫn vào tính năng ở frontend.
+  - [ ] Xoá endpoint khỏi spec API, sinh lại client.
+  - [ ] Xoá module BE/FE và import trong điểm ghép, kiểm tra không còn ràng buộc.
+  - [ ] Xoá quyền, feature flag, cấu hình và chuỗi hiển thị không còn dùng.
+  - [ ] **Không drop bảng dữ liệu nghiệp vụ** — đánh dấu deprecated, migration đảo ngược được, giữ dữ liệu lịch sử.
+  - [ ] Xoá `TODO(slice-N)` của slice bị bỏ khỏi bảng Nợ kỹ thuật.
+  - [ ] Ghi ADR: lý do bỏ và cách xử lý dữ liệu cũ.
 
 ### 8.3 Checklist đánh giá ảnh hưởng (làm trước khi chấp nhận)
 
@@ -199,9 +200,9 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR**.
 
 ### 8.4 Sổ thay đổi phạm vi (chỉ thêm dòng mới, không sửa dòng cũ)
 
-| Ngày | Loại | Slice liên quan | Nội dung thay đổi | Lý do | ADR |
-| --- | --- | --- | --- | --- | --- |
-| *…* | *Thêm / Sửa / Huỷ / Hoãn / Chẻ / Thay thế* | *…* | *…* | *…* | *…* |
+| Ngày | Loại                                       | Slice liên quan | Nội dung thay đổi | Lý do | ADR |
+| ---- | ------------------------------------------ | --------------- | ----------------- | ----- | --- |
+| _…_  | _Thêm / Sửa / Huỷ / Hoãn / Chẻ / Thay thế_ | _…_             | _…_               | _…_   | _…_ |
 
 ### 8.5 Thứ tự thao tác bắt buộc
 

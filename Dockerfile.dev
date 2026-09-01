@@ -1,0 +1,15 @@
+FROM node:24-bookworm-slim
+
+RUN corepack enable
+WORKDIR /workspace
+
+COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY packages/shared/package.json packages/shared/package.json
+COPY packages/api-client/package.json packages/api-client/package.json
+
+RUN pnpm install --no-frozen-lockfile
+
+COPY . .
+CMD ["pnpm", "dev"]

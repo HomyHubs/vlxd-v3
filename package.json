@@ -1,0 +1,37 @@
+{
+  "name": "vlxd-v3",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "contracts:lint": "redocly lint contracts/http/openapi.yaml",
+    "contracts:generate": "openapi-typescript contracts/http/openapi.yaml -o packages/api-client/src/generated/schema.ts",
+    "contracts:check": "pnpm contracts:generate && git diff --exit-code -- packages/api-client/src/generated/schema.ts",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm contracts:lint && pnpm contracts:check"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "@redocly/cli": "^2.0.0",
+    "eslint": "^9.35.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^6.0.0",
+    "globals": "^16.3.0",
+    "openapi-typescript": "^7.9.1",
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.42.0"
+  }
+}

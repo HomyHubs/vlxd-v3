@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vlxd}
+      POSTGRES_USER: ${POSTGRES_USER:-vlxd}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vlxd_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vlxd} -d ${POSTGRES_DB:-vlxd}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    image: amacneil/dbmate:2.35.1
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-vlxd}:${POSTGRES_PASSWORD:-vlxd_dev}@db:5432/${POSTGRES_DB:-vlxd}?sslmode=disable
+    volumes:
+      - ./db/migrations:/db/migrations:ro
+    command: ["--migrations-dir", "/db/migrations", "up"]
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: ["pnpm", "--filter", "@vlxd/api", "dev"]
+    environment:
+      NODE_ENV: development
+      API_HOST: 0.0.0.0
+      API_PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-vlxd}:${POSTGRES_PASSWORD:-vlxd_dev}@db:5432/${POSTGRES_DB:-vlxd}?sslmode=disable
+      LOG_LEVEL: info
+    ports:
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: ["pnpm", "--filter", "@vlxd/web", "dev", "--host", "0.0.0.0"]
+    environment:
+      VITE_API_PROXY_TARGET: http://api:3000
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  postgres-data:

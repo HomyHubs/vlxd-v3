@@ -1,0 +1,15 @@
+{
+  "app": {
+    "name": "Quản lý Vật liệu Xây dựng",
+    "slice": "Slice 0 · Walking skeleton"
+  },
+  "health": {
+    "title": "Kiểm tra hệ thống",
+    "description": "Kiểm tra đường kết nối từ trình duyệt đến API và cơ sở dữ liệu PostgreSQL.",
+    "action": "Kiểm tra hệ thống",
+    "checking": "Đang kiểm tra…",
+    "success": "Hệ thống hoạt động bình thường",
+    "databaseUnavailable": "Không thể kết nối cơ sở dữ liệu",
+    "unknownError": "Không thể kiểm tra hệ thống"
+  }
+}
