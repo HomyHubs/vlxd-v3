@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "dev", "feature/**"]
+  pull_request:
+    branches: ["main", "dev"]
+
+jobs:
+  check:
+    name: Quality Gates & Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check API contracts
+        run: pnpm contracts:check
+
+      - name: Build packages and applications
+        run: pnpm build
+
+      - name: Run all quality checks
+        run: pnpm check
