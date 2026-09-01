@@ -449,7 +449,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 0 — Walking skeleton, nhánh `feature/slice-0`.
+Slice 0 — Walking skeleton, PR #1 (`feature/slice-0` -> `main`), Notion Review Pro Round 2.
 
 ### Đã xong
 
@@ -459,23 +459,20 @@ Slice 0 — Walking skeleton, nhánh `feature/slice-0`.
 - [x] Task 0.2 — chốt OpenAPI cho health endpoints và tạo package API client.
 - [x] Task 0.3 — thêm PostgreSQL/Kysely, migration reversible `app_meta` và Testcontainers test.
 - [x] Task 0.4 — thêm UI React/MUI/i18next với nút gọi `GET /health` và component test.
+- [x] Fix review findings B001 & B002 (decouple DB readiness check from seed row, add structured logging, configure Fastify trustProxy and rate-limit probe allowList).
+- [x] Chạy toàn bộ quality gate `pnpm check` pass 100% (format, lint 0 warnings, typecheck, vitest unit + integration tests, build, redocly lint, contract check).
+- [x] Push commit fix lên `origin feature/slice-0`, cập nhật state comment PR #1 và kích hoạt Notion Review Round 2.
 
 ### Đang làm dở
 
-- [ ] Verification Slice 0 — chưa cài dependency, sinh lại OpenAPI client, chạy typecheck/test/build hoặc demo Docker Compose.
+- [ ] Đang chờ Agent B (Notion AI Custom Agent) hoàn tất review Round 2 qua Notion MCP Relay.
 
 ### Bước tiếp theo
 
-- [ ] Chạy `corepack enable && pnpm install`.
-- [ ] Chạy `pnpm contracts:generate && pnpm check`.
-- [ ] Chạy `docker compose -f compose.dev.yml up --build` và nghiệm thu trên browser.
-- [ ] Khi toàn bộ gate xanh, cập nhật Slice 0 thành `Xong`, commit và mở PR vào `dev`.
+- [ ] Đọc kết quả review Round 2 từ Notion MCP.
+- [ ] Xác thực envelope JSON bằng `validate_review_envelope.py`.
+- [ ] Đăng review comment và state comment `APPROVED` / `READY_TO_MERGE` lên PR #1.
 
-### Ghi chú / lỗi đang gặp
-
-- Andy MCP chặn `pnpm` trong `run_cmd` và chưa cấu hình mục `test.commands`, nên chưa thể chạy cổng kiểm tra từ phiên này.
-- `git diff --check` đã chạy và không phát hiện lỗi whitespace.
-- Slice 0 bắt đầu ngày 2026-08-31.
 
 ---
 
