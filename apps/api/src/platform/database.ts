@@ -22,7 +22,7 @@ export interface UserTable {
   email: string;
   full_name: string;
   password_hash: string;
-  status: Generated<string>;
+  status: Generated<"active" | "inactive">;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }
