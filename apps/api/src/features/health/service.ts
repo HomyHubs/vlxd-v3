@@ -1,12 +1,17 @@
 import type { HealthStatus, HealthUnavailable } from "@vlxd/shared";
 
+export interface HealthLogger {
+  error(obj: unknown, msg?: string): void;
+  warn?(obj: unknown, msg?: string): void;
+}
+
 export interface HealthService {
   liveness(): { status: "ok" };
-  readiness(): Promise<HealthStatus | HealthUnavailable>;
+  readiness(logger?: HealthLogger): Promise<HealthStatus | HealthUnavailable>;
 }
 
 export interface HealthServiceDependencies {
-  checkDatabase(): Promise<boolean>;
+  checkDatabase(logger?: HealthLogger): Promise<boolean>;
 }
 
 export function createHealthService(dependencies: HealthServiceDependencies): HealthService {
@@ -14,8 +19,8 @@ export function createHealthService(dependencies: HealthServiceDependencies): He
     liveness() {
       return { status: "ok" };
     },
-    async readiness() {
-      const databaseReady = await dependencies.checkDatabase();
+    async readiness(logger?: HealthLogger) {
+      const databaseReady = await dependencies.checkDatabase(logger);
 
       if (!databaseReady) {
         return {

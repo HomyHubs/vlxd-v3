@@ -33,8 +33,8 @@ export const healthRoutes: FastifyPluginAsync<HealthRoutesOptions> = (server, op
         },
       },
     },
-    async (_request, reply) => {
-      const result = await options.healthService.readiness();
+    async (request, reply) => {
+      const result = await options.healthService.readiness(request.log);
 
       if (result.status === "ok") {
         return reply.code(200).send(result);
@@ -54,8 +54,8 @@ export const healthRoutes: FastifyPluginAsync<HealthRoutesOptions> = (server, op
         },
       },
     },
-    async (_request, reply) => {
-      const result = await options.healthService.readiness();
+    async (request, reply) => {
+      const result = await options.healthService.readiness(request.log);
 
       if (result.status === "ok") {
         return reply.code(200).send(result);

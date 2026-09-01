@@ -4,16 +4,18 @@ import rateLimit from "@fastify/rate-limit";
 import Fastify, { type FastifyInstance } from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 
-import { createHealthService, healthRoutes } from "./features/health/index.js";
+import { createHealthService, type HealthLogger, healthRoutes } from "./features/health/index.js";
 
 export interface BuildAppOptions {
-  checkDatabase(): Promise<boolean>;
+  checkDatabase: (logger?: HealthLogger) => Promise<boolean>;
   logger?: boolean;
   logLevel?: string;
+  trustProxy?: boolean | string | string[];
 }
 
 export async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
-  const server = Fastify({
+  const server: FastifyInstance = Fastify({
+    trustProxy: options.trustProxy ?? true,
     logger:
       options.logger === false
         ? false
@@ -36,10 +38,17 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   await server.register(helmet);
   await server.register(cors, { origin: false });
-  await server.register(rateLimit, { max: 100, timeWindow: "1 minute" });
+  await server.register(rateLimit, {
+    max: 100,
+    timeWindow: "1 minute",
+    allowList: (req) => {
+      const pathname = req.url.split("?")[0];
+      return pathname === "/health" || pathname === "/healthz" || pathname === "/readyz";
+    },
+  });
   await server.register(healthRoutes, {
     healthService: createHealthService({
-      checkDatabase: () => options.checkDatabase(),
+      checkDatabase: (logger) => options.checkDatabase(logger),
     }),
   });
 

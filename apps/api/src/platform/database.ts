@@ -11,6 +11,11 @@ export interface Database {
   app_meta: AppMetaTable;
 }
 
+export interface DatabaseLogger {
+  error(obj: unknown, msg?: string): void;
+  warn?(obj: unknown, msg?: string): void;
+}
+
 export function createDatabasePool(databaseUrl: string): Pool {
   return new Pool({
     connectionString: databaseUrl,
@@ -26,21 +31,17 @@ export function createDatabase(pool: Pool): Kysely<Database> {
   });
 }
 
-export async function checkDatabase(database: Kysely<Database>): Promise<boolean> {
+export async function checkDatabase(
+  database: Kysely<Database>,
+  logger?: DatabaseLogger,
+): Promise<boolean> {
   try {
-    const result = await database
-      .selectFrom("app_meta")
-      .select(["key", "value"])
-      .where("key", "=", "schema_version")
-      .executeTakeFirst();
-
-    if (result?.value !== "slice-0") {
-      return false;
-    }
-
     await sql`select 1`.execute(database);
     return true;
-  } catch {
+  } catch (error: unknown) {
+    if (logger) {
+      logger.error({ err: error }, "database health check failed");
+    }
     return false;
   }
 }

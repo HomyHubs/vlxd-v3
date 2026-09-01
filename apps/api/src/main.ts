@@ -7,7 +7,7 @@ const pool = createDatabasePool(environment.DATABASE_URL);
 const database = createDatabase(pool);
 
 const server = await buildApp({
-  checkDatabase: () => checkDatabase(database),
+  checkDatabase: (logger) => checkDatabase(database, logger),
   logLevel: environment.LOG_LEVEL,
 });
 
