@@ -198,18 +198,18 @@ Cách nghiệm thu:
 | Slice                | Trạng thái   | Demo bấm được           | Stub còn nợ |
 | -------------------- | ------------ | ----------------------- | ----------- |
 | 0 — Walking skeleton | Đang làm     | Nhánh `feature/slice-0` | —           |
-| 1 — Đăng nhập        | Chưa bắt đầu | —                       | —           |
-| 2 — Sản phẩm         | Chưa bắt đầu | —                       | —           |
-| 3 — Kho & tồn        | Chưa bắt đầu | —                       | —           |
-| 4 — Nhập kho         | Chưa bắt đầu | —                       | —           |
-| 5 — Đơn hàng         | Chưa bắt đầu | —                       | —           |
-| 6 — Phân quyền       | Chưa bắt đầu | —                       | —           |
-| 7 — Thanh toán       | Chưa bắt đầu | —                       | —           |
-| 8 — Báo cáo          | Chưa bắt đầu | —                       | —           |
+| 1 — Đăng nhập        | Đang làm     | Nhánh `feature/slice-1` | Chưa quên mật khẩu, chưa 2FA, chưa mời user |
+| 2 — Sản phẩm         | Chưa bắt đầu | —                       | —                                           |
+| 3 — Kho & tồn        | Chưa bắt đầu | —                       | —                                           |
+| 4 — Nhập kho         | Chưa bắt đầu | —                       | —                                           |
+| 5 — Đơn hàng         | Chưa bắt đầu | —                       | —                                           |
+| 6 — Phân quyền       | Chưa bắt đầu | —                       | —                                           |
+| 7 — Thanh toán       | Chưa bắt đầu | —                       | —                                           |
+| 8 — Báo cáo          | Chưa bắt đầu | —                       | —                                           |
 
 ### Nợ kỹ thuật tích lũy
 
-- _… ghi từng stub kèm slice tạo ra nó và slice dự kiến xử lý …_
+- Slice 1: Chưa có quên mật khẩu, 2FA, mời user (dự kiến xử lý ở các slice quản lý người dùng nâng cao).
 
 ---
 

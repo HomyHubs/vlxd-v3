@@ -1,20 +1,18 @@
 import { Container, CssBaseline, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 
-import { SystemHealthCard } from "./features/health";
+import { AppHeader, LoginPage, ProtectedRoute } from "./features/auth/index.js";
+import { SystemHealthCard } from "./features/health/index.js";
 
-export function App() {
+function DashboardLayout() {
   const { t } = useTranslation();
 
   return (
     <>
-      <CssBaseline />
+      <AppHeader />
       <Container maxWidth="md">
-        <Stack
-          component="main"
-          spacing={4}
-          sx={{ minHeight: "100vh", justifyContent: "center", py: 6 }}
-        >
+        <Stack component="main" spacing={4} sx={{ py: 6 }}>
           <Stack spacing={0.5}>
             <Typography color="primary" fontWeight={700} variant="overline">
               {t("app.slice")}
@@ -26,6 +24,23 @@ export function App() {
           <SystemHealthCard />
         </Stack>
       </Container>
+    </>
+  );
+}
+
+export function App() {
+  return (
+    <>
+      <CssBaseline />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<DashboardLayout />} />
+          </Route>
+          <Route path="*" element={<LoginPage />} />
+        </Routes>
+      </BrowserRouter>
     </>
   );
 }

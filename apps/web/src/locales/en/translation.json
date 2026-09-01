@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Construction Materials Management",
-    "slice": "Slice 0 · Walking skeleton"
+    "slice": "Slice 1 · Real Authentication"
   },
   "health": {
     "title": "System check",
@@ -11,5 +11,21 @@
     "success": "The system is operating normally",
     "databaseUnavailable": "The database is unavailable",
     "unknownError": "The system check failed"
+  },
+  "auth": {
+    "loginTitle": "Sign In",
+    "loginSubtitle": "Enter your email and password to access the dashboard",
+    "emailLabel": "Email",
+    "emailPlaceholder": "owner@vlxd.local",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "••••••••",
+    "loginButton": "Sign In",
+    "loggingIn": "Signing in…",
+    "logoutButton": "Sign Out",
+    "loggingOut": "Signing out…",
+    "invalidCredentials": "Incorrect email or password",
+    "genericError": "Unable to sign in. Please try again later.",
+    "welcome": "Welcome",
+    "tenant": "Store"
   }
 }

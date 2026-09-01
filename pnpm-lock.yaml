@@ -120,6 +120,9 @@ importers:
       '@vlxd/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@vlxd/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       i18next:
         specifier: ^25.0.0
         version: 25.10.10(typescript@5.9.3)
