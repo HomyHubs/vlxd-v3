@@ -11,11 +11,13 @@ afterEach(() => {
 
 describe("SystemHealthCard", () => {
   it("calls the API path and shows the Vietnamese success message", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ status: "ok", db: "ok" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ status: "ok", db: "ok" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -34,7 +36,10 @@ describe("SystemHealthCard", () => {
     await userEvent.click(screen.getByRole("button", { name: "Kiểm tra hệ thống" }));
 
     expect(await screen.findByText("Hệ thống hoạt động bình thường")).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalled();
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/health");
+    const calledUrl =
+      fetchMock.mock.calls[0]?.[0] instanceof Request
+        ? fetchMock.mock.calls[0][0].url
+        : String(fetchMock.mock.calls[0]?.[0]);
+    expect(calledUrl).toContain("/api/health");
   });
 });

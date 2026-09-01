@@ -11,7 +11,7 @@ afterEach(async () => {
 describe("health routes", () => {
   it("returns ok when the database check succeeds", async () => {
     const server = await buildApp({
-      checkDatabase: async () => true,
+      checkDatabase: () => Promise.resolve(true),
       logger: false,
     });
     servers.push(server);
@@ -24,7 +24,7 @@ describe("health routes", () => {
 
   it("returns a stable error code when the database check fails", async () => {
     const server = await buildApp({
-      checkDatabase: async () => false,
+      checkDatabase: () => Promise.resolve(false),
       logger: false,
     });
     servers.push(server);
@@ -41,7 +41,7 @@ describe("health routes", () => {
 
   it("keeps liveness independent from database readiness", async () => {
     const server = await buildApp({
-      checkDatabase: async () => false,
+      checkDatabase: () => Promise.resolve(false),
       logger: false,
     });
     servers.push(server);

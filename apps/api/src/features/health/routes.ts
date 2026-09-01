@@ -8,7 +8,7 @@ export interface HealthRoutesOptions {
   healthService: HealthService;
 }
 
-export const healthRoutes: FastifyPluginAsync<HealthRoutesOptions> = async (server, options) => {
+export const healthRoutes: FastifyPluginAsync<HealthRoutesOptions> = (server, options) => {
   const app = server.withTypeProvider<ZodTypeProvider>();
 
   app.get(
@@ -64,4 +64,6 @@ export const healthRoutes: FastifyPluginAsync<HealthRoutesOptions> = async (serv
       return reply.code(503).send(result);
     },
   );
+
+  return Promise.resolve();
 };

@@ -39,7 +39,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await server.register(rateLimit, { max: 100, timeWindow: "1 minute" });
   await server.register(healthRoutes, {
     healthService: createHealthService({
-      checkDatabase: options.checkDatabase,
+      checkDatabase: () => options.checkDatabase(),
     }),
   });
 
