@@ -449,7 +449,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 0 — Walking skeleton, PR #1 (`feature/slice-0` -> `main`), Notion Review Pro Round 2.
+Slice 0 — Walking skeleton, PR #1 (`feature/slice-0` -> `main`), Notion Review Pro Round 3 hoàn tất, State: `READY_TO_MERGE`.
 
 ### Đã xong
 
@@ -460,18 +460,20 @@ Slice 0 — Walking skeleton, PR #1 (`feature/slice-0` -> `main`), Notion Review
 - [x] Task 0.3 — thêm PostgreSQL/Kysely, migration reversible `app_meta` và Testcontainers test.
 - [x] Task 0.4 — thêm UI React/MUI/i18next với nút gọi `GET /health` và component test.
 - [x] Fix review findings B001 & B002 (decouple DB readiness check from seed row, add structured logging, configure Fastify trustProxy and rate-limit probe allowList).
+- [x] Fix review finding B003 (default `trustProxy` to `false` in `apps/api/src/app.ts`, add safe fallback rate-limit `keyGenerator`).
 - [x] Chạy toàn bộ quality gate `pnpm check` pass 100% (format, lint 0 warnings, typecheck, vitest unit + integration tests, build, redocly lint, contract check).
-- [x] Push commit fix lên `origin feature/slice-0`, cập nhật state comment PR #1 và kích hoạt Notion Review Round 2.
+- [x] Push commit fix `03eb0e5` lên `origin feature/slice-0`.
+- [x] Notion Review Round 3: Verdict `APPROVED_TO_MERGE`, 0 blocker, `merge_decision: READY`.
+- [x] Đăng review comment kèm provenance và chuyển state sang `READY_TO_MERGE` trên PR #1 (chế độ `merge_mode=ready_only`).
 
 ### Đang làm dở
 
-- [ ] Đang chờ Agent B (Notion AI Custom Agent) hoàn tất review Round 2 qua Notion MCP Relay.
+- [ ] Đợi người dùng xác nhận để merge PR #1 vào `main`.
 
 ### Bước tiếp theo
 
-- [ ] Đọc kết quả review Round 2 từ Notion MCP.
-- [ ] Xác thực envelope JSON bằng `validate_review_envelope.py`.
-- [ ] Đăng review comment và state comment `APPROVED` / `READY_TO_MERGE` lên PR #1.
+- [ ] Nhận xác nhận từ người dùng và merge PR #1 vào `main`.
+- [ ] Chuyển sang Slice 1 (Auth feature).
 
 
 ---
