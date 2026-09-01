@@ -15,7 +15,7 @@ export interface BuildAppOptions {
 
 export async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
   const server: FastifyInstance = Fastify({
-    trustProxy: options.trustProxy ?? true,
+    trustProxy: options.trustProxy ?? false,
     logger:
       options.logger === false
         ? false
@@ -45,6 +45,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       const pathname = req.url.split("?")[0];
       return pathname === "/health" || pathname === "/healthz" || pathname === "/readyz";
     },
+    keyGenerator: (req) => req.ip || req.socket.remoteAddress || "127.0.0.1",
   });
   await server.register(healthRoutes, {
     healthService: createHealthService({
