@@ -421,6 +421,7 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR** theo 
 | Ngày | Loại                                       | ID liên quan | Nội dung thay đổi | Lý do | ADR |
 | ---- | ------------------------------------------ | ------------ | ----------------- | ----- | --- |
 | _…_  | _Thêm / Sửa / Huỷ / Hoãn / Chẻ / Thay thế_ | _…_          | _…_               | _…_   | _…_ |
+| 2026-09-02 | Thêm | Slice 2 | Chốt phạm vi Sản phẩm: xem và tạo, gồm migration `product`/`unit`, API danh sách/tạo, UI `/products` và giới hạn gói Free 80 sản phẩm. | Tiếp tục lộ trình Vertical Slice sau khi Slice 0 và Slice 1 hoàn tất. | Không cần — chưa thay đổi schema/API thực tế trong commit tài liệu này. |
 
 ### 17.6 Thứ tự thao tác bắt buộc
 
@@ -449,7 +450,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 1 hoàn tất, chuẩn bị khởi động Slice tiếp theo.
+Slice 2 — Sản phẩm: xem và tạo — đang làm, chưa mở PR. Phạm vi chi tiết và trạng thái bàn giao nằm tại `docs/tasks/CURRENT.md`.
 
 ### Đã xong
 
@@ -463,11 +464,14 @@ Slice 1 hoàn tất, chuẩn bị khởi động Slice tiếp theo.
 
 ### Đang làm dở
 
-- [ ] Chưa có task dở dang.
+- [ ] Task 2.1 — migration thuận nghịch bảng `product`, `unit` và dev seed danh mục đơn vị chuẩn.
+- [ ] Task 2.2 — API contract-first `GET /products` (phân trang, tìm kiếm) và `POST /products`.
+- [ ] Task 2.3 — trang `/products` dùng Material React Table và Dialog "Thêm sản phẩm" dùng react-hook-form + Zod.
+- [ ] Task 2.4 — giới hạn gói Free tối đa 80 sản phẩm, lỗi `PRODUCT_LIMIT_REACHED` và thông báo i18n trên UI.
 
 ### Bước tiếp theo
 
-- [ ] Xác định và khởi động Slice tiếp theo theo lộ trình.
+- [ ] Bắt đầu Task 2.1 trên nhánh `feature/slice-2`; mở PR với base `dev` sau khi toàn bộ cổng gác xanh.
 
 ---
 
