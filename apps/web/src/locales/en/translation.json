@@ -1,0 +1,15 @@
+{
+  "app": {
+    "name": "Construction Materials Management",
+    "slice": "Slice 0 · Walking skeleton"
+  },
+  "health": {
+    "title": "System check",
+    "description": "Check the path from the browser through the API to PostgreSQL.",
+    "action": "Check system",
+    "checking": "Checking…",
+    "success": "The system is operating normally",
+    "databaseUnavailable": "The database is unavailable",
+    "unknownError": "The system check failed"
+  }
+}

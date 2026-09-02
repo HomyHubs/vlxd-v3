@@ -10,7 +10,7 @@
 <aside>
 📌
 
-Cách dùng: Sao chép toàn bộ nội dung bên dưới, lưu thành file `AGENTS.md` đặt ở **gốc repo**. Khối copy đầy đủ nằm ở cuối trang (mục *Bản đầy đủ để copy*).
+Cách dùng: Sao chép toàn bộ nội dung bên dưới, lưu thành file `AGENTS.md` đặt ở **gốc repo**. Khối copy đầy đủ nằm ở cuối trang (mục _Bản đầy đủ để copy_).
 
 </aside>
 
@@ -23,13 +23,13 @@ Trang này là **GỐC**. Mọi chỉ dẫn khác chỉ là phần bổ sung the
 
 </aside>
 
-| Tài liệu | Khi nào đọc | Vai trò |
-| --- | --- | --- |
-| Trang này — `AGENTS.md` gốc ở root repo | Luôn luôn, đầu mỗi phiên | Bắt buộc, cao nhất |
-| Profile công nghệ web app: [Web App Template — Chỉ dẫn vận hành cho AI Coding Agent](https://app.notion.com/p/Web-App-Template-Ch-d-n-v-n-h-nh-cho-AI-Coding-Agent-6a8c6bef3f2b47e795ba8258bf3f42fc?pvs=21) | Khi dự án là web app có frontend và backend | Bổ sung mục 2.5 |
-| `AGENTS.md` con trong từng thư mục chức năng | Khi sửa file trong thư mục đó | Bổ sung phạm vi hợp |
-| `docs/adr/` | Khi quyết định cross-cutting hoặc khó đảo ngược | Bắt buộc ghi lại |
-| `docs/decision-backlog.md` | Trước khi bắt đầu một mốc lớn | Không được vượt gate đang mở |
+| Tài liệu                                                                                                                                                                                                    | Khi nào đọc                                     | Vai trò                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------- |
+| Trang này — `AGENTS.md` gốc ở root repo                                                                                                                                                                     | Luôn luôn, đầu mỗi phiên                        | Bắt buộc, cao nhất           |
+| Profile công nghệ web app: [Web App Template — Chỉ dẫn vận hành cho AI Coding Agent](https://app.notion.com/p/Web-App-Template-Ch-d-n-v-n-h-nh-cho-AI-Coding-Agent-6a8c6bef3f2b47e795ba8258bf3f42fc?pvs=21) | Khi dự án là web app có frontend và backend     | Bổ sung mục 2.5              |
+| `AGENTS.md` con trong từng thư mục chức năng                                                                                                                                                                | Khi sửa file trong thư mục đó                   | Bổ sung phạm vi hợp          |
+| `docs/adr/`                                                                                                                                                                                                 | Khi quyết định cross-cutting hoặc khó đảo ngược | Bắt buộc ghi lại             |
+| `docs/decision-backlog.md`                                                                                                                                                                                  | Trước khi bắt đầu một mốc lớn                   | Không được vượt gate đang mở |
 
 **Thứ tự ưu tiên khi xung đột:** trang gốc này → profile công nghệ → `AGENTS.md` con → thói quen riêng của agent (thấp nhất).
 
@@ -46,16 +46,16 @@ Trang này là **GỐC**. Mọi chỉ dẫn khác chỉ là phần bổ sung the
 
 ## 1. Bối cảnh dự án (điền ngay khi khởi tạo repo)
 
-| Trường | Giá trị |
-| --- | --- |
-| Tên dự án | ... |
-| Mục tiêu một dòng | ... |
-| Loại dự án | web app FE+BE / service / CLI / library |
-| Profile công nghệ áp dụng | ... |
-| Stack thực tế | ... |
-| Điểm khởi đầu | file hoặc thư mục chính |
-| Cách chạy local | ví dụ docker compose -f compose.dev.yml up |
-| Người hoặc nhóm sở hữu | ... |
+| Trường                    | Giá trị                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| Tên dự án                 | vlxd-v3                                                                                  |
+| Mục tiêu một dòng         | Web app quản lý cửa hàng vật liệu xây dựng, triển khai theo lát cắt dọc                  |
+| Loại dự án                | Web app frontend + backend                                                               |
+| Profile công nghệ áp dụng | Web App Template + Vertical Slice                                                        |
+| Stack thực tế             | Node 24, pnpm workspace, React + Vite + MUI, Fastify + Zod, PostgreSQL + Kysely + dbmate |
+| Điểm khởi đầu             | Slice 0 — Walking skeleton                                                               |
+| Cách chạy local           | `docker compose -f compose.dev.yml up --build`                                           |
+| Người hoặc nhóm sở hữu    | HomyHubs                                                                                 |
 
 <aside>
 🔌
@@ -79,9 +79,9 @@ Trước khi áp dụng bất kỳ sơ đồ thư mục nào, bạn PHẢI quét
 
 1. Quét cây thư mục gốc và `src/` (hoặc thư mục nguồn tương đương).
 2. Nhận diện xem đã có cách chia theo chức năng/domain hay chưa. Dấu hiệu ĐÃ chia:
-    - Thư mục theo feature: `feature1/`, `feature2/`, `feature3/`, `auth/`, `payment/`…
-    - Thư mục theo tầng/vai trò: `frontend/`, `backend/`, `api/`, `web/`, `mobile/`…
-    - Kiểu monorepo/module hoá: `modules/`, `packages/`, `apps/`, `services/`, `domains/`…
+   - Thư mục theo feature: `feature1/`, `feature2/`, `feature3/`, `auth/`, `payment/`…
+   - Thư mục theo tầng/vai trò: `frontend/`, `backend/`, `api/`, `web/`, `mobile/`…
+   - Kiểu monorepo/module hoá: `modules/`, `packages/`, `apps/`, `services/`, `domains/`…
 3. Chọn đúng một trong hai trường hợp bên dưới và GHI quyết định vào mục **## Trạng thái tiến độ**.
 
 ### Trường hợp A — Repo ĐÃ chia thư mục theo chức năng
@@ -183,8 +183,8 @@ Trước khi hiện thực một feature, bạn PHẢI định nghĩa và cố �
 ```tsx
 // src/features/auth/index.ts — chốt trước, không đổi giữa chừng
 export interface AuthModule {
-  getCurrentUser(token: string): Promise<User | null>
-  login(email: string, pass: string): Promise<Token>
+  getCurrentUser(token: string): Promise<User | null>;
+  login(email: string, pass: string): Promise<Token>;
 }
 ```
 
@@ -211,10 +211,10 @@ Với file dùng chung bắt buộc (như router tổng), dùng "điểm ghép t
 
 ```tsx
 // src/app.ts
-import { registerAuthRoutes } from "./features/auth"
-import { registerPaymentRoutes } from "./features/payment"
-registerAuthRoutes(app)
-registerPaymentRoutes(app)
+import { registerAuthRoutes } from "./features/auth";
+import { registerPaymentRoutes } from "./features/payment";
+registerAuthRoutes(app);
+registerPaymentRoutes(app);
 ```
 
 ---
@@ -306,39 +306,39 @@ Khi sắp hết token hoặc kết thúc phiên, bạn PHẢI:
 
 Một task chỉ được coi là xong khi đủ tất cả:
 
-- [ ]  Contract của module đã được chốt và không đổi giữa chừng; nếu có API thì spec đã cập nhật và client đã sinh lại
-- [ ]  Có test cho logic nghiệp vụ và test tích hợp cho đường đi qua dữ liệu thật
-- [ ]  Toàn bộ cổng gác ở mục 4 xanh cả cục bộ và trên CI
-- [ ]  Không thêm secret, không thêm kiểu dữ liệu bỏ kiểm tra, không tắt rule lint mà không ghi lý do
-- [ ]  Log có cấu trúc và request-id; lỗi trả về theo error code tập trung
-- [ ]  Migration đảo ngược được và đã test rollback
-- [ ]  Chỉ sửa file trong phạm vi task, không rò rỉ refactor ngoài phạm vi
-- [ ]  Tài liệu hoặc ADR liên quan đã cập nhật
-- [ ]  Mục Trạng thái tiến độ đã cập nhật và đã commit
+- [ ] Contract của module đã được chốt và không đổi giữa chừng; nếu có API thì spec đã cập nhật và client đã sinh lại
+- [ ] Có test cho logic nghiệp vụ và test tích hợp cho đường đi qua dữ liệu thật
+- [ ] Toàn bộ cổng gác ở mục 4 xanh cả cục bộ và trên CI
+- [ ] Không thêm secret, không thêm kiểu dữ liệu bỏ kiểm tra, không tắt rule lint mà không ghi lý do
+- [ ] Log có cấu trúc và request-id; lỗi trả về theo error code tập trung
+- [ ] Migration đảo ngược được và đã test rollback
+- [ ] Chỉ sửa file trong phạm vi task, không rò rỉ refactor ngoài phạm vi
+- [ ] Tài liệu hoặc ADR liên quan đã cập nhật
+- [ ] Mục Trạng thái tiến độ đã cập nhật và đã commit
 
 ---
 
 ## 16. Anti-pattern cấm tuyệt đối
 
-| Anti-pattern | Thay bằng |
-| --- | --- |
-| Giữ tiến độ trong đầu hoặc trong ngữ cảnh chat | Ghi vào mục Trạng thái tiến độ và commit |
-| Đập đi tái cấu trúc repo đã có quy ước | Trường hợp A ở mục 1.5, bổ sung dần theo task |
-| Import thẳng vào file bên trong module khác | Chỉ import qua cửa công khai `index.ts` |
-| Đổi contract giữa chừng khi đang code | Chốt contract trước, đổi thì làm ADR |
-| Tắt rule lint hoặc bỏ test để làm xanh cổng gác | Sửa nguyên nhân, nếu phải tắt thì ghi lý do ngay tại chỗ |
-| Sửa tay code sinh tự động | Sửa spec rồi sinh lại |
-| Sửa migration đã merge | Thêm migration mới |
-| Copy kiểu dữ liệu giữa frontend và backend | Package chia sẻ hoặc client sinh từ spec |
-| Secret trong file môi trường ở staging hoặc production | Secret manager, nạp lúc runtime |
-| Không có log có cấu trúc và healthcheck | Thêm ngay từ ngày đầu |
-| Hai agent cùng sửa một file dùng chung cùng lúc | Worktree riêng, điểm ghép mỗi dòng độc lập, mục 6 |
-| Kết thúc phiên mà không commit và không ghi trạng thái | Quy trình bàn giao ở mục 8 |
-| Refactor lớn gán kèm feature trong một PR | Tách PR |
-| Đánh số lại hoặc xoá slice/task khi đổi phạm vi | ID bất biến, chỉ thêm dòng mới, mục 17 |
-| Sửa lại nội dung task đã ship để "cho khớp" hiện tại | Giữ lịch sử, tạo slice/task sửa riêng |
-| Code trước rồi mới cập nhật tài liệu phạm vi | Cập nhật phạm vi + sổ thay đổi trước, rồi mới code |
-| Xoá cứng bảng dữ liệu khi bỏ tính năng | Đánh dấu deprecated, migration đảo ngược được, giữ dữ liệu lịch sử |
+| Anti-pattern                                           | Thay bằng                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------ |
+| Giữ tiến độ trong đầu hoặc trong ngữ cảnh chat         | Ghi vào mục Trạng thái tiến độ và commit                           |
+| Đập đi tái cấu trúc repo đã có quy ước                 | Trường hợp A ở mục 1.5, bổ sung dần theo task                      |
+| Import thẳng vào file bên trong module khác            | Chỉ import qua cửa công khai `index.ts`                            |
+| Đổi contract giữa chừng khi đang code                  | Chốt contract trước, đổi thì làm ADR                               |
+| Tắt rule lint hoặc bỏ test để làm xanh cổng gác        | Sửa nguyên nhân, nếu phải tắt thì ghi lý do ngay tại chỗ           |
+| Sửa tay code sinh tự động                              | Sửa spec rồi sinh lại                                              |
+| Sửa migration đã merge                                 | Thêm migration mới                                                 |
+| Copy kiểu dữ liệu giữa frontend và backend             | Package chia sẻ hoặc client sinh từ spec                           |
+| Secret trong file môi trường ở staging hoặc production | Secret manager, nạp lúc runtime                                    |
+| Không có log có cấu trúc và healthcheck                | Thêm ngay từ ngày đầu                                              |
+| Hai agent cùng sửa một file dùng chung cùng lúc        | Worktree riêng, điểm ghép mỗi dòng độc lập, mục 6                  |
+| Kết thúc phiên mà không commit và không ghi trạng thái | Quy trình bàn giao ở mục 8                                         |
+| Refactor lớn gán kèm feature trong một PR              | Tách PR                                                            |
+| Đánh số lại hoặc xoá slice/task khi đổi phạm vi        | ID bất biến, chỉ thêm dòng mới, mục 17                             |
+| Sửa lại nội dung task đã ship để "cho khớp" hiện tại   | Giữ lịch sử, tạo slice/task sửa riêng                              |
+| Code trước rồi mới cập nhật tài liệu phạm vi           | Cập nhật phạm vi + sổ thay đổi trước, rồi mới code                 |
+| Xoá cứng bảng dữ liệu khi bỏ tính năng                 | Đánh dấu deprecated, migration đảo ngược được, giữ dữ liệu lịch sử |
 
 ---
 
@@ -353,15 +353,15 @@ Một task chỉ được coi là xong khi đủ tất cả:
 
 ### 17.1 Quy tắc đánh số
 
-| Tình huống | Cách làm | Ví dụ |
-| --- | --- | --- |
-| Tính năng mới, làm sau cùng | Cấp ID tiếp theo | Slice 9, Slice 10 |
-| Tính năng mới phải chèn giữa | Dùng số thập phân, không đẩy các mục sau | Slice 4.5 |
-| Mục công việc quá to | Giữ số gốc, thêm hậu tố chữ | Slice 5 → 5a, 5b |
-| Thêm/sửa task ở mục **chưa bắt đầu** | Sửa trực tiếp | thêm 3.4 |
-| Thêm/sửa task ở mục **đã xong** | Giữ nguyên làm lịch sử; tạo mục sửa riêng kèm dòng `Thay đổi mục gốc: <id>` | Slice 2 → Slice 2.1 |
-| Bỏ tính năng chưa code | Đổi trạng thái `Đã huỷ`  • ghi lý do, giữ nguyên dòng | — |
-| Bỏ tính năng đã code | Tạo mục retire riêng với checklist gỡ bỏ | Slice 11 — Retire X |
+| Tình huống                           | Cách làm                                                                    | Ví dụ               |
+| ------------------------------------ | --------------------------------------------------------------------------- | ------------------- |
+| Tính năng mới, làm sau cùng          | Cấp ID tiếp theo                                                            | Slice 9, Slice 10   |
+| Tính năng mới phải chèn giữa         | Dùng số thập phân, không đẩy các mục sau                                    | Slice 4.5           |
+| Mục công việc quá to                 | Giữ số gốc, thêm hậu tố chữ                                                 | Slice 5 → 5a, 5b    |
+| Thêm/sửa task ở mục **chưa bắt đầu** | Sửa trực tiếp                                                               | thêm 3.4            |
+| Thêm/sửa task ở mục **đã xong**      | Giữ nguyên làm lịch sử; tạo mục sửa riêng kèm dòng `Thay đổi mục gốc: <id>` | Slice 2 → Slice 2.1 |
+| Bỏ tính năng chưa code               | Đổi trạng thái `Đã huỷ` • ghi lý do, giữ nguyên dòng                        | —                   |
+| Bỏ tính năng đã code                 | Tạo mục retire riêng với checklist gỡ bỏ                                    | Slice 11 — Retire X |
 
 ### 17.2 Ba loại thay đổi
 
@@ -375,22 +375,22 @@ Một task chỉ được coi là xong khi đủ tất cả:
 
 **B. Sửa tính năng đã có trong danh sách**
 
-| Trạng thái | Được phép | Không được phép |
-| --- | --- | --- |
-| Chưa bắt đầu | Sửa tự do nội dung task, thêm/bỏ/đổi thứ tự | Đổi ID |
-| Đang làm | Chỉ sửa phần chưa code; ghi lý do vào sổ thay đổi | Mở rộng phạm vi ngoài contract đã chốt (mục 5) |
-| Đã xong | Giữ nguyên làm lịch sử | Sửa lại nội dung task đã ship |
+| Trạng thái   | Được phép                                         | Không được phép                                |
+| ------------ | ------------------------------------------------- | ---------------------------------------------- |
+| Chưa bắt đầu | Sửa tự do nội dung task, thêm/bỏ/đổi thứ tự       | Đổi ID                                         |
+| Đang làm     | Chỉ sửa phần chưa code; ghi lý do vào sổ thay đổi | Mở rộng phạm vi ngoài contract đã chốt (mục 5) |
+| Đã xong      | Giữ nguyên làm lịch sử                            | Sửa lại nội dung task đã ship                  |
 
 **C. Xóa tính năng**
 
 - **Chưa code:** đổi trạng thái `Đã huỷ` + ghi lý do. Không xoá dòng để còn dấu vết quyết định.
 - **Đã code:** tạo mục retire riêng, checklist bắt buộc:
-    - [ ]  Xoá entry point và route/UI dẫn vào tính năng.
-    - [ ]  Xoá endpoint khỏi spec API, sinh lại client (mục 12).
-    - [ ]  Xoá module và cửa công khai không còn dùng, kiểm tra không còn import.
-    - [ ]  Xoá cấu hình, feature flag, quyền và chuỗi hiển thị không còn dùng.
-    - [ ]  **Không xoá cứng bảng dữ liệu nghiệp vụ** — đánh dấu deprecated, migration đảo ngược được, giữ dữ liệu lịch sử (mục 11).
-    - [ ]  Ghi ADR: lý do bỏ và cách xử lý dữ liệu cũ.
+  - [ ] Xoá entry point và route/UI dẫn vào tính năng.
+  - [ ] Xoá endpoint khỏi spec API, sinh lại client (mục 12).
+  - [ ] Xoá module và cửa công khai không còn dùng, kiểm tra không còn import.
+  - [ ] Xoá cấu hình, feature flag, quyền và chuỗi hiển thị không còn dùng.
+  - [ ] **Không xoá cứng bảng dữ liệu nghiệp vụ** — đánh dấu deprecated, migration đảo ngược được, giữ dữ liệu lịch sử (mục 11).
+  - [ ] Ghi ADR: lý do bỏ và cách xử lý dữ liệu cũ.
 
 ### 17.3 Checklist đánh giá ảnh hưởng (làm trước khi chấp nhận thay đổi)
 
@@ -406,21 +406,21 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR** theo 
 
 ### 17.4 Trạng thái được phép dùng
 
-| Trạng thái | Ý nghĩa |
-| --- | --- |
-| Chưa bắt đầu | Đã lên kế hoạch, chưa có code |
-| Đang làm | Đã mở nhánh/PR |
-| Xong | Đạt đủ Definition of Done ở mục 15 |
+| Trạng thái    | Ý nghĩa                                |
+| ------------- | -------------------------------------- |
+| Chưa bắt đầu  | Đã lên kế hoạch, chưa có code          |
+| Đang làm      | Đã mở nhánh/PR                         |
+| Xong          | Đạt đủ Definition of Done ở mục 15     |
 | Xong (còn nợ) | Chạy được nhưng còn nợ kỹ thuật đã ghi |
-| Hoãn | Có giá trị nhưng lùi lịch, ghi lý do |
-| Đã huỷ | Quyết định không làm, ghi lý do |
-| Đã thay thế | Bị mục khác thay, ghi rõ ID thay thế |
+| Hoãn          | Có giá trị nhưng lùi lịch, ghi lý do   |
+| Đã huỷ        | Quyết định không làm, ghi lý do        |
+| Đã thay thế   | Bị mục khác thay, ghi rõ ID thay thế   |
 
 ### 17.5 Sổ thay đổi phạm vi (bắt buộc ghi, chỉ thêm dòng mới)
 
-| Ngày | Loại | ID liên quan | Nội dung thay đổi | Lý do | ADR |
-| --- | --- | --- | --- | --- | --- |
-| *…* | *Thêm / Sửa / Huỷ / Hoãn / Chẻ / Thay thế* | *…* | *…* | *…* | *…* |
+| Ngày | Loại                                       | ID liên quan | Nội dung thay đổi | Lý do | ADR |
+| ---- | ------------------------------------------ | ------------ | ----------------- | ----- | --- |
+| _…_  | _Thêm / Sửa / Huỷ / Hoãn / Chẻ / Thay thế_ | _…_          | _…_               | _…_   | _…_ |
 
 ### 17.6 Thứ tự thao tác bắt buộc
 
@@ -441,31 +441,40 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 </aside>
 
-**Quyết định cấu trúc repo (mục 1.5):** [ ] Trường hợp A (theo cấu trúc sẵn có) — [ ] Trường hợp B (áp sơ đồ mục 2)
+**Quyết định cấu trúc repo (mục 1.5):** [ ] Trường hợp A (theo cấu trúc sẵn có) — [x] Trường hợp B (áp cấu trúc monorepo theo profile Web App)
 
-**Profile công nghệ áp dụng (mục 0.0 và 1):** [ ] Web app FE+BE — [ ] Không áp profile nào
+**Profile công nghệ áp dụng (mục 0.0 và 1):** [x] Web app FE+BE — [ ] Không áp profile nào
 
-**Cổng gác thực tế của repo này (mục 4):** lệnh ... — đã xác minh chạy được: [ ] cục bộ [ ] CI
+**Cổng gác thực tế của repo này (mục 4):** `pnpm check` và `pnpm contracts:check` — đã xác minh chạy được: [ ] cục bộ [ ] CI
 
 ### Task hiện tại
 
-[Mô tả task đang làm]
+Slice 0 — Walking skeleton, PR #1 (`feature/slice-0` -> `main`), Notion Review Pro Round 3 hoàn tất, State: `READY_TO_MERGE`.
 
 ### Đã xong
 
-- [ ]  ...
+- [x] Đọc và chốt bộ tài liệu hướng dẫn gốc, profile Web App và Vertical Slice.
+- [x] Xác nhận Slice 0 gồm bốn task 0.1–0.4.
+- [x] Task 0.1 — dựng monorepo pnpm/Turbo, cấu hình Node 24, Docker Compose và quality scripts.
+- [x] Task 0.2 — chốt OpenAPI cho health endpoints và tạo package API client.
+- [x] Task 0.3 — thêm PostgreSQL/Kysely, migration reversible `app_meta` và Testcontainers test.
+- [x] Task 0.4 — thêm UI React/MUI/i18next với nút gọi `GET /health` và component test.
+- [x] Fix review findings B001 & B002 (decouple DB readiness check from seed row, add structured logging, configure Fastify trustProxy and rate-limit probe allowList).
+- [x] Fix review finding B003 (default `trustProxy` to `false` in `apps/api/src/app.ts`, add safe fallback rate-limit `keyGenerator`).
+- [x] Chạy toàn bộ quality gate `pnpm check` pass 100% (format, lint 0 warnings, typecheck, vitest unit + integration tests, build, redocly lint, contract check).
+- [x] Push commit fix `03eb0e5` lên `origin feature/slice-0`.
+- [x] Notion Review Round 3: Verdict `APPROVED_TO_MERGE`, 0 blocker, `merge_decision: READY`.
+- [x] Đăng review comment kèm provenance và chuyển state sang `READY_TO_MERGE` trên PR #1 (chế độ `merge_mode=ready_only`).
 
 ### Đang làm dở
 
-- [ ]  [Hàm/file đang viết] — vị trí: [file:dòng] — còn thiếu: [chi tiết]
+- [ ] Đợi người dùng xác nhận để merge PR #1 vào `main`.
 
 ### Bước tiếp theo
 
-- [ ]  ...
+- [ ] Nhận xác nhận từ người dùng và merge PR #1 vào `main`.
+- [ ] Chuyển sang Slice 1 (Auth feature).
 
-### Ghi chú / lỗi đang gặp
-
-- ...
 
 ---
 
@@ -477,18 +486,26 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 # AGENTS.md — <tên feature>
 
 ## Bối cảnh feature
+
 - Nhiệm vụ: [1-2 dòng]
 - Phụ thuộc: [module nào, qua cửa công khai nào]
 
 ## Contract (cửa công khai — chốt trước, không đổi giữa chừng)
+
 - [liệt kê hàm/interface export ra ngoài]
 
 ## Trạng thái tiến độ
+
 ### Đã xong
+
 - [ ] ...
+
 ### Đang làm dở
+
 - [ ] ...
+
 ### Bước tiếp theo
+
 - [ ] ...
 ```
 
