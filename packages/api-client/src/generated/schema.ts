@@ -205,6 +205,11 @@ export interface components {
             unitName: string;
             /** Format: date-time */
             createdAt: string;
+            stockLevels: {
+                warehouseId: string;
+                warehouseCode: string;
+                quantity: number;
+            }[];
         };
         ProductListResponse: {
             items: components["schemas"]["Product"][];

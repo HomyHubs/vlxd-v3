@@ -6,6 +6,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { AppHeader, LoginPage, ProtectedRoute } from "./features/auth/index.js";
 import { SystemHealthCard } from "./features/health/index.js";
 import { ProductsPage } from "./features/products/index.js";
+import { WarehousesPage } from "./features/warehouses/index.js";
 
 function DashboardLayout() {
   const { t } = useTranslation();
@@ -43,6 +44,7 @@ export function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardLayout />} />
             <Route path="/products" element={<ProductsPage />} />
+            <Route path="/warehouses" element={<WarehousesPage />} />
           </Route>
           <Route path="*" element={<LoginPage />} />
         </Routes>

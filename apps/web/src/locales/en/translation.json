@@ -42,6 +42,21 @@
       "thung": "Box"
     }
   },
+  "warehouses": {
+    "title": "Warehouses",
+    "description": "Manage warehouses and view product stock by warehouse.",
+    "add": "Add warehouse",
+    "code": "Warehouse code",
+    "name": "Warehouse name",
+    "cancel": "Cancel",
+    "save": "Save",
+    "loadError": "Unable to load warehouses.",
+    "errors": {
+      "WAREHOUSE_LIMIT_REACHED": "The Free plan allows up to 3 warehouses.",
+      "WAREHOUSE_CODE_EXISTS": "This warehouse code already exists.",
+      "WAREHOUSE_CREATE_FAILED": "Unable to create the warehouse."
+    }
+  },
   "auth": {
     "loginTitle": "Sign In",
     "loginSubtitle": "Enter your email and password to access the dashboard",

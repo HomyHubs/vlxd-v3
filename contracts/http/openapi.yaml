@@ -350,7 +350,7 @@ components:
     Product:
       type: object
       additionalProperties: false
-      required: [id, sku, name, unitCode, unitName, createdAt]
+      required: [id, sku, name, unitCode, unitName, createdAt, stockLevels]
       properties:
         id: { type: string }
         sku: { type: string }
@@ -358,6 +358,16 @@ components:
         unitCode: { $ref: "#/components/schemas/UnitCode" }
         unitName: { type: string }
         createdAt: { type: string, format: date-time }
+        stockLevels:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [warehouseId, warehouseCode, quantity]
+            properties:
+              warehouseId: { type: string }
+              warehouseCode: { type: string }
+              quantity: { type: integer, minimum: 0 }
     ProductListResponse:
       type: object
       additionalProperties: false

@@ -42,6 +42,21 @@
       "thung": "Thùng"
     }
   },
+  "warehouses": {
+    "title": "Kho",
+    "description": "Quản lý kho và xem tồn sản phẩm theo từng kho.",
+    "add": "Thêm kho",
+    "code": "Mã kho",
+    "name": "Tên kho",
+    "cancel": "Huỷ",
+    "save": "Lưu",
+    "loadError": "Không thể tải danh sách kho.",
+    "errors": {
+      "WAREHOUSE_LIMIT_REACHED": "Gói Free chỉ cho phép tối đa 3 kho.",
+      "WAREHOUSE_CODE_EXISTS": "Mã kho đã tồn tại.",
+      "WAREHOUSE_CREATE_FAILED": "Không thể tạo kho."
+    }
+  },
   "auth": {
     "loginTitle": "Đăng nhập hệ thống",
     "loginSubtitle": "Nhập email và mật khẩu để truy cập trang quản lý",

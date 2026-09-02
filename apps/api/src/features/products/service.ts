@@ -39,8 +39,9 @@ function toProduct(row: {
   unitCode: Product["unitCode"];
   unitName: string;
   createdAt: Date;
+  stockLevels?: Product["stockLevels"];
 }): Product {
-  return { ...row, createdAt: row.createdAt.toISOString() };
+  return { ...row, createdAt: row.createdAt.toISOString(), stockLevels: row.stockLevels ?? [] };
 }
 
 export function createProductService(dependencies: ProductServiceDependencies): ProductService {
@@ -85,10 +86,42 @@ export function createProductService(dependencies: ProductServiceDependencies): 
           .execute(),
         countQuery.executeTakeFirstOrThrow(),
       ]);
+      const stockRows = rows.length
+        ? await db
+            .selectFrom("stock_levels")
+            .innerJoin("warehouses", "warehouses.id", "stock_levels.warehouse_id")
+            .select([
+              "stock_levels.product_id as productId",
+              "stock_levels.quantity as quantity",
+              "warehouses.id as warehouseId",
+              "warehouses.code as warehouseCode",
+            ])
+            .where(
+              "stock_levels.product_id",
+              "in",
+              rows.map((row) => row.id),
+            )
+            .where("warehouses.tenant_id", "=", tenantId)
+            .execute()
+        : [];
+      const stockByProduct = new Map<string, Product["stockLevels"]>();
+      for (const stock of stockRows) {
+        const levels = stockByProduct.get(stock.productId) ?? [];
+        levels.push({
+          warehouseId: stock.warehouseId,
+          warehouseCode: stock.warehouseCode,
+          quantity: stock.quantity,
+        });
+        stockByProduct.set(stock.productId, levels);
+      }
 
       return {
         items: rows.map((row) =>
-          toProduct({ ...row, unitCode: row.unitCode as Product["unitCode"] }),
+          toProduct({
+            ...row,
+            unitCode: row.unitCode as Product["unitCode"],
+            stockLevels: stockByProduct.get(row.id) ?? [],
+          }),
         ),
         page: query.page,
         pageSize: query.pageSize,
@@ -138,7 +171,12 @@ export function createProductService(dependencies: ProductServiceDependencies): 
             .executeTakeFirstOrThrow();
           return {
             success: true,
-            product: toProduct({ ...row, unitCode: input.unitCode, unitName: unit.name }),
+            product: toProduct({
+              ...row,
+              unitCode: input.unitCode,
+              unitName: unit.name,
+              stockLevels: [],
+            }),
           };
         } catch (error: unknown) {
           if (

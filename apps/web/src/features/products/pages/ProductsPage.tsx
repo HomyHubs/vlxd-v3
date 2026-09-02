@@ -23,6 +23,7 @@ import { CreateProductRequestSchema } from "@vlxd/shared";
 
 import { AppHeader } from "../../auth/index.js";
 import { useCreateProduct, useProducts } from "../api/useProducts.js";
+import { useWarehouses } from "../../warehouses/index.js";
 
 const UNIT_CODES: UnitCode[] = ["vien", "bao", "tan", "kg", "m3", "cay", "tam", "thung"];
 
@@ -32,6 +33,7 @@ export function ProductsPage() {
   const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState<MRT_PaginationState>({ pageIndex: 0, pageSize: 20 });
   const products = useProducts(pagination.pageIndex + 1, pagination.pageSize, search);
+  const warehouses = useWarehouses();
   const createProduct = useCreateProduct();
   const {
     control,
@@ -48,8 +50,14 @@ export function ProductsPage() {
       { accessorKey: "sku", header: t("products.sku") },
       { accessorKey: "name", header: t("products.name") },
       { accessorKey: "unitName", header: t("products.unit") },
+      ...((warehouses.data?.items ?? []).map((warehouse) => ({
+        id: `stock-${warehouse.id}`,
+        header: warehouse.code,
+        accessorFn: (product: Product) =>
+          product.stockLevels.find((level) => level.warehouseId === warehouse.id)?.quantity ?? 0,
+      })) satisfies MRT_ColumnDef<Product>[]),
     ],
-    [t],
+    [t, warehouses.data?.items],
   );
 
   const table = useMaterialReactTable({

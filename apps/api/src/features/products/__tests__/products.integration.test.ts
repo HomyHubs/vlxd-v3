@@ -40,15 +40,21 @@ describe("products integration", () => {
       resolve(process.cwd(), "../../db/migrations/202609020002_create_product_tables.sql"),
       "utf8",
     );
+    const inventorySql = await readFile(
+      resolve(process.cwd(), "../../db/migrations/202609020003_create_inventory_tables.sql"),
+      "utf8",
+    );
     const seedSql = await readFile(resolve(process.cwd(), "../../db/seeds/dev.sql"), "utf8");
     const [authUp] = upAndDown(authSql);
     const [productUp, productDown] = upAndDown(productSql);
+    const [inventoryUp, inventoryDown] = upAndDown(inventorySql);
     const pool = createDatabasePool(started.getConnectionUri());
     const database = createDatabase(pool);
 
     await pool.query(authUp);
     await pool.query(productUp);
     await pool.query(seedSql);
+    await pool.query(inventoryUp);
     await pool.query(`
       INSERT INTO tenants (id, name, code, plan)
       VALUES ('tenant-dev-002', 'Second Store', 'second-store', 'free');
@@ -153,6 +159,7 @@ describe("products integration", () => {
       const productCount = await pool.query<{ count: string }>("SELECT count(*) FROM products");
       expect(productCount.rows[0]?.count).toBe("2");
 
+      await pool.query(inventoryDown);
       await pool.query(productDown);
       const tables = await pool.query<{ products: string | null; units: string | null }>(
         "select to_regclass('public.products') as products, to_regclass('public.units') as units",

@@ -99,7 +99,7 @@ describe("inventory migration and stock level", () => {
       const server = await buildApp({
         authService: createAuthService({ database }),
         warehouseService: createWarehouseService({ database }),
-        checkDatabase: async () => true,
+        checkDatabase: () => Promise.resolve(true),
         logger: false,
         secureCookies: false,
       });

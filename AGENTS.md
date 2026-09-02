@@ -512,3 +512,5 @@ Slice 3 — Kho & tồn — chưa bắt đầu. Phạm vi chi tiết và trạng
 ```
 
 [Web App Template — Chỉ dẫn vận hành cho AI Coding Agent](https://app.notion.com/p/Web-App-Template-Ch-d-n-v-n-h-nh-cho-AI-Coding-Agent-6a8c6bef3f2b47e795ba8258bf3f42fc?pvs=21)
+
+Slice 3 status (2026-09-02): Tasks 3.1-3.3 implemented on feature/slice-3; generated client and final gate remain before review.

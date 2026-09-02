@@ -9,6 +9,13 @@ export const ProductSchema = z.object({
   unitCode: UnitCodeSchema,
   unitName: z.string(),
   createdAt: z.string().datetime(),
+  stockLevels: z.array(
+    z.object({
+      warehouseId: z.string(),
+      warehouseCode: z.string(),
+      quantity: z.number().int().nonnegative(),
+    }),
+  ),
 });
 
 export const ProductListQuerySchema = z.object({
