@@ -450,7 +450,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 2 — Sản phẩm: xem và tạo — đang review tại PR #5. Phạm vi chi tiết và trạng thái bàn giao nằm tại `docs/tasks/CURRENT.md`.
+Slice 3 — Kho & tồn — chưa bắt đầu. Phạm vi chi tiết và trạng thái bàn giao nằm tại `docs/tasks/CURRENT.md`.
 
 ### Đã xong
 
@@ -471,11 +471,11 @@ Slice 2 — Sản phẩm: xem và tạo — đang review tại PR #5. Phạm vi 
 - [x] Task 2.4 — giới hạn gói Free tối đa 80 sản phẩm, lỗi `PRODUCT_LIMIT_REACHED` và thông báo i18n trên UI.
 - [x] Hoàn tất cổng gác cục bộ (`pnpm check` PASS ngày 2026-09-02).
 - [x] Commit `a59dfbe` và mở PR #5 vào `dev`.
-- [ ] Hoàn tất review và merge PR #5.
+- [x] Review Agent B vòng 2 và squash-merge PR #5 vào `dev` (`07f1476`).
 
 ### Bước tiếp theo
 
-- [ ] Theo dõi review và xử lý feedback tại PR #5; chỉ cập nhật Slice 3 sau khi merge.
+- [ ] Bắt đầu Slice 3 — Kho & tồn.
 
 ---
 
