@@ -1,5 +1,6 @@
 import { buildApp } from "./app.js";
 import { createAuthService } from "./features/auth/index.js";
+import { createProductService } from "./features/products/index.js";
 import { checkDatabase, createDatabase, createDatabasePool } from "./platform/database.js";
 import { parseEnvironment } from "./platform/environment.js";
 
@@ -7,9 +8,11 @@ const environment = parseEnvironment(process.env);
 const pool = createDatabasePool(environment.DATABASE_URL);
 const database = createDatabase(pool);
 const authService = createAuthService({ database });
+const productService = createProductService({ database });
 
 const server = await buildApp({
   authService,
+  productService,
   checkDatabase: (logger) => checkDatabase(database, logger),
   logLevel: environment.LOG_LEVEL,
   secureCookies: environment.COOKIE_SECURE,

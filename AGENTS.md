@@ -446,7 +446,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 **Profile công nghệ áp dụng (mục 0.0 và 1):** [x] Web app FE+BE — [ ] Không áp profile nào
 
-**Cổng gác thực tế của repo này (mục 4):** `pnpm check` và `pnpm contracts:check` — đã xác minh chạy được: [ ] cục bộ [ ] CI
+**Cổng gác thực tế của repo này (mục 4):** `pnpm check` và `pnpm contracts:check` — đã xác minh chạy được: [x] cục bộ [ ] CI (2026-09-02)
 
 ### Task hiện tại
 
@@ -465,14 +465,16 @@ Slice 2 — Sản phẩm: xem và tạo — đang làm, chưa mở PR. Phạm vi
 
 ### Đang làm dở
 
-- [ ] Task 2.1 — migration thuận nghịch bảng `product`, `unit` và dev seed danh mục đơn vị chuẩn.
-- [ ] Task 2.2 — API contract-first `GET /products` (phân trang, tìm kiếm) và `POST /products`.
-- [ ] Task 2.3 — trang `/products` dùng Material React Table và Dialog "Thêm sản phẩm" dùng react-hook-form + Zod.
-- [ ] Task 2.4 — giới hạn gói Free tối đa 80 sản phẩm, lỗi `PRODUCT_LIMIT_REACHED` và thông báo i18n trên UI.
+- [x] Task 2.1 — migration thuận nghịch bảng `products`, `units` và seed danh mục đơn vị chuẩn.
+- [x] Task 2.2 — API contract-first `GET /products` (phân trang, tìm kiếm) và `POST /products`.
+- [x] Task 2.3 — trang `/products` dùng Material React Table và Dialog "Thêm sản phẩm" dùng react-hook-form + Zod.
+- [x] Task 2.4 — giới hạn gói Free tối đa 80 sản phẩm, lỗi `PRODUCT_LIMIT_REACHED` và thông báo i18n trên UI.
+- [x] Hoàn tất cổng gác cục bộ (`pnpm check` PASS ngày 2026-09-02).
+- [ ] Commit, review và PR vào `dev`.
 
 ### Bước tiếp theo
 
-- [ ] Bắt đầu Task 2.1 trên nhánh `feature/slice-2`; mở PR với base `dev` sau khi toàn bộ cổng gác xanh.
+- [ ] Commit `feature/slice-2`, rồi mở PR với base `dev` để review.
 
 ---
 

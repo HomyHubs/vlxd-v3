@@ -106,6 +106,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List products for the authenticated tenant */
+        get: operations["listProducts"];
+        put?: never;
+        /** Create a product for the authenticated tenant */
+        post: operations["createProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -157,6 +175,33 @@ export interface components {
         };
         AuthErrorResponse: {
             code: string;
+            message: string;
+        };
+        /** @enum {string} */
+        UnitCode: "vien" | "bao" | "tan" | "kg" | "m3" | "cay" | "tam" | "thung";
+        Product: {
+            id: string;
+            sku: string;
+            name: string;
+            unitCode: components["schemas"]["UnitCode"];
+            unitName: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ProductListResponse: {
+            items: components["schemas"]["Product"][];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        CreateProductRequest: {
+            sku: string;
+            name: string;
+            unitCode: components["schemas"]["UnitCode"];
+        };
+        ProductErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "PRODUCT_LIMIT_REACHED" | "PRODUCT_SKU_EXISTS" | "UNIT_NOT_FOUND";
             message: string;
         };
     };
@@ -337,6 +382,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthErrorResponse"];
+                };
+            };
+        };
+    };
+    listProducts: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated product list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductErrorResponse"];
+                };
+            };
+        };
+    };
+    createProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Product created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Product"];
+                };
+            };
+            /** @description Invalid input or unknown unit */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductErrorResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductErrorResponse"];
+                };
+            };
+            /** @description SKU already exists for the tenant */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductErrorResponse"];
+                };
+            };
+            /** @description Free plan product limit reached */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductErrorResponse"];
                 };
             };
         };

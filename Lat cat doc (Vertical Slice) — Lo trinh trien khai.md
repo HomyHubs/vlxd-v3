@@ -199,7 +199,7 @@ Cách nghiệm thu:
 | -------------------- | ------------ | ----------------------- | ----------- |
 | 0 — Walking skeleton | Đang làm     | Nhánh `feature/slice-0` | —           |
 | 1 — Đăng nhập        | Đang làm     | Nhánh `feature/slice-1` | Chưa quên mật khẩu, chưa 2FA, chưa mời user |
-| 2 — Sản phẩm         | Chưa bắt đầu | —                       | —                                           |
+| 2 — Sản phẩm         | Đang làm     | Nhánh `feature/slice-2` | —                                           |
 | 3 — Kho & tồn        | Chưa bắt đầu | —                       | —                                           |
 | 4 — Nhập kho         | Chưa bắt đầu | —                       | —                                           |
 | 5 — Đơn hàng         | Chưa bắt đầu | —                       | —                                           |

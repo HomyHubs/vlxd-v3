@@ -1,9 +1,11 @@
-import { Container, CssBaseline, Stack, Typography } from "@mui/material";
+import { Button, Container, CssBaseline, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 
 import { AppHeader, LoginPage, ProtectedRoute } from "./features/auth/index.js";
 import { SystemHealthCard } from "./features/health/index.js";
+import { ProductsPage } from "./features/products/index.js";
 
 function DashboardLayout() {
   const { t } = useTranslation();
@@ -22,6 +24,9 @@ function DashboardLayout() {
             </Typography>
           </Stack>
           <SystemHealthCard />
+          <Button component={RouterLink} to="/products" variant="contained">
+            {t("products.open")}
+          </Button>
         </Stack>
       </Container>
     </>
@@ -37,6 +42,7 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardLayout />} />
+            <Route path="/products" element={<ProductsPage />} />
           </Route>
           <Route path="*" element={<LoginPage />} />
         </Routes>

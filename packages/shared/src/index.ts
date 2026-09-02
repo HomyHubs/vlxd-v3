@@ -19,3 +19,18 @@ export {
   type AuthUser,
   type LoginRequest,
 } from "./auth.js";
+
+export {
+  CreateProductRequestSchema,
+  ProductErrorResponseSchema,
+  ProductListQuerySchema,
+  ProductListResponseSchema,
+  ProductSchema,
+  UnitCodeSchema,
+  type CreateProductRequest,
+  type Product,
+  type ProductErrorResponse,
+  type ProductListQuery,
+  type ProductListResponse,
+  type UnitCode,
+} from "./product.js";

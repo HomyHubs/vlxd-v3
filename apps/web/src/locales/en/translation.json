@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Construction Materials Management",
-    "slice": "Slice 1 · Real Authentication"
+    "slice": "Slice 2 · View and create products"
   },
   "health": {
     "title": "System check",
@@ -11,6 +11,36 @@
     "success": "The system is operating normally",
     "databaseUnavailable": "The database is unavailable",
     "unknownError": "The system check failed"
+  },
+  "products": {
+    "title": "Products",
+    "description": "View and create products for your store.",
+    "open": "Open product catalog",
+    "add": "Add product",
+    "search": "Search by SKU or name",
+    "sku": "Product code",
+    "name": "Product name",
+    "unit": "Unit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "loadError": "Unable to load products.",
+    "errors": {
+      "PRODUCT_LIMIT_REACHED": "The Free plan allows up to 80 products.",
+      "PRODUCT_SKU_EXISTS": "This product code already exists.",
+      "UNIT_NOT_FOUND": "The selected unit does not exist.",
+      "PRODUCT_CREATE_FAILED": "Unable to create the product. Please try again."
+    },
+    "units": {
+      "vien": "Piece",
+      "bao": "Bag",
+      "tan": "Tonne",
+      "kg": "Kilogram",
+      "m3": "Cubic metre",
+      "cay": "Length",
+      "tam": "Sheet",
+      "thung": "Box"
+    }
   },
   "auth": {
     "loginTitle": "Sign In",
