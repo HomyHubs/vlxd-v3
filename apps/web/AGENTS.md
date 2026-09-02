@@ -9,6 +9,7 @@
 
 - Slice 0 cung cấp `SystemHealthCard` qua `src/features/health/index.ts`.
 - Slice 1 cung cấp `LoginPage`, `ProtectedRoute`, `AppHeader`, `useCurrentUser`, `useLogin`, `useLogout` qua `src/features/auth/index.ts`.
+- Slice 2 cung cấp `ProductsPage`, `useProducts`, `useCreateProduct` qua `src/features/products/index.ts`.
 - UI gọi API qua generated client; không truy cập PostgreSQL/Supabase trực tiếp.
 
 ## Trạng thái tiến độ
@@ -21,11 +22,13 @@
 - [x] Trang `/login` với react-hook-form + Zod resolver.
 - [x] Route guard `ProtectedRoute` và component `AppHeader` hiển thị thông tin user.
 - [x] Component tests cho health, login, header và route guard.
+- [x] Trang `/products`, bảng Material React Table, tìm kiếm và dialog tạo sản phẩm có i18n vi/en.
+- [x] Component test cho luồng mở dialog tạo sản phẩm.
 
 ### Đang làm dở
 
-- [ ] Hoàn tất Slice 1, chuẩn bị cho Slice 2.
+- [ ] Hoàn tất gate và review Slice 2.
 
 ### Bước tiếp theo
 
-- [ ] Hiện thực UI cho Slice 2 — Sản phẩm (xem và tạo).
+- [ ] Mở PR Slice 2 vào `dev` sau khi gate xanh.

@@ -20,6 +20,7 @@
     "@vlxd/api-client": "workspace:*",
     "@vlxd/shared": "workspace:*",
     "i18next": "^25.0.0",
+    "material-react-table": "^3.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.87.0",

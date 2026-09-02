@@ -9,7 +9,8 @@
 
 - Public route Slice 0: `GET /health`, `GET /healthz`, `GET /readyz`.
 - Public route Slice 1: `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`.
-- Module khác chỉ import health qua `src/features/health/index.ts` và auth qua `src/features/auth/index.ts`.
+- Public route Slice 2: `GET /products`, `POST /products`.
+- Module khác chỉ import health, auth và products qua `index.ts` của từng feature.
 
 ## Trạng thái tiến độ
 
@@ -21,11 +22,13 @@
 - [x] Auth migration `tenants`, `users`, `sessions` + dev seed 1 tenant và 1 user Chủ cửa hàng (argon2id).
 - [x] Auth routes (`/auth/login`, `/auth/logout`, `/auth/me`) với opaque session cookie.
 - [x] Unit test và integration test PostgreSQL thật cho auth và health.
+- [x] Products service/routes scope theo tenant, phân trang/tìm kiếm, tạo sản phẩm và giới hạn gói Free.
+- [x] Unit test route và integration test PostgreSQL thật cho products.
 
 ### Đang làm dở
 
-- [ ] Hoàn tất Slice 1, chuẩn bị cho Slice 2.
+- [ ] Hoàn tất gate và review Slice 2.
 
 ### Bước tiếp theo
 
-- [ ] Hiện thực Slice 2 — Sản phẩm (xem và tạo).
+- [ ] Mở PR Slice 2 vào `dev` sau khi gate xanh.

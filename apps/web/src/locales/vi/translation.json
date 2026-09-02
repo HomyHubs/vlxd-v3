@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Quản lý Vật liệu Xây dựng",
-    "slice": "Slice 1 · Đăng nhập thật"
+    "slice": "Slice 2 · Sản phẩm: xem và tạo"
   },
   "health": {
     "title": "Kiểm tra hệ thống",
@@ -11,6 +11,36 @@
     "success": "Hệ thống hoạt động bình thường",
     "databaseUnavailable": "Không thể kết nối cơ sở dữ liệu",
     "unknownError": "Không thể kiểm tra hệ thống"
+  },
+  "products": {
+    "title": "Sản phẩm",
+    "description": "Xem và tạo sản phẩm của cửa hàng.",
+    "open": "Mở danh mục sản phẩm",
+    "add": "Thêm sản phẩm",
+    "search": "Tìm theo mã hoặc tên",
+    "sku": "Mã sản phẩm",
+    "name": "Tên sản phẩm",
+    "unit": "Đơn vị",
+    "cancel": "Huỷ",
+    "save": "Lưu",
+    "saving": "Đang lưu…",
+    "loadError": "Không thể tải danh sách sản phẩm.",
+    "errors": {
+      "PRODUCT_LIMIT_REACHED": "Gói Free chỉ cho phép tối đa 80 sản phẩm.",
+      "PRODUCT_SKU_EXISTS": "Mã sản phẩm đã tồn tại.",
+      "UNIT_NOT_FOUND": "Đơn vị không tồn tại.",
+      "PRODUCT_CREATE_FAILED": "Không thể tạo sản phẩm. Vui lòng thử lại."
+    },
+    "units": {
+      "vien": "Viên",
+      "bao": "Bao",
+      "tan": "Tấn",
+      "kg": "Kilôgam",
+      "m3": "Mét khối",
+      "cay": "Cây",
+      "tam": "Tấm",
+      "thung": "Thùng"
+    }
   },
   "auth": {
     "loginTitle": "Đăng nhập hệ thống",

@@ -35,11 +35,30 @@ export interface SessionTable {
   created_at: Generated<Date>;
 }
 
+export interface UnitTable {
+  id: string;
+  code: string;
+  name: string;
+  created_at: Generated<Date>;
+}
+
+export interface ProductTable {
+  id: string;
+  tenant_id: string;
+  unit_id: string;
+  sku: string;
+  name: string;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
 export interface Database {
   app_meta: AppMetaTable;
   tenants: TenantTable;
   users: UserTable;
   sessions: SessionTable;
+  units: UnitTable;
+  products: ProductTable;
 }
 
 export interface DatabaseLogger {

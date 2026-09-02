@@ -7,9 +7,11 @@ import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod
 
 import { type AuthService, authRoutes } from "./features/auth/index.js";
 import { createHealthService, type HealthLogger, healthRoutes } from "./features/health/index.js";
+import { productRoutes, type ProductService } from "./features/products/index.js";
 
 export interface BuildAppOptions {
   authService?: AuthService | undefined;
+  productService?: ProductService | undefined;
   checkDatabase: (logger?: HealthLogger) => Promise<boolean>;
   logger?: boolean | undefined;
   logLevel?: string | undefined;
@@ -61,6 +63,12 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     await server.register(authRoutes, {
       authService: options.authService,
       secureCookies: options.secureCookies,
+    });
+  }
+  if (options.authService && options.productService) {
+    await server.register(productRoutes, {
+      authService: options.authService,
+      productService: options.productService,
     });
   }
 

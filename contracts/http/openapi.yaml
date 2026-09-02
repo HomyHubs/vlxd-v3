@@ -119,6 +119,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthErrorResponse"
+  /products:
+    get:
+      operationId: listProducts
+      summary: List products for the authenticated tenant
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: search
+          schema: { type: string, maxLength: 100 }
+      responses:
+        "200":
+          description: Paginated product list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductErrorResponse"
+    post:
+      operationId: createProduct
+      summary: Create a product for the authenticated tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductRequest"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          description: Invalid input or unknown unit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductErrorResponse"
+        "409":
+          description: SKU already exists for the tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductErrorResponse"
+        "422":
+          description: Free plan product limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductErrorResponse"
 components:
   schemas:
     LivenessStatus:
@@ -220,3 +287,45 @@ components:
           type: string
         message:
           type: string
+    UnitCode:
+      type: string
+      enum: [vien, bao, tan, kg, m3, cay, tam, thung]
+    Product:
+      type: object
+      additionalProperties: false
+      required: [id, sku, name, unitCode, unitName, createdAt]
+      properties:
+        id: { type: string }
+        sku: { type: string }
+        name: { type: string }
+        unitCode: { $ref: "#/components/schemas/UnitCode" }
+        unitName: { type: string }
+        createdAt: { type: string, format: date-time }
+    ProductListResponse:
+      type: object
+      additionalProperties: false
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Product" }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+    CreateProductRequest:
+      type: object
+      additionalProperties: false
+      required: [sku, name, unitCode]
+      properties:
+        sku: { type: string, minLength: 1, maxLength: 50 }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        unitCode: { $ref: "#/components/schemas/UnitCode" }
+    ProductErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [UNAUTHORIZED, PRODUCT_LIMIT_REACHED, PRODUCT_SKU_EXISTS, UNIT_NOT_FOUND]
+        message: { type: string }
