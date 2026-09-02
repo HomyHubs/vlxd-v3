@@ -82,6 +82,56 @@ describe("auth routes unit tests", () => {
     expect(String(setCookie)).toContain(`${SESSION_COOKIE_NAME}=mock-session-token-123`);
     expect(String(setCookie)).toContain("HttpOnly");
     expect(String(setCookie)).toContain("SameSite=Lax");
+    expect(String(setCookie)).toContain("Secure");
+  });
+
+  it("defaults to Secure cookie when secureCookies is not passed (fail-closed)", async () => {
+    const authService = createMockAuthService();
+    const server = await buildApp({
+      checkDatabase: () => Promise.resolve(true),
+      authService,
+      logger: false,
+    });
+    servers.push(server);
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: {
+        email: "owner@vlxd.local",
+        password: "MatKhau@123",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const setCookie = response.headers["set-cookie"];
+    expect(setCookie).toBeDefined();
+    expect(String(setCookie)).toContain("Secure");
+  });
+
+  it("omits Secure flag on cookies when secureCookies is explicitly false", async () => {
+    const authService = createMockAuthService();
+    const server = await buildApp({
+      checkDatabase: () => Promise.resolve(true),
+      authService,
+      secureCookies: false,
+      logger: false,
+    });
+    servers.push(server);
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: {
+        email: "owner@vlxd.local",
+        password: "MatKhau@123",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const setCookie = response.headers["set-cookie"];
+    expect(setCookie).toBeDefined();
+    expect(String(setCookie)).not.toContain("Secure");
   });
 
   it("POST /auth/login returns 401 when credentials are wrong", async () => {

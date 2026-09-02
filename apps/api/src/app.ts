@@ -9,11 +9,12 @@ import { type AuthService, authRoutes } from "./features/auth/index.js";
 import { createHealthService, type HealthLogger, healthRoutes } from "./features/health/index.js";
 
 export interface BuildAppOptions {
-  authService?: AuthService;
+  authService?: AuthService | undefined;
   checkDatabase: (logger?: HealthLogger) => Promise<boolean>;
-  logger?: boolean;
-  logLevel?: string;
-  trustProxy?: boolean | string | string[];
+  logger?: boolean | undefined;
+  logLevel?: string | undefined;
+  secureCookies?: boolean | undefined;
+  trustProxy?: boolean | string | string[] | undefined;
 }
 
 export async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
@@ -59,6 +60,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   if (options.authService) {
     await server.register(authRoutes, {
       authService: options.authService,
+      secureCookies: options.secureCookies,
     });
   }
 

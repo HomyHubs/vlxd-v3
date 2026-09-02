@@ -6,6 +6,7 @@ export {
 } from "./routes.js";
 export {
   createAuthService,
+  hashSessionToken,
   type AuthLogger,
   type AuthService,
   type AuthServiceDependencies,

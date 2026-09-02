@@ -12,6 +12,7 @@ const server = await buildApp({
   authService,
   checkDatabase: (logger) => checkDatabase(database, logger),
   logLevel: environment.LOG_LEVEL,
+  secureCookies: environment.COOKIE_SECURE,
 });
 
 async function shutdown(signal: string): Promise<void> {

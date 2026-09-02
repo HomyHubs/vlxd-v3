@@ -14,12 +14,12 @@ export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 export interface AuthRoutesOptions {
   authService: AuthService;
-  secureCookies?: boolean;
+  secureCookies?: boolean | undefined;
 }
 
 export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = (server, options) => {
   const app = server.withTypeProvider<ZodTypeProvider>();
-  const isSecure = options.secureCookies ?? process.env.NODE_ENV === "production";
+  const isSecure = options.secureCookies ?? true;
 
   app.post(
     "/auth/login",

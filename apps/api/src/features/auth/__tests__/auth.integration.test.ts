@@ -6,7 +6,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApp } from "../../../app.js";
 import { checkDatabase, createDatabase, createDatabasePool } from "../../../platform/database.js";
-import { type AuthSessionResponse, createAuthService, SESSION_COOKIE_NAME } from "../index.js";
+import {
+  type AuthSessionResponse,
+  createAuthService,
+  hashSessionToken,
+  SESSION_COOKIE_NAME,
+} from "../index.js";
 
 describe("auth integration tests (login -> me -> logout with real DB)", () => {
   const container = new PostgreSqlContainer("postgres:18-alpine")
@@ -120,11 +125,19 @@ describe("auth integration tests (login -> me -> logout with real DB)", () => {
       const sessionToken = sessionTokenMatch?.[1];
       expect(sessionToken).toBeDefined();
 
-      // 4. Verify session exists in database
-      const dbSession = await database
+      // 4. Verify session exists in database with HASHED id (raw token never stored)
+      const rawSessionCheck = await database
         .selectFrom("sessions")
         .selectAll()
         .where("id", "=", sessionToken!)
+        .executeTakeFirst();
+      expect(rawSessionCheck).toBeUndefined();
+
+      const hashedToken = hashSessionToken(sessionToken!);
+      const dbSession = await database
+        .selectFrom("sessions")
+        .selectAll()
+        .where("id", "=", hashedToken)
         .executeTakeFirst();
       expect(dbSession).toBeDefined();
       expect(dbSession?.user_id).toBe(loginBody.user.id);
@@ -158,7 +171,7 @@ describe("auth integration tests (login -> me -> logout with real DB)", () => {
       const dbSessionAfterLogout = await database
         .selectFrom("sessions")
         .selectAll()
-        .where("id", "=", sessionToken!)
+        .where("id", "=", hashedToken)
         .executeTakeFirst();
       expect(dbSessionAfterLogout).toBeUndefined();
 

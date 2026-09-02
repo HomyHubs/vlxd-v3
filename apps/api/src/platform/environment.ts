@@ -6,6 +6,10 @@ const EnvironmentSchema = z.object({
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DATABASE_URL: z.string().url(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
+  COOKIE_SECURE: z
+    .enum(["true", "false", "1", "0"])
+    .default("true")
+    .transform((val) => val === "true" || val === "1"),
 });
 
 export type Environment = z.infer<typeof EnvironmentSchema>;

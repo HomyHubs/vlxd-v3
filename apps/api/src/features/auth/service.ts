@@ -1,10 +1,14 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 import { verify } from "@node-rs/argon2";
 import type { AuthSessionResponse, LoginRequest } from "@vlxd/shared";
 import type { Kysely } from "kysely";
 
 import type { Database } from "../../platform/database.js";
+
+export function hashSessionToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export interface AuthLogger {
   error(obj: unknown, msg?: string): void;
@@ -85,12 +89,13 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
 
       // Generate opaque cryptographically random session token
       const sessionToken = randomBytes(32).toString("base64url");
+      const hashedSessionToken = hashSessionToken(sessionToken);
       const expiresAt = new Date(Date.now() + sessionDurationMs);
 
       await db
         .insertInto("sessions")
         .values({
-          id: sessionToken,
+          id: hashedSessionToken,
           user_id: user.id,
           tenant_id: tenant.id,
           expires_at: expiresAt,
@@ -120,11 +125,13 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
 
     async logout(sessionToken) {
       if (!sessionToken) return;
-      await db.deleteFrom("sessions").where("id", "=", sessionToken).execute();
+      const hashedSessionToken = hashSessionToken(sessionToken);
+      await db.deleteFrom("sessions").where("id", "=", hashedSessionToken).execute();
     },
 
     async getMe(sessionToken) {
       if (!sessionToken) return null;
+      const hashedSessionToken = hashSessionToken(sessionToken);
 
       const now = new Date();
       const session = await db
@@ -144,7 +151,7 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
           "tenants.code as tenantCode",
           "tenants.plan as tenantPlan",
         ])
-        .where("sessions.id", "=", sessionToken)
+        .where("sessions.id", "=", hashedSessionToken)
         .where("sessions.expires_at", ">", now)
         .where("users.status", "=", "active")
         .executeTakeFirst();
