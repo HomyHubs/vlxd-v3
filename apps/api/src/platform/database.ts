@@ -52,6 +52,23 @@ export interface ProductTable {
   updated_at: Generated<Date>;
 }
 
+export interface WarehouseTable {
+  id: string;
+  tenant_id: string;
+  code: string;
+  name: string;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface StockLevelTable {
+  warehouse_id: string;
+  product_id: string;
+  quantity: number;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
 export interface Database {
   app_meta: AppMetaTable;
   tenants: TenantTable;
@@ -59,6 +76,8 @@ export interface Database {
   sessions: SessionTable;
   units: UnitTable;
   products: ProductTable;
+  warehouses: WarehouseTable;
+  stock_levels: StockLevelTable;
 }
 
 export interface DatabaseLogger {
