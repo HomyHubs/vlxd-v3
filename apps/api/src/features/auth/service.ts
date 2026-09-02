@@ -154,6 +154,7 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
         .where("sessions.id", "=", hashedSessionToken)
         .where("sessions.expires_at", ">", now)
         .where("users.status", "=", "active")
+        .whereRef("users.tenant_id", "=", "sessions.tenant_id")
         .executeTakeFirst();
 
       if (!session) {
