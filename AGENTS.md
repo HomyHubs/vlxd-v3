@@ -449,24 +449,25 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 1 — Đăng nhập thật, nhánh `feature/slice-1`, chưa mở PR.
+Slice 1 hoàn tất, chuẩn bị khởi động Slice tiếp theo.
 
 ### Đã xong
 
 - [x] Slice 0 — PR #1 đã squash-merge vào `main` (`9342b62`), review Round 3 verdict `APPROVED_TO_MERGE`, 0 blocker.
 - [x] Task 1.1 — migration thuận nghịch `tenant`, `user`, `session` và dev seed.
-- [x] Task 1.2 — `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` dùng opaque session cookie (httpOnly, sameSite=lax).
+- [x] Task 1.2 — `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` dùng opaque session cookie (httpOnly, sameSite=lax, Secure flag fail-closed).
 - [x] Task 1.3 — trang `/login`, route guard, header hiện tên user, i18n vi và en, component tests.
-- [x] Rebase `feature/slice-1` lên `main` sau khi PR #1 squash-merge.
+- [x] Fix review findings PR #2 (B001 hash session token với sha256, B002 fail-closed secure cookie flag).
+- [x] PR #2 đã được review bởi Notion AI chat (Agent B): Round 2 verdict `APPROVED_TO_MERGE`, 0 blocker.
+- [x] Squash-merge PR #2 vào `main` (`2d7f4b3`) và xoá nhánh `feature/slice-1` (cục bộ & remote).
 
 ### Đang làm dở
 
-- [ ] Chạy lại `pnpm -r check` trên nền `main` mới.
+- [ ] Chưa có task dở dang.
 
 ### Bước tiếp theo
 
-- [ ] Mở PR #2 `feature/slice-1` -> `main`.
-- [ ] Chạy Notion Review Pro cho PR #2.
+- [ ] Xác định và khởi động Slice tiếp theo theo lộ trình.
 
 ---
 
