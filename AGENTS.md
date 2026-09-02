@@ -421,6 +421,7 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR** theo 
 | Ngày | Loại                                       | ID liên quan | Nội dung thay đổi | Lý do | ADR |
 | ---- | ------------------------------------------ | ------------ | ----------------- | ----- | --- |
 | _…_  | _Thêm / Sửa / Huỷ / Hoãn / Chẻ / Thay thế_ | _…_          | _…_               | _…_   | _…_ |
+| 2026-09-02 | Thêm | Slice 2 | Chốt phạm vi Sản phẩm: xem và tạo, gồm migration `product`/`unit`, API danh sách/tạo, UI `/products` và giới hạn gói Free 80 sản phẩm. | Tiếp tục lộ trình Vertical Slice sau khi Slice 0 và Slice 1 hoàn tất. | Không cần — chưa thay đổi schema/API thực tế trong commit tài liệu này. |
 
 ### 17.6 Thứ tự thao tác bắt buộc
 
@@ -449,7 +450,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 1 hoàn tất, chuẩn bị khởi động Slice tiếp theo.
+Slice 2 — Sản phẩm: xem và tạo — đang làm, chưa mở PR. Phạm vi chi tiết và trạng thái bàn giao nằm tại `docs/tasks/CURRENT.md`.
 
 ### Đã xong
 
@@ -460,14 +461,18 @@ Slice 1 hoàn tất, chuẩn bị khởi động Slice tiếp theo.
 - [x] Fix review findings PR #2 (B001 hash session token với sha256, B002 fail-closed secure cookie flag).
 - [x] PR #2 đã được review bởi Notion AI chat (Agent B): Round 2 verdict `APPROVED_TO_MERGE`, 0 blocker.
 - [x] Squash-merge PR #2 vào `main` (`2d7f4b3`) và xoá nhánh `feature/slice-1` (cục bộ & remote).
+- [x] Review branch ngày 2026-09-02: `ai-docs` là branch duy nhất có thay đổi mới so với `dev`; đã mở PR #4 vào `dev`. `main`, `dev` và branch local `feature/slice-2` cùng commit `55fe961`; không cần PR riêng. `pnpm check` cục bộ PASS (Turbo dùng cache); trạng thái CI trực tiếp tại PR #4. Chi tiết: `docs/ai-workflow/review-logs/branch-review-2026-09-02.md`. Chưa thực hiện merge.
 
 ### Đang làm dở
 
-- [ ] Chưa có task dở dang.
+- [ ] Task 2.1 — migration thuận nghịch bảng `product`, `unit` và dev seed danh mục đơn vị chuẩn.
+- [ ] Task 2.2 — API contract-first `GET /products` (phân trang, tìm kiếm) và `POST /products`.
+- [ ] Task 2.3 — trang `/products` dùng Material React Table và Dialog "Thêm sản phẩm" dùng react-hook-form + Zod.
+- [ ] Task 2.4 — giới hạn gói Free tối đa 80 sản phẩm, lỗi `PRODUCT_LIMIT_REACHED` và thông báo i18n trên UI.
 
 ### Bước tiếp theo
 
-- [ ] Xác định và khởi động Slice tiếp theo theo lộ trình.
+- [ ] Bắt đầu Task 2.1 trên nhánh `feature/slice-2`; mở PR với base `dev` sau khi toàn bộ cổng gác xanh.
 
 ---
 
