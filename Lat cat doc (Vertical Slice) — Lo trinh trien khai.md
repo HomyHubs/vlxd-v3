@@ -200,7 +200,7 @@ Cách nghiệm thu:
 | 0 — Walking skeleton | Đang làm     | Nhánh `feature/slice-0` | —           |
 | 1 — Đăng nhập        | Đang làm     | Nhánh `feature/slice-1` | Chưa quên mật khẩu, chưa 2FA, chưa mời user |
 | 2 — Sản phẩm         | Đang làm     | Nhánh `feature/slice-2` | —                                           |
-| 3 — Kho & tồn        | Chưa bắt đầu | —                       | —                                           |
+| 3 — Kho & tồn        | Đang làm     | Nhánh `feature/slice-3` | —                                           |
 | 4 — Nhập kho         | Chưa bắt đầu | —                       | —                                           |
 | 5 — Đơn hàng         | Chưa bắt đầu | —                       | —                                           |
 | 6 — Phân quyền       | Chưa bắt đầu | —                       | —                                           |
@@ -297,6 +297,7 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR** trong
 | Ngày       | Loại                            | Slice liên quan | Nội dung thay đổi             | Lý do                               | ADR |
 | ---------- | ------------------------------- | --------------- | ----------------------------- | ----------------------------------- | --- |
 | 2026-08-27 | Khởi tạo                        | 0–8             | Chốt lộ trình 9 slice ban đầu | Chuyển sang phương pháp lát cắt dọc | —   |
+| 2026-09-02 | Bắt đầu                        | Slice 3         | Chốt phạm vi Kho & tồn hiển thị, gồm migration `warehouse`/`stock_level`, API danh sách/tạo kho và UI `/warehouses` + tồn bằng 0 trên sản phẩm. | Tiếp tục lộ trình sau khi Slice 2 đã merge. | Chưa cần — contract/API chưa implement. |
 | _…_        | _Thêm / Sửa / Huỷ / Hoãn / Chẻ_ | _…_             | _…_                           | _…_                                 | _…_ |
 
 ### 8.6 Chỉ dẫn cho AI Coding Agent khi phạm vi đổi

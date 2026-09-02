@@ -475,7 +475,8 @@ Slice 3 — Kho & tồn — chưa bắt đầu. Phạm vi chi tiết và trạng
 
 ### Bước tiếp theo
 
-- [ ] Bắt đầu Slice 3 — Kho & tồn.
+- [x] Chốt phạm vi và danh sách Task 3.1–3.3 cho Slice 3 — Kho & tồn.
+- [ ] Hoàn thành Task 3.1–3.3, review và merge Slice 3.
 
 ---
 
