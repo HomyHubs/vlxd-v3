@@ -186,6 +186,63 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductErrorResponse"
+  /warehouses:
+    get:
+      operationId: listWarehouses
+      summary: List warehouses for the authenticated tenant
+      responses:
+        "200":
+          description: Warehouse list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WarehouseListResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WarehouseErrorResponse"
+    post:
+      operationId: createWarehouse
+      summary: Create a warehouse for the authenticated tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWarehouseRequest"
+      responses:
+        "201":
+          description: Warehouse created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Warehouse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WarehouseErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WarehouseErrorResponse"
+        "409":
+          description: Warehouse code already exists for the tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WarehouseErrorResponse"
+        "422":
+          description: Free plan warehouse limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WarehouseErrorResponse"
 components:
   schemas:
     LivenessStatus:
@@ -328,4 +385,38 @@ components:
         code:
           type: string
           enum: [UNAUTHORIZED, PRODUCT_LIMIT_REACHED, PRODUCT_SKU_EXISTS, UNIT_NOT_FOUND]
+        message: { type: string }
+    Warehouse:
+      type: object
+      additionalProperties: false
+      required: [id, code, name, createdAt]
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+    WarehouseListResponse:
+      type: object
+      additionalProperties: false
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Warehouse" }
+        total: { type: integer }
+    CreateWarehouseRequest:
+      type: object
+      additionalProperties: false
+      required: [code, name]
+      properties:
+        code: { type: string, minLength: 1, maxLength: 30 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+    WarehouseErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [UNAUTHORIZED, WAREHOUSE_LIMIT_REACHED, WAREHOUSE_CODE_EXISTS]
         message: { type: string }

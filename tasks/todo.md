@@ -16,3 +16,5 @@
 ## Dependency order
 
 `3.1 → 3.2 → 3.3`; không triển khai song song phần migration và API contract.
+
+Implementation status (2026-09-02): 3.1 and 3.2 complete; 3.3 is next.

@@ -124,6 +124,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List warehouses for the authenticated tenant */
+        get: operations["listWarehouses"];
+        put?: never;
+        /** Create a warehouse for the authenticated tenant */
+        post: operations["createWarehouse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -202,6 +220,26 @@ export interface components {
         ProductErrorResponse: {
             /** @enum {string} */
             code: "UNAUTHORIZED" | "PRODUCT_LIMIT_REACHED" | "PRODUCT_SKU_EXISTS" | "UNIT_NOT_FOUND";
+            message: string;
+        };
+        Warehouse: {
+            id: string;
+            code: string;
+            name: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        WarehouseListResponse: {
+            items: components["schemas"]["Warehouse"][];
+            total: number;
+        };
+        CreateWarehouseRequest: {
+            code: string;
+            name: string;
+        };
+        WarehouseErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "WAREHOUSE_LIMIT_REACHED" | "WAREHOUSE_CODE_EXISTS";
             message: string;
         };
     };
@@ -475,6 +513,95 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductErrorResponse"];
+                };
+            };
+        };
+    };
+    listWarehouses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warehouse list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseErrorResponse"];
+                };
+            };
+        };
+    };
+    createWarehouse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWarehouseRequest"];
+            };
+        };
+        responses: {
+            /** @description Warehouse created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Warehouse"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseErrorResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseErrorResponse"];
+                };
+            };
+            /** @description Warehouse code already exists for the tenant */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseErrorResponse"];
+                };
+            };
+            /** @description Free plan warehouse limit reached */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseErrorResponse"];
                 };
             };
         };

@@ -32,3 +32,5 @@
 ### Bước tiếp theo
 
 - [ ] Mở PR Slice 2 vào `dev` sau khi gate xanh.
+
+Slice 3 status: inventory migration and warehouse API are complete; UI remains.

@@ -34,3 +34,14 @@ export {
   type ProductListResponse,
   type UnitCode,
 } from "./product.js";
+
+export {
+  CreateWarehouseRequestSchema,
+  WarehouseErrorResponseSchema,
+  WarehouseListResponseSchema,
+  WarehouseSchema,
+  type CreateWarehouseRequest,
+  type Warehouse,
+  type WarehouseErrorResponse,
+  type WarehouseListResponse,
+} from "./warehouse.js";

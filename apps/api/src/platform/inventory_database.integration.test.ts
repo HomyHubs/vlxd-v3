@@ -4,6 +4,9 @@ import { resolve } from "node:path";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { buildApp } from "../app.js";
+import { createAuthService, SESSION_COOKIE_NAME } from "../features/auth/index.js";
+import { createWarehouseService } from "../features/warehouses/index.js";
 import { createDatabase, createDatabasePool } from "./database.js";
 
 describe("inventory migration and stock level", () => {
@@ -21,7 +24,7 @@ describe("inventory migration and stock level", () => {
     await started?.stop();
   });
 
-  it("creates warehouse stock foundations and rolls them back", async () => {
+  it("creates warehouses with zero stock, enforces the Free limit, and rolls back", async () => {
     if (!started) throw new Error("PostgreSQL container did not start");
     const readMigration = async (name: string) =>
       readFile(resolve(process.cwd(), `../../db/migrations/${name}`), "utf8");
@@ -93,6 +96,38 @@ describe("inventory migration and stock level", () => {
           .execute(),
       ).rejects.toMatchObject({ code: "23505" });
 
+      const server = await buildApp({
+        authService: createAuthService({ database }),
+        warehouseService: createWarehouseService({ database }),
+        checkDatabase: async () => true,
+        logger: false,
+        secureCookies: false,
+      });
+      const login = await server.inject({
+        method: "POST",
+        url: "/auth/login",
+        payload: { email: "owner@vlxd.local", password: "MatKhau@123" },
+      });
+      const cookie = extractSessionCookie(login.headers["set-cookie"]);
+      for (const code of ["SECOND", "THIRD"]) {
+        const response = await server.inject({
+          method: "POST",
+          url: "/warehouses",
+          cookies: { [SESSION_COOKIE_NAME]: cookie },
+          payload: { code, name: code },
+        });
+        expect(response.statusCode).toBe(201);
+      }
+      const limited = await server.inject({
+        method: "POST",
+        url: "/warehouses",
+        cookies: { [SESSION_COOKIE_NAME]: cookie },
+        payload: { code: "FOURTH", name: "Fourth" },
+      });
+      expect(limited.statusCode).toBe(422);
+      expect(limited.json()).toMatchObject({ code: "WAREHOUSE_LIMIT_REACHED" });
+      await server.close();
+
       await pool.query(inventory[1]);
       const tables = await pool.query<{ warehouses: string | null; stock_levels: string | null }>(
         "select to_regclass('public.warehouses') as warehouses, to_regclass('public.stock_levels') as stock_levels",
@@ -103,3 +138,11 @@ describe("inventory migration and stock level", () => {
     }
   });
 });
+
+function extractSessionCookie(rawCookie: string | string[] | undefined): string {
+  const cookieStr = String(Array.isArray(rawCookie) ? (rawCookie[0] ?? "") : (rawCookie ?? ""));
+  const match = new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`).exec(cookieStr);
+  const sessionCookie = match?.[1];
+  if (!sessionCookie) throw new Error("Login response did not set a session cookie");
+  return sessionCookie;
+}

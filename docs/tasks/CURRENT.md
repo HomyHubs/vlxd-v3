@@ -7,3 +7,5 @@
 - Phạm vi và danh sách task: `docs/specs/slice-3-inventory.md`, `tasks/plan.md`, `tasks/todo.md`.
 - Đang làm dở: Task 3.1 — migration `warehouses` và `stock_levels`.
 - Quyết định cần xác nhận: giới hạn kho gói Free; provisional default trong spec là 3.
+
+Implementation status (2026-09-02): Tasks 3.1 and 3.2 complete; Task 3.3 in progress.
