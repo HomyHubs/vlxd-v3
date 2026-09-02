@@ -461,6 +461,7 @@ Slice 2 — Sản phẩm: xem và tạo — đang làm, chưa mở PR. Phạm vi
 - [x] Fix review findings PR #2 (B001 hash session token với sha256, B002 fail-closed secure cookie flag).
 - [x] PR #2 đã được review bởi Notion AI chat (Agent B): Round 2 verdict `APPROVED_TO_MERGE`, 0 blocker.
 - [x] Squash-merge PR #2 vào `main` (`2d7f4b3`) và xoá nhánh `feature/slice-1` (cục bộ & remote).
+- [x] Review branch ngày 2026-09-02: `ai-docs` là branch duy nhất có thay đổi mới so với `dev`; đã mở PR #4 vào `dev`. `main`, `dev` và branch local `feature/slice-2` cùng commit `55fe961`; không cần PR riêng. `pnpm check` cục bộ PASS (Turbo dùng cache); trạng thái CI trực tiếp tại PR #4. Chi tiết: `docs/ai-workflow/review-logs/branch-review-2026-09-02.md`. Chưa thực hiện merge.
 
 ### Đang làm dở
 
