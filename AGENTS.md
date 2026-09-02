@@ -450,7 +450,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 3 — Kho & tồn — chưa bắt đầu. Phạm vi chi tiết và trạng thái bàn giao nằm tại `docs/tasks/CURRENT.md`.
+Slice 3 — Kho & tồn — đã hoàn tất implementation trên `feature/slice-3`; đã chạy cổng gác, đang review/merge vào `dev`. Phạm vi chi tiết và trạng thái bàn giao nằm tại `docs/tasks/CURRENT.md`.
 
 ### Đã xong
 

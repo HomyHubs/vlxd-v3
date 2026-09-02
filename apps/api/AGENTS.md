@@ -10,6 +10,7 @@
 - Public route Slice 0: `GET /health`, `GET /healthz`, `GET /readyz`.
 - Public route Slice 1: `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`.
 - Public route Slice 2: `GET /products`, `POST /products`.
+- Public route Slice 3: `GET /warehouses`, `POST /warehouses`.
 - Module khác chỉ import health, auth và products qua `index.ts` của từng feature.
 
 ## Trạng thái tiến độ
@@ -27,7 +28,7 @@
 
 ### Đang làm dở
 
-- [ ] Hoàn tất gate và review Slice 2.
+- [x] Slice 3 inventory migration, warehouse API, stock response, tests và gate hoàn tất; Free warehouse limit provisional là 3.
 
 ### Bước tiếp theo
 
