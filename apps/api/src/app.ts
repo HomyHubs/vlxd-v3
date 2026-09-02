@@ -1,16 +1,20 @@
+import fastifyCookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import Fastify, { type FastifyInstance } from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 
+import { type AuthService, authRoutes } from "./features/auth/index.js";
 import { createHealthService, type HealthLogger, healthRoutes } from "./features/health/index.js";
 
 export interface BuildAppOptions {
+  authService?: AuthService | undefined;
   checkDatabase: (logger?: HealthLogger) => Promise<boolean>;
-  logger?: boolean;
-  logLevel?: string;
-  trustProxy?: boolean | string | string[];
+  logger?: boolean | undefined;
+  logLevel?: string | undefined;
+  secureCookies?: boolean | undefined;
+  trustProxy?: boolean | string | string[] | undefined;
 }
 
 export async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
@@ -36,6 +40,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   server.setValidatorCompiler(validatorCompiler);
   server.setSerializerCompiler(serializerCompiler);
 
+  await server.register(fastifyCookie);
   await server.register(helmet);
   await server.register(cors, { origin: false });
   await server.register(rateLimit, {
@@ -52,6 +57,12 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       checkDatabase: (logger) => options.checkDatabase(logger),
     }),
   });
+  if (options.authService) {
+    await server.register(authRoutes, {
+      authService: options.authService,
+      secureCookies: options.secureCookies,
+    });
+  }
 
   return server;
 }

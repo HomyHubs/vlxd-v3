@@ -1,14 +1,45 @@
-import { Kysely, PostgresDialect, sql } from "kysely";
+import { type Generated, Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
 
 export interface AppMetaTable {
   key: string;
   value: string;
-  updated_at: Date;
+  updated_at: Generated<Date>;
+}
+
+export interface TenantTable {
+  id: string;
+  name: string;
+  code: string;
+  plan: Generated<string>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface UserTable {
+  id: string;
+  tenant_id: string;
+  email: string;
+  full_name: string;
+  password_hash: string;
+  status: Generated<"active" | "inactive">;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface SessionTable {
+  id: string;
+  user_id: string;
+  tenant_id: string;
+  expires_at: Date;
+  created_at: Generated<Date>;
 }
 
 export interface Database {
   app_meta: AppMetaTable;
+  tenants: TenantTable;
+  users: UserTable;
+  sessions: SessionTable;
 }
 
 export interface DatabaseLogger {

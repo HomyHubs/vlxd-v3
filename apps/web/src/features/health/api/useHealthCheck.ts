@@ -1,7 +1,6 @@
-import { createApiClient } from "@vlxd/api-client";
 import { useQuery } from "@tanstack/react-query";
 
-const apiClient = createApiClient("/api");
+import { apiClient } from "../../../lib/apiClient.js";
 
 async function fetchHealth() {
   const { data, error } = await apiClient.GET("/health");

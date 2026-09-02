@@ -14,9 +14,11 @@
     "check": "pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.0.0",
     "@fastify/helmet": "^13.0.0",
     "@fastify/rate-limit": "^10.0.0",
+    "@node-rs/argon2": "^2.2.0",
     "@vlxd/shared": "workspace:*",
     "fastify": "^5.0.0",
     "fastify-type-provider-zod": "^6.0.0",

@@ -52,6 +52,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthUnavailable"
+  /auth/login:
+    post:
+      operationId: login
+      summary: Authenticate user and issue an opaque session cookie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: Session cookie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSessionResponse"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthErrorResponse"
+        "401":
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthErrorResponse"
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Invalidate the current session and clear cookie
+      responses:
+        "200":
+          description: Logout successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: Cleared session cookie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthLogoutResponse"
+  /auth/me:
+    get:
+      operationId: getMe
+      summary: Get the currently authenticated user and tenant profile
+      responses:
+        "200":
+          description: Active session details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSessionResponse"
+        "401":
+          description: Unauthorized or session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthErrorResponse"
 components:
   schemas:
     LivenessStatus:
@@ -87,3 +154,69 @@ components:
         code:
           type: string
           const: DATABASE_UNAVAILABLE
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+    AuthUser:
+      type: object
+      additionalProperties: false
+      required: [id, email, fullName, tenantId, status]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        tenantId:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+    AuthTenant:
+      type: object
+      additionalProperties: false
+      required: [id, name, code, plan]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        code:
+          type: string
+        plan:
+          type: string
+    AuthSessionResponse:
+      type: object
+      additionalProperties: false
+      required: [user, tenant]
+      properties:
+        user:
+          $ref: "#/components/schemas/AuthUser"
+        tenant:
+          $ref: "#/components/schemas/AuthTenant"
+    AuthLogoutResponse:
+      type: object
+      additionalProperties: false
+      required: [success]
+      properties:
+        success:
+          type: boolean
+    AuthErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

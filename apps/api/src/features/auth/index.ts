@@ -1,10 +1,17 @@
 export {
-  HealthStatusSchema,
-  HealthUnavailableSchema,
-  type HealthStatus,
-  type HealthUnavailable,
-} from "./health.js";
-
+  authRoutes,
+  type AuthRoutesOptions,
+  SESSION_COOKIE_NAME,
+  SESSION_MAX_AGE_SECONDS,
+} from "./routes.js";
+export {
+  createAuthService,
+  hashSessionToken,
+  type AuthLogger,
+  type AuthService,
+  type AuthServiceDependencies,
+  type LoginResult,
+} from "./service.js";
 export {
   AuthErrorResponseSchema,
   AuthLogoutResponseSchema,
@@ -18,4 +25,4 @@ export {
   type AuthTenant,
   type AuthUser,
   type LoginRequest,
-} from "./auth.js";
+} from "./schema.js";

@@ -3,12 +3,13 @@
 ## Bối cảnh feature
 
 - Nhiệm vụ: React UI chạy trên browser, gọi API qua generated client.
-- Phụ thuộc: `@vlxd/api-client`; mọi chuỗi hiển thị đi qua i18next.
+- Phụ thuộc: `@vlxd/api-client`, `@vlxd/shared`; mọi chuỗi hiển thị đi qua i18next.
 
 ## Contract
 
 - Slice 0 cung cấp `SystemHealthCard` qua `src/features/health/index.ts`.
-- UI gọi `GET /health`; không truy cập PostgreSQL/Supabase trực tiếp.
+- Slice 1 cung cấp `LoginPage`, `ProtectedRoute`, `AppHeader`, `useCurrentUser`, `useLogin`, `useLogout` qua `src/features/auth/index.ts`.
+- UI gọi API qua generated client; không truy cập PostgreSQL/Supabase trực tiếp.
 
 ## Trạng thái tiến độ
 
@@ -17,12 +18,14 @@
 - [x] Vite + React + MUI bootstrap.
 - [x] i18next với tiếng Việt mặc định và fallback tiếng Anh.
 - [x] Nút kiểm tra hệ thống gọi generated API client.
-- [x] Component test cho luồng bấm thành công.
+- [x] Trang `/login` với react-hook-form + Zod resolver.
+- [x] Route guard `ProtectedRoute` và component `AppHeader` hiển thị thông tin user.
+- [x] Component tests cho health, login, header và route guard.
 
 ### Đang làm dở
 
-- [ ] Chạy typecheck, component test và production build.
+- [ ] Hoàn tất Slice 1, chuẩn bị cho Slice 2.
 
 ### Bước tiếp theo
 
-- [ ] Chạy demo end-to-end bằng Docker Compose.
+- [ ] Hiện thực UI cho Slice 2 — Sản phẩm (xem và tạo).

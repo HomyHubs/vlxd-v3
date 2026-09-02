@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Quản lý Vật liệu Xây dựng",
-    "slice": "Slice 0 · Walking skeleton"
+    "slice": "Slice 1 · Đăng nhập thật"
   },
   "health": {
     "title": "Kiểm tra hệ thống",
@@ -11,5 +11,21 @@
     "success": "Hệ thống hoạt động bình thường",
     "databaseUnavailable": "Không thể kết nối cơ sở dữ liệu",
     "unknownError": "Không thể kiểm tra hệ thống"
+  },
+  "auth": {
+    "loginTitle": "Đăng nhập hệ thống",
+    "loginSubtitle": "Nhập email và mật khẩu để truy cập trang quản lý",
+    "emailLabel": "Email",
+    "emailPlaceholder": "owner@vlxd.local",
+    "passwordLabel": "Mật khẩu",
+    "passwordPlaceholder": "••••••••",
+    "loginButton": "Đăng nhập",
+    "loggingIn": "Đang đăng nhập…",
+    "logoutButton": "Đăng xuất",
+    "loggingOut": "Đang đăng xuất…",
+    "invalidCredentials": "Email hoặc mật khẩu không chính xác",
+    "genericError": "Không thể đăng nhập. Vui lòng thử lại sau.",
+    "welcome": "Xin chào",
+    "tenant": "Cửa hàng"
   }
 }

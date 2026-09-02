@@ -449,32 +449,24 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 0 — Walking skeleton, PR #1 (`feature/slice-0` -> `main`), Notion Review Pro Round 3 hoàn tất, State: `READY_TO_MERGE`.
+Slice 1 — Đăng nhập thật, nhánh `feature/slice-1`, chưa mở PR.
 
 ### Đã xong
 
-- [x] Đọc và chốt bộ tài liệu hướng dẫn gốc, profile Web App và Vertical Slice.
-- [x] Xác nhận Slice 0 gồm bốn task 0.1–0.4.
-- [x] Task 0.1 — dựng monorepo pnpm/Turbo, cấu hình Node 24, Docker Compose và quality scripts.
-- [x] Task 0.2 — chốt OpenAPI cho health endpoints và tạo package API client.
-- [x] Task 0.3 — thêm PostgreSQL/Kysely, migration reversible `app_meta` và Testcontainers test.
-- [x] Task 0.4 — thêm UI React/MUI/i18next với nút gọi `GET /health` và component test.
-- [x] Fix review findings B001 & B002 (decouple DB readiness check from seed row, add structured logging, configure Fastify trustProxy and rate-limit probe allowList).
-- [x] Fix review finding B003 (default `trustProxy` to `false` in `apps/api/src/app.ts`, add safe fallback rate-limit `keyGenerator`).
-- [x] Chạy toàn bộ quality gate `pnpm check` pass 100% (format, lint 0 warnings, typecheck, vitest unit + integration tests, build, redocly lint, contract check).
-- [x] Push commit fix `03eb0e5` lên `origin feature/slice-0`.
-- [x] Notion Review Round 3: Verdict `APPROVED_TO_MERGE`, 0 blocker, `merge_decision: READY`.
-- [x] Đăng review comment kèm provenance và chuyển state sang `READY_TO_MERGE` trên PR #1 (chế độ `merge_mode=ready_only`).
+- [x] Slice 0 — PR #1 đã squash-merge vào `main` (`9342b62`), review Round 3 verdict `APPROVED_TO_MERGE`, 0 blocker.
+- [x] Task 1.1 — migration thuận nghịch `tenant`, `user`, `session` và dev seed.
+- [x] Task 1.2 — `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` dùng opaque session cookie (httpOnly, sameSite=lax).
+- [x] Task 1.3 — trang `/login`, route guard, header hiện tên user, i18n vi và en, component tests.
+- [x] Rebase `feature/slice-1` lên `main` sau khi PR #1 squash-merge.
 
 ### Đang làm dở
 
-- [ ] Đợi người dùng xác nhận để merge PR #1 vào `main`.
+- [ ] Chạy lại `pnpm -r check` trên nền `main` mới.
 
 ### Bước tiếp theo
 
-- [ ] Nhận xác nhận từ người dùng và merge PR #1 vào `main`.
-- [ ] Chuyển sang Slice 1 (Auth feature).
-
+- [ ] Mở PR #2 `feature/slice-1` -> `main`.
+- [ ] Chạy Notion Review Pro cho PR #2.
 
 ---
 
