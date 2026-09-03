@@ -423,6 +423,7 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR** theo 
 | _…_  | _Thêm / Sửa / Huỷ / Hoãn / Chẻ / Thay thế_ | _…_          | _…_               | _…_   | _…_ |
 | 2026-09-02 | Thêm | Slice 2 | Chốt phạm vi Sản phẩm: xem và tạo, gồm migration `product`/`unit`, API danh sách/tạo, UI `/products` và giới hạn gói Free 80 sản phẩm. | Tiếp tục lộ trình Vertical Slice sau khi Slice 0 và Slice 1 hoàn tất. | Không cần — chưa thay đổi schema/API thực tế trong commit tài liệu này. |
 | 2026-09-02 | Thêm | Slice 4 | Nhập kho (Inbound Stock Receipts): migration `stock_receipts`, `stock_receipt_lines`, `stock_movements`; API `/stock-receipts`; UI `/inventory/receipts/new`, `/inventory/receipts`, `/inventory/receipts/:id`. | Lát cắt nghiệp vụ tiếp theo trong lộ trình Vertical Slice. | Không cần — tương thích schema, tuân thủ contract-first. |
+| 2026-09-03 | Thêm | Slice 5 | Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions): migration `customers`, `sales_orders`, `sales_order_lines`; API `/sales-orders`, `/customers`; UI `/orders/new`, `/orders`, `/orders/:id`; trừ tồn kho qua `stock_movements` và chặn bán vượt tồn (`INSUFFICIENT_STOCK`). | Lát cắt nghiệp vụ mẫu theo lộ trình Vertical Slice. | Không cần — tương thích schema, tuân thủ contract-first. |
 
 ### 17.6 Thứ tự thao tác bắt buộc
 
@@ -451,7 +452,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 4 — Nhập kho (Inbound Stock Receipts) — hoàn thành toàn bộ implementation và verification, sẵn sàng review/merge.
+Slice 5 — Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions) — Đã hoàn thành 100% (Tasks 5.1, 5.2, 5.3, 5.4), cổng gác `pnpm check` và `pnpm contracts:check` pass 100%. Sẵn sàng tạo PR.
 
 ### Đã xong
 
@@ -464,19 +465,20 @@ Slice 4 — Nhập kho (Inbound Stock Receipts) — hoàn thành toàn bộ impl
 - [x] Squash-merge PR #2 vào `main` (`2d7f4b3`) và xoá nhánh `feature/slice-1` (cục bộ & remote).
 - [x] Slice 2 — Sản phẩm (PR #5 squash-merge vào `dev` tại `07f1476`).
 - [x] Slice 3 — Kho & tồn (đã hoàn thành trên `dev` tại commit `bed43a8`).
-- [x] Task 4.1 — Migration `stock_receipts`, `stock_receipt_lines`, `stock_movements`, DB types và rollback test.
-- [x] Task 4.2 — Contract & API `POST /stock-receipts`, `GET /stock-receipts`, `GET /stock-receipts/{id}` với giao dịch nguyên tử cập nhật tồn kho.
-- [x] Task 4.3 — UI Tạo phiếu nhập kho (`/inventory/receipts/new`).
-- [x] Task 4.4 — UI Danh sách và Chi tiết phiếu nhập (`/inventory/receipts`, `/inventory/receipts/:id`).
+- [x] Slice 4 — Nhập kho (đã hoàn thành trên `dev` tại commit `7981907`).
+- [x] Task 5.1 — Migration `customers`, `sales_orders`, `sales_order_lines`, DB types và rollback integration test.
+- [x] Task 5.2 — Contract OpenAPI 3.1 & API `POST /sales-orders`, `GET /sales-orders`, `GET /sales-orders/{id}`, `GET /customers`, `POST /customers` (atomic stock deduction, INSUFFICIENT_STOCK check, 35 unit + 9 PostgreSQL integration tests pass).
+- [x] Task 5.3 — UI Tạo đơn hàng mới (`/orders/new`) defaulting Khách lẻ, tính tổng tự động, xử lý lỗi tồn kho.
+- [x] Task 5.4 — UI Danh sách đơn và Chi tiết đơn (`/orders`, `/orders/:id`), i18n vi/en, component tests pass.
 
 ### Đang làm dở
 
-- Không có.
+(Không có — Slice 5 đã hoàn tất, chuẩn bị commit & PR).
 
 ### Bước tiếp theo
 
-- [ ] Tạo PR hoặc tích hợp nhánh `feature/slice-4` vào `dev`.
-- [ ] Chuyển sang Slice 5 (Bán hàng và xuất kho theo lộ trình).
+- [ ] Commit nhánh `feature/slice-5` và đẩy lên origin.
+- [ ] Mở Pull Request cho Slice 5.
 
 ---
 

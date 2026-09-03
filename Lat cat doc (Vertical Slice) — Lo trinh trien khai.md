@@ -197,12 +197,12 @@ Cách nghiệm thu:
 
 | Slice                | Trạng thái   | Demo bấm được           | Stub còn nợ |
 | -------------------- | ------------ | ----------------------- | ----------- |
-| 0 — Walking skeleton | Đang làm     | Nhánh `feature/slice-0` | —           |
-| 1 — Đăng nhập        | Đang làm     | Nhánh `feature/slice-1` | Chưa quên mật khẩu, chưa 2FA, chưa mời user |
-| 2 — Sản phẩm         | Đang làm     | Nhánh `feature/slice-2` | —                                           |
-| 3 — Kho & tồn        | Đang làm     | Nhánh `feature/slice-3` | —                                           |
-| 4 — Nhập kho         | Chưa bắt đầu | —                       | —                                           |
-| 5 — Đơn hàng         | Chưa bắt đầu | —                       | —                                           |
+| 0 — Walking skeleton | Xong         | Nhánh `main`            | —           |
+| 1 — Đăng nhập        | Xong         | Nhánh `main`            | Chưa quên mật khẩu, chưa 2FA, chưa mời user |
+| 2 — Sản phẩm         | Xong         | Nhánh `dev`             | —                                           |
+| 3 — Kho & tồn        | Xong         | Nhánh `dev`             | —                                           |
+| 4 — Nhập kho         | Xong         | Nhánh `dev`             | —                                           |
+| 5 — Đơn hàng         | Xong         | Nhánh `feature/slice-5` | Chưa thanh toán (Slice 7)                   |
 | 6 — Phân quyền       | Chưa bắt đầu | —                       | —                                           |
 | 7 — Thanh toán       | Chưa bắt đầu | —                       | —                                           |
 | 8 — Báo cáo          | Chưa bắt đầu | —                       | —                                           |

@@ -100,6 +100,41 @@ export interface StockMovementTable {
   created_at: Generated<Date>;
 }
 
+export interface CustomerTable {
+  id: string;
+  tenant_id: string;
+  code: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface SalesOrderTable {
+  id: string;
+  tenant_id: string;
+  order_number: string;
+  customer_id: string;
+  warehouse_id: string;
+  status: Generated<string>;
+  total_amount: number | string;
+  note: string | null;
+  created_by: string;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface SalesOrderLineTable {
+  id: string;
+  order_id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number | string;
+  line_total: number | string;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   app_meta: AppMetaTable;
   tenants: TenantTable;
@@ -112,6 +147,9 @@ export interface Database {
   stock_receipts: StockReceiptTable;
   stock_receipt_lines: StockReceiptLineTable;
   stock_movements: StockMovementTable;
+  customers: CustomerTable;
+  sales_orders: SalesOrderTable;
+  sales_order_lines: SalesOrderLineTable;
 }
 
 export interface DatabaseLogger {

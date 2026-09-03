@@ -1,0 +1,284 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+import { PostgreSqlContainer } from "@testcontainers/postgresql";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type {
+  CustomerListResponse,
+  SalesOrderDetailResponse,
+  SalesOrderListResponse,
+} from "@vlxd/shared";
+
+import { buildApp } from "../../../app.js";
+import { createAuthService, SESSION_COOKIE_NAME } from "../../auth/index.js";
+import { createProductService } from "../../products/index.js";
+import { createWarehouseService } from "../../warehouses/index.js";
+import { createStockReceiptService } from "../../stock-receipts/index.js";
+import { createCustomerService } from "../../customers/index.js";
+import { createSalesOrderService } from "../index.js";
+import { createDatabase, createDatabasePool } from "../../../platform/database.js";
+
+describe("sales orders integration tests (full flow, stock deduction & boundary checks)", () => {
+  const container = new PostgreSqlContainer("postgres:18-alpine")
+    .withDatabase("vlxd")
+    .withUsername("vlxd")
+    .withPassword("vlxd_test");
+  let started: Awaited<ReturnType<typeof container.start>> | undefined;
+
+  beforeAll(async () => {
+    started = await container.start();
+  }, 60000);
+
+  afterAll(async () => {
+    await started?.stop();
+  });
+
+  it("creates sales order, deducts stock, records movements, prevents overdraft and verifies queries", async () => {
+    if (!started) throw new Error("PostgreSQL container did not start");
+
+    const readMigration = async (name: string) =>
+      readFile(resolve(process.cwd(), `../../db/migrations/${name}`), "utf8");
+    const splitMigration = (sql: string): [string, string] => {
+      const [, body] = sql.split("-- migrate:up");
+      const [up, down] = body?.split("-- migrate:down") ?? [];
+      if (!up || !down) throw new Error("Migration must contain up and down sections");
+      return [up, down];
+    };
+
+    const appMeta = splitMigration(await readMigration("202608310001_create_app_meta.sql"));
+    const auth = splitMigration(await readMigration("202609020001_create_auth_tables.sql"));
+    const products = splitMigration(await readMigration("202609020002_create_product_tables.sql"));
+    const inventory = splitMigration(
+      await readMigration("202609020003_create_inventory_tables.sql"),
+    );
+    const stockReceipts = splitMigration(
+      await readMigration("202609020004_create_stock_receipt_tables.sql"),
+    );
+    const salesOrders = splitMigration(
+      await readMigration("202609030005_create_sales_order_tables.sql"),
+    );
+    const seed = await readFile(resolve(process.cwd(), "../../db/seeds/dev.sql"), "utf8");
+
+    const pool = createDatabasePool(started.getConnectionUri());
+    const database = createDatabase(pool);
+
+    try {
+      await pool.query(appMeta[0]);
+      await pool.query(auth[0]);
+      await pool.query(products[0]);
+      await pool.query(seed);
+      await pool.query(inventory[0]);
+      await pool.query(stockReceipts[0]);
+      await pool.query(salesOrders[0]);
+
+      // Seed warehouse and product
+      await database
+        .insertInto("warehouses")
+        .values({
+          id: "wh-main-001",
+          tenant_id: "tenant-dev-001",
+          code: "KHO-TONG",
+          name: "Kho Tổng",
+        })
+        .execute();
+
+      await database
+        .insertInto("products")
+        .values({
+          id: "prod-cement-001",
+          tenant_id: "tenant-dev-001",
+          unit_id: "unit-bao",
+          sku: "XM-001",
+          name: "Xi măng Hà Tiên PCB40",
+        })
+        .execute();
+
+      const authService = createAuthService({ database });
+      const productService = createProductService({ database });
+      const warehouseService = createWarehouseService({ database });
+      const stockReceiptService = createStockReceiptService({ database });
+      const customerService = createCustomerService({ database });
+      const salesOrderService = createSalesOrderService({ database });
+
+      const app = await buildApp({
+        authService,
+        productService,
+        warehouseService,
+        stockReceiptService,
+        customerService,
+        salesOrderService,
+        checkDatabase: () => Promise.resolve(true),
+        logger: false,
+        secureCookies: false,
+      });
+
+      // 1. Log in
+      const loginRes = await app.inject({
+        method: "POST",
+        url: "/auth/login",
+        payload: {
+          email: "owner@vlxd.local",
+          password: "MatKhau@123",
+        },
+      });
+      expect(loginRes.statusCode).toBe(200);
+      const sessionCookie = loginRes.cookies.find((c) => c.name === SESSION_COOKIE_NAME);
+      expect(sessionCookie).toBeDefined();
+      const cookies = { [SESSION_COOKIE_NAME]: sessionCookie!.value };
+
+      // 2. Initial stock receipt: Inbound 50 bags of cement
+      const receiptRes = await app.inject({
+        method: "POST",
+        url: "/stock-receipts",
+        cookies,
+        payload: {
+          warehouseId: "wh-main-001",
+          note: "Nhập kho ban đầu 50 bao",
+          lines: [{ productId: "prod-cement-001", quantity: 50 }],
+        },
+      });
+      expect(receiptRes.statusCode).toBe(201);
+
+      // Verify stock level is 50
+      const stock50 = await database
+        .selectFrom("stock_levels")
+        .select("quantity")
+        .where("warehouse_id", "=", "wh-main-001")
+        .where("product_id", "=", "prod-cement-001")
+        .executeTakeFirst();
+      expect(stock50?.quantity).toBe(50);
+
+      // 3. Check customer list (should contain seeded default retail customer)
+      const custListRes = await app.inject({
+        method: "GET",
+        url: "/customers",
+        cookies,
+      });
+      expect(custListRes.statusCode).toBe(200);
+      const custList = custListRes.json<CustomerListResponse>();
+      expect(custList.items.length).toBeGreaterThanOrEqual(1);
+      const defaultRetail = custList.items.find((c) => c.code === "KH-LE");
+      expect(defaultRetail).toBeDefined();
+
+      // 4. Create new customer
+      const createCustRes = await app.inject({
+        method: "POST",
+        url: "/customers",
+        cookies,
+        payload: {
+          code: "KH-THAU-01",
+          name: "Anh Hùng Thầu Xây Dựng",
+          phone: "0912345678",
+          address: "123 Đường Công Trình",
+        },
+      });
+      expect(createCustRes.statusCode).toBe(201);
+      const newCust = createCustRes.json<{ id: string; code: string }>();
+      expect(newCust.code).toBe("KH-THAU-01");
+
+      // 5. Attempt sale exceeding available stock (100 bags > 50 available) -> Expect 422
+      const overdraftRes = await app.inject({
+        method: "POST",
+        url: "/sales-orders",
+        cookies,
+        payload: {
+          customerId: newCust.id,
+          warehouseId: "wh-main-001",
+          note: "Đơn bán vượt tồn",
+          lines: [{ productId: "prod-cement-001", quantity: 100, unitPrice: 85000 }],
+        },
+      });
+      expect(overdraftRes.statusCode).toBe(422);
+      expect(overdraftRes.json()).toMatchObject({
+        code: "INSUFFICIENT_STOCK",
+      });
+
+      // Verify stock remains 50 after rejected transaction
+      const stockStill50 = await database
+        .selectFrom("stock_levels")
+        .select("quantity")
+        .where("warehouse_id", "=", "wh-main-001")
+        .where("product_id", "=", "prod-cement-001")
+        .executeTakeFirst();
+      expect(stockStill50?.quantity).toBe(50);
+
+      // 6. Create valid sales order: 20 bags at 85,000 VND
+      const validOrderRes = await app.inject({
+        method: "POST",
+        url: "/sales-orders",
+        cookies,
+        payload: {
+          customerId: newCust.id,
+          warehouseId: "wh-main-001",
+          note: "Giao công trình buổi sáng",
+          lines: [{ productId: "prod-cement-001", quantity: 20, unitPrice: 85000 }],
+        },
+      });
+      expect(validOrderRes.statusCode).toBe(201);
+      const createdOrder = validOrderRes.json<SalesOrderDetailResponse>();
+      expect(createdOrder.orderNumber).toMatch(/^DH-\d{8}-[A-Z0-9]{4}$/);
+      expect(createdOrder.totalAmount).toBe(1700000); // 20 * 85000
+      expect(createdOrder.lines).toHaveLength(1);
+      expect(createdOrder.lines[0]).toMatchObject({
+        productId: "prod-cement-001",
+        quantity: 20,
+        unitPrice: 85000,
+        lineTotal: 1700000,
+      });
+
+      // 7. Verify stock deduction in database: 50 - 20 = 30
+      const stockAfterSale = await database
+        .selectFrom("stock_levels")
+        .select("quantity")
+        .where("warehouse_id", "=", "wh-main-001")
+        .where("product_id", "=", "prod-cement-001")
+        .executeTakeFirst();
+      expect(stockAfterSale?.quantity).toBe(30);
+
+      // 8. Verify stock movement recorded with type = 'sales_issue' and negative quantity (-20)
+      const movement = await database
+        .selectFrom("stock_movements")
+        .selectAll()
+        .where("reference_id", "=", createdOrder.id)
+        .where("type", "=", "sales_issue")
+        .executeTakeFirst();
+      expect(movement).toBeDefined();
+      expect(movement?.quantity).toBe(-20);
+      expect(movement?.product_id).toBe("prod-cement-001");
+
+      // 9. List sales orders
+      const listOrdersRes = await app.inject({
+        method: "GET",
+        url: "/sales-orders?page=1&pageSize=10",
+        cookies,
+      });
+      expect(listOrdersRes.statusCode).toBe(200);
+      const orderList = listOrdersRes.json<SalesOrderListResponse>();
+      expect(orderList.total).toBe(1);
+      expect(orderList.items[0]).toMatchObject({
+        id: createdOrder.id,
+        orderNumber: createdOrder.orderNumber,
+        customerName: "Anh Hùng Thầu Xây Dựng",
+        warehouseName: "Kho Tổng",
+        totalAmount: 1700000,
+        itemCount: 1,
+      });
+
+      // 10. Get sales order detail by ID
+      const detailRes = await app.inject({
+        method: "GET",
+        url: `/sales-orders/${createdOrder.id}`,
+        cookies,
+      });
+      expect(detailRes.statusCode).toBe(200);
+      const detail = detailRes.json<SalesOrderDetailResponse>();
+      expect(detail.id).toBe(createdOrder.id);
+      expect(detail.customerCode).toBe("KH-THAU-01");
+      expect(detail.lines[0]?.productSku).toBe("XM-001");
+
+      await app.close();
+    } finally {
+      await pool.end();
+    }
+  }, 45000);
+});

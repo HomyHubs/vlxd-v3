@@ -10,6 +10,11 @@ import {
   StockReceiptDetailPage,
   StockReceiptListPage,
 } from "./features/inventory/index.js";
+import {
+  CreateSalesOrderPage,
+  SalesOrderDetailPage,
+  SalesOrderListPage,
+} from "./features/sales-orders/index.js";
 import { ProductsPage } from "./features/products/index.js";
 import { WarehousesPage } from "./features/warehouses/index.js";
 
@@ -40,6 +45,9 @@ function DashboardLayout() {
             <Button component={RouterLink} to="/inventory/receipts" variant="outlined">
               {t("inventory.listTitle")}
             </Button>
+            <Button component={RouterLink} to="/orders" variant="outlined">
+              {t("orders.title", "Bán hàng")}
+            </Button>
           </Stack>
         </Stack>
       </Container>
@@ -61,6 +69,9 @@ export function App() {
             <Route path="/inventory/receipts" element={<StockReceiptListPage />} />
             <Route path="/inventory/receipts/new" element={<CreateStockReceiptPage />} />
             <Route path="/inventory/receipts/:id" element={<StockReceiptDetailPage />} />
+            <Route path="/orders" element={<SalesOrderListPage />} />
+            <Route path="/orders/new" element={<CreateSalesOrderPage />} />
+            <Route path="/orders/:id" element={<SalesOrderDetailPage />} />
           </Route>
           <Route path="*" element={<LoginPage />} />
         </Routes>

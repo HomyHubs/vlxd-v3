@@ -62,3 +62,33 @@ export {
   type StockReceiptListItem,
   type StockReceiptListResponse,
 } from "./stockReceipt.js";
+
+export {
+  CreateCustomerRequestSchema,
+  CustomerErrorResponseSchema,
+  CustomerListResponseSchema,
+  CustomerSchema,
+  type CreateCustomerRequest,
+  type Customer,
+  type CustomerErrorResponse,
+  type CustomerListResponse,
+} from "./customer.js";
+
+export {
+  CreateSalesOrderLineInputSchema,
+  CreateSalesOrderRequestSchema,
+  SalesOrderDetailResponseSchema,
+  SalesOrderErrorResponseSchema,
+  SalesOrderLineSchema,
+  SalesOrderListItemSchema,
+  SalesOrderListResponseSchema,
+  SalesOrderQuerySchema,
+  type CreateSalesOrderLineInput,
+  type CreateSalesOrderRequest,
+  type SalesOrderDetailResponse,
+  type SalesOrderErrorResponse,
+  type SalesOrderLine,
+  type SalesOrderListItem,
+  type SalesOrderListResponse,
+  type SalesOrderQuery,
+} from "./salesOrder.js";

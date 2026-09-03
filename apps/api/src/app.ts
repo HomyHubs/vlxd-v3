@@ -10,12 +10,16 @@ import { createHealthService, type HealthLogger, healthRoutes } from "./features
 import { productRoutes, type ProductService } from "./features/products/index.js";
 import { type WarehouseService, warehouseRoutes } from "./features/warehouses/index.js";
 import { type StockReceiptService, stockReceiptRoutes } from "./features/stock-receipts/index.js";
+import { type CustomerService, customerRoutes } from "./features/customers/index.js";
+import { type SalesOrderService, salesOrderRoutes } from "./features/sales-orders/index.js";
 
 export interface BuildAppOptions {
   authService?: AuthService | undefined;
   productService?: ProductService | undefined;
   warehouseService?: WarehouseService | undefined;
   stockReceiptService?: StockReceiptService | undefined;
+  customerService?: CustomerService | undefined;
+  salesOrderService?: SalesOrderService | undefined;
   checkDatabase: (logger?: HealthLogger) => Promise<boolean>;
   logger?: boolean | undefined;
   logLevel?: string | undefined;
@@ -85,6 +89,18 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     await server.register(stockReceiptRoutes, {
       authService: options.authService,
       stockReceiptService: options.stockReceiptService,
+    });
+  }
+  if (options.authService && options.customerService) {
+    await server.register(customerRoutes, {
+      authService: options.authService,
+      customerService: options.customerService,
+    });
+  }
+  if (options.authService && options.salesOrderService) {
+    await server.register(salesOrderRoutes, {
+      authService: options.authService,
+      salesOrderService: options.salesOrderService,
     });
   }
 
