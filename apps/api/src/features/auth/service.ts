@@ -100,7 +100,10 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
 
       if (!user || user.status !== "active") {
         if (logger?.warn) {
-          logger.warn({ email }, "login failed: user not found or inactive");
+          logger.warn(
+            { reason: "user_not_found_or_inactive" },
+            "login failed: user not found or inactive",
+          );
         }
         return {
           success: false,
@@ -112,7 +115,10 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
       const isPasswordValid = await verify(user.password_hash, credentials.password);
       if (!isPasswordValid) {
         if (logger?.warn) {
-          logger.warn({ email }, "login failed: invalid password");
+          logger.warn(
+            { userId: user.id, reason: "invalid_password" },
+            "login failed: invalid password",
+          );
         }
         return {
           success: false,
@@ -129,7 +135,10 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
 
       if (!tenant) {
         if (logger?.error) {
-          logger.error({ email, tenantId: user.tenant_id }, "login failed: tenant not found");
+          logger.error(
+            { userId: user.id, tenantId: user.tenant_id, reason: "tenant_not_found" },
+            "login failed: tenant not found",
+          );
         }
         return {
           success: false,

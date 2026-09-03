@@ -114,11 +114,11 @@ INSERT INTO title_role_groups (title_id, role_group_id)
 SELECT 'title-wh-' || id, 'rg-warehouse' FROM tenants
 ON CONFLICT DO NOTHING;
 
--- Deterministically backfill OWNER title for all pre-existing users in each tenant
+-- Deterministically backfill default title for all pre-existing users in each tenant
 INSERT INTO user_titles (user_id, title_id, tenant_id)
 SELECT u.id, t.id, u.tenant_id
 FROM users u
-JOIN titles t ON t.tenant_id = u.tenant_id AND t.code = 'OWNER'
+JOIN titles t ON t.tenant_id = u.tenant_id AND t.code = (CASE WHEN u.email = 'sales@vlxd.local' THEN 'SALES' ELSE 'OWNER' END)
 ON CONFLICT (user_id, title_id) DO NOTHING;
 
 -- migrate:down
