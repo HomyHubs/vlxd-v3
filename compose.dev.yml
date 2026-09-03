@@ -44,6 +44,9 @@ services:
         "${POSTGRES_USER:-vlxd}",
         "-d",
         "${POSTGRES_DB:-vlxd}",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "--single-transaction",
         "-f",
         "/db/seeds/dev.sql",
       ]

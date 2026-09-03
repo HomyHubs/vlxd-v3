@@ -3,11 +3,18 @@ import type { CreateProductRequest, Product, ProductListResponse } from "@vlxd/s
 
 import { apiClient } from "../../../lib/apiClient.js";
 
+import { useCurrentUser } from "../../auth/api/useAuth.js";
+
 export const PRODUCTS_QUERY_KEY = ["products"] as const;
 
 export function useProducts(page: number, pageSize: number, search: string) {
+  const { data: session } = useCurrentUser();
+  const tenantId = session?.tenant.id ?? null;
+
   return useQuery<ProductListResponse>({
-    queryKey: [...PRODUCTS_QUERY_KEY, page, pageSize, search],
+    queryKey: tenantId
+      ? [...PRODUCTS_QUERY_KEY, tenantId, page, pageSize, search]
+      : [...PRODUCTS_QUERY_KEY, page, pageSize, search],
     queryFn: async () => {
       const { data, error } = await apiClient.GET("/products", {
         params: { query: { page, pageSize, ...(search ? { search } : {}) } },
@@ -15,6 +22,7 @@ export function useProducts(page: number, pageSize: number, search: string) {
       if (error || !data) throw new Error("PRODUCTS_LOAD_FAILED");
       return data;
     },
+    enabled: Boolean(tenantId),
   });
 }
 

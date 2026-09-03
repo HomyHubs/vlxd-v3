@@ -3,16 +3,22 @@ import type { CreateWarehouseRequest, Warehouse, WarehouseListResponse } from "@
 
 import { apiClient } from "../../../lib/apiClient.js";
 
+import { useCurrentUser } from "../../auth/api/useAuth.js";
+
 export const WAREHOUSES_QUERY_KEY = ["warehouses"] as const;
 
 export function useWarehouses() {
+  const { data: session } = useCurrentUser();
+  const tenantId = session?.tenant.id ?? null;
+
   return useQuery<WarehouseListResponse>({
-    queryKey: WAREHOUSES_QUERY_KEY,
+    queryKey: tenantId ? [...WAREHOUSES_QUERY_KEY, tenantId] : WAREHOUSES_QUERY_KEY,
     queryFn: async () => {
       const { data, error } = await apiClient.GET("/warehouses");
       if (error || !data) throw new Error("WAREHOUSES_LOAD_FAILED");
       return data;
     },
+    enabled: Boolean(tenantId),
   });
 }
 

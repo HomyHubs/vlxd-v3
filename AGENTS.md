@@ -489,7 +489,8 @@ Toàn bộ cổng gác cục bộ `pnpm check` và `pnpm contracts:check` pass 1
   - [x] Fix Round 2 Findings — Enforce capability-based route guards & dashboard links across all business surfaces, hide mutation buttons when lacking manage/create capability, decouple migration backfill from test email, resolve capabilities before session insert, add Role-Matrix UI suite for OWNER, SALES, WAREHOUSE.
   - [x] Fix Round 3 Findings — Enforce cross-tenant cache isolation, align authoritative capabilities in dev seed and UI tests, guard empty-state sales order CTA, add delayed-response cache isolation test and read-only sales tests.
   - [x] Fix Round 4 Findings — Sửa `cancelQueries` predicate loại trừ auth query, chuyển tenant cache clearing sang `useEffect` của `useCurrentUser`, thêm 2 test suite production-path cho Tenant B và 401, thêm `seed` service vào `compose.dev.yml`.
-  - [x] Cổng gác tất định: `pnpm check` (format, lint 0 warnings, typecheck 4/4 packages, 113 tests pass [71 api tests + 42 web tests], production build, contracts lint & drift check) pass 100%.
+  - [x] Fix Round 5 Findings — Ngăn chặn race condition `/auth/me` đè kết quả login/logout qua generational tracking (`authGeneration`) và huỷ query retryer (`cancelQueries`), tenant-scope toàn bộ query key nghiệp vụ (`products`, `warehouses`, `stock-receipts`, `sales-orders`, `customers`) và disable khi chưa xác định tenant, đồng bộ đăng nhập/đăng xuất đa tab qua `BroadcastChannel`, theo dõi chuyển đổi session theo `tenantId:userId`, thêm atomic flag `-v ON_ERROR_STOP=1 --single-transaction` cho seed container, bổ sung 3 test suite kiểm tra triệt để race conditions và ProductsPage business surface isolation.
+  - [x] Cổng gác tất định: `pnpm check` (format, lint 0 warnings, typecheck 4/4 packages, 116 tests pass [71 api tests + 45 web tests], production build, contracts lint & drift check) pass 100%.
 
 ### Đang làm dở
 

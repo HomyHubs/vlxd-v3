@@ -6,13 +6,19 @@ import type {
 } from "@vlxd/shared";
 
 import { apiClient } from "../../../lib/apiClient.js";
+import { useCurrentUser } from "../../auth/api/useAuth.js";
 import { PRODUCTS_QUERY_KEY } from "../../products/api/useProducts.js";
 
 export const SALES_ORDERS_QUERY_KEY = ["sales-orders"] as const;
 
 export function useSalesOrders(page = 1, pageSize = 20, customerId?: string, warehouseId?: string) {
+  const { data: session } = useCurrentUser();
+  const tenantId = session?.tenant.id ?? null;
+
   return useQuery<SalesOrderListResponse>({
-    queryKey: [...SALES_ORDERS_QUERY_KEY, page, pageSize, customerId, warehouseId],
+    queryKey: tenantId
+      ? [...SALES_ORDERS_QUERY_KEY, tenantId, page, pageSize, customerId, warehouseId]
+      : [...SALES_ORDERS_QUERY_KEY, page, pageSize, customerId, warehouseId],
     queryFn: async () => {
       const { data, error } = await apiClient.GET("/sales-orders", {
         params: {
@@ -27,12 +33,18 @@ export function useSalesOrders(page = 1, pageSize = 20, customerId?: string, war
       if (error || !data) throw new Error("SALES_ORDERS_LOAD_FAILED");
       return data;
     },
+    enabled: Boolean(tenantId),
   });
 }
 
 export function useSalesOrder(id: string) {
+  const { data: session } = useCurrentUser();
+  const tenantId = session?.tenant.id ?? null;
+
   return useQuery<SalesOrderDetailResponse>({
-    queryKey: [...SALES_ORDERS_QUERY_KEY, "detail", id],
+    queryKey: tenantId
+      ? [...SALES_ORDERS_QUERY_KEY, tenantId, "detail", id]
+      : [...SALES_ORDERS_QUERY_KEY, "detail", id],
     queryFn: async () => {
       const { data, error } = await apiClient.GET("/sales-orders/{id}", {
         params: { path: { id } },
@@ -40,7 +52,7 @@ export function useSalesOrder(id: string) {
       if (error || !data) throw new Error("SALES_ORDER_LOAD_FAILED");
       return data;
     },
-    enabled: Boolean(id),
+    enabled: Boolean(id) && Boolean(tenantId),
   });
 }
 
