@@ -9,11 +9,13 @@ import { type AuthService, authRoutes } from "./features/auth/index.js";
 import { createHealthService, type HealthLogger, healthRoutes } from "./features/health/index.js";
 import { productRoutes, type ProductService } from "./features/products/index.js";
 import { type WarehouseService, warehouseRoutes } from "./features/warehouses/index.js";
+import { type StockReceiptService, stockReceiptRoutes } from "./features/stock-receipts/index.js";
 
 export interface BuildAppOptions {
   authService?: AuthService | undefined;
   productService?: ProductService | undefined;
   warehouseService?: WarehouseService | undefined;
+  stockReceiptService?: StockReceiptService | undefined;
   checkDatabase: (logger?: HealthLogger) => Promise<boolean>;
   logger?: boolean | undefined;
   logLevel?: string | undefined;
@@ -77,6 +79,12 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     await server.register(warehouseRoutes, {
       authService: options.authService,
       warehouseService: options.warehouseService,
+    });
+  }
+  if (options.authService && options.stockReceiptService) {
+    await server.register(stockReceiptRoutes, {
+      authService: options.authService,
+      stockReceiptService: options.stockReceiptService,
     });
   }
 

@@ -5,6 +5,11 @@ import { Link as RouterLink } from "react-router-dom";
 
 import { AppHeader, LoginPage, ProtectedRoute } from "./features/auth/index.js";
 import { SystemHealthCard } from "./features/health/index.js";
+import {
+  CreateStockReceiptPage,
+  StockReceiptDetailPage,
+  StockReceiptListPage,
+} from "./features/inventory/index.js";
 import { ProductsPage } from "./features/products/index.js";
 import { WarehousesPage } from "./features/warehouses/index.js";
 
@@ -25,9 +30,17 @@ function DashboardLayout() {
             </Typography>
           </Stack>
           <SystemHealthCard />
-          <Button component={RouterLink} to="/products" variant="contained">
-            {t("products.open")}
-          </Button>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <Button component={RouterLink} to="/products" variant="contained">
+              {t("products.open")}
+            </Button>
+            <Button component={RouterLink} to="/warehouses" variant="outlined">
+              {t("warehouses.title")}
+            </Button>
+            <Button component={RouterLink} to="/inventory/receipts" variant="outlined">
+              {t("inventory.listTitle")}
+            </Button>
+          </Stack>
         </Stack>
       </Container>
     </>
@@ -45,6 +58,9 @@ export function App() {
             <Route path="/" element={<DashboardLayout />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/warehouses" element={<WarehousesPage />} />
+            <Route path="/inventory/receipts" element={<StockReceiptListPage />} />
+            <Route path="/inventory/receipts/new" element={<CreateStockReceiptPage />} />
+            <Route path="/inventory/receipts/:id" element={<StockReceiptDetailPage />} />
           </Route>
           <Route path="*" element={<LoginPage />} />
         </Routes>

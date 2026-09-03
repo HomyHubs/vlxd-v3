@@ -142,6 +142,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stock-receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List stock receipts for the authenticated tenant */
+        get: operations["listStockReceipts"];
+        put?: never;
+        /** Create an inbound stock receipt and update stock levels */
+        post: operations["createStockReceipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stock-receipts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get details of a single stock receipt */
+        get: operations["getStockReceipt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -245,6 +280,62 @@ export interface components {
         WarehouseErrorResponse: {
             /** @enum {string} */
             code: "UNAUTHORIZED" | "WAREHOUSE_LIMIT_REACHED" | "WAREHOUSE_CODE_EXISTS";
+            message: string;
+        };
+        CreateStockReceiptLineInput: {
+            productId: string;
+            quantity: number;
+        };
+        CreateStockReceiptRequest: {
+            warehouseId: string;
+            note?: string;
+            lines: components["schemas"]["CreateStockReceiptLineInput"][];
+        };
+        StockReceiptLine: {
+            id: string;
+            productId: string;
+            productSku: string;
+            productName: string;
+            unitName: string;
+            quantity: number;
+        };
+        StockReceiptListItem: {
+            id: string;
+            receiptNumber: string;
+            warehouseId: string;
+            warehouseCode: string;
+            warehouseName: string;
+            status: string;
+            note?: string | null;
+            createdByName: string;
+            /** Format: date-time */
+            createdAt: string;
+            itemCount: number;
+            totalQuantity: number;
+        };
+        StockReceiptListResponse: {
+            items: components["schemas"]["StockReceiptListItem"][];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        StockReceiptDetailResponse: {
+            id: string;
+            receiptNumber: string;
+            warehouseId: string;
+            warehouseCode: string;
+            warehouseName: string;
+            status: string;
+            note?: string | null;
+            createdByName: string;
+            /** Format: date-time */
+            createdAt: string;
+            totalQuantity: number;
+            lines: components["schemas"]["StockReceiptLine"][];
+        };
+        StockReceiptErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INVALID_RECEIPT_LINES";
             message: string;
         };
     };
@@ -607,6 +698,130 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WarehouseErrorResponse"];
+                };
+            };
+        };
+    };
+    listStockReceipts: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                warehouseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated list of stock receipts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+        };
+    };
+    createStockReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStockReceiptRequest"];
+            };
+        };
+        responses: {
+            /** @description Stock receipt created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptDetailResponse"];
+                };
+            };
+            /** @description Invalid request payload or lines */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+            /** @description Warehouse or product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+        };
+    };
+    getStockReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stock receipt details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptDetailResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+            /** @description Stock receipt not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
                 };
             };
         };

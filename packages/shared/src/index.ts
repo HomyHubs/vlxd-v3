@@ -45,3 +45,20 @@ export {
   type WarehouseErrorResponse,
   type WarehouseListResponse,
 } from "./warehouse.js";
+
+export {
+  CreateStockReceiptLineInputSchema,
+  CreateStockReceiptRequestSchema,
+  StockReceiptDetailResponseSchema,
+  StockReceiptErrorResponseSchema,
+  StockReceiptLineSchema,
+  StockReceiptListItemSchema,
+  StockReceiptListResponseSchema,
+  type CreateStockReceiptLineInput,
+  type CreateStockReceiptRequest,
+  type StockReceiptDetailResponse,
+  type StockReceiptErrorResponse,
+  type StockReceiptLine,
+  type StockReceiptListItem,
+  type StockReceiptListResponse,
+} from "./stockReceipt.js";

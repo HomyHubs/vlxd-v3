@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Construction Materials Management",
-    "slice": "Slice 2 · View and create products"
+    "slice": "Slice 4 · Inbound Stock Receipts"
   },
   "health": {
     "title": "System check",
@@ -55,6 +55,51 @@
       "WAREHOUSE_LIMIT_REACHED": "The Free plan allows up to 3 warehouses.",
       "WAREHOUSE_CODE_EXISTS": "This warehouse code already exists.",
       "WAREHOUSE_CREATE_FAILED": "Unable to create the warehouse."
+    }
+  },
+  "inventory": {
+    "listTitle": "Stock Receipts",
+    "listDescription": "Manage and track inbound shipments to warehouses.",
+    "newReceipt": "New Inbound Receipt",
+    "createTitle": "Create Inbound Stock Receipt",
+    "detailTitle": "Stock Receipt Details",
+    "backToList": "Back to list",
+    "selectWarehouse": "Select warehouse",
+    "filterWarehouse": "Filter by warehouse",
+    "allWarehouses": "All warehouses",
+    "note": "Note",
+    "notePlaceholder": "Enter optional notes for this stock receipt…",
+    "itemsTitle": "Inbound Product Items",
+    "addLine": "Add Product",
+    "productCol": "Product",
+    "quantityCol": "Quantity",
+    "actionCol": "Action",
+    "removeLine": "Remove row",
+    "cancel": "Cancel",
+    "saveReceipt": "Save Stock Receipt",
+    "saving": "Saving…",
+    "receiptNumber": "Receipt #",
+    "warehouse": "Destination Warehouse",
+    "createdAt": "Created At",
+    "createdBy": "Created By",
+    "itemCount": "Items Count",
+    "totalQuantity": "Total Quantity",
+    "status": "Status",
+    "actions": "Actions",
+    "viewDetail": "Details",
+    "loading": "Loading data…",
+    "emptyReceipts": "No stock receipts recorded yet.",
+    "statuses": {
+      "completed": "Completed"
+    },
+    "errors": {
+      "warehouseRequired": "Please select a warehouse.",
+      "invalidLines": "Please select a product and enter a valid quantity for each line.",
+      "WAREHOUSE_NOT_FOUND": "Warehouse not found or unauthorized.",
+      "PRODUCT_NOT_FOUND": "One or more products were not found.",
+      "INVALID_RECEIPT_LINES": "Invalid receipt lines provided.",
+      "createFailed": "Failed to create stock receipt. Please try again.",
+      "loadDetailFailed": "Failed to load stock receipt details."
     }
   },
   "auth": {

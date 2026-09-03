@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Quản lý Vật liệu Xây dựng",
-    "slice": "Slice 2 · Sản phẩm: xem và tạo"
+    "slice": "Slice 4 · Nhập kho (Inbound Stock Receipts)"
   },
   "health": {
     "title": "Kiểm tra hệ thống",
@@ -55,6 +55,51 @@
       "WAREHOUSE_LIMIT_REACHED": "Gói Free chỉ cho phép tối đa 3 kho.",
       "WAREHOUSE_CODE_EXISTS": "Mã kho đã tồn tại.",
       "WAREHOUSE_CREATE_FAILED": "Không thể tạo kho."
+    }
+  },
+  "inventory": {
+    "listTitle": "Phiếu nhập kho",
+    "listDescription": "Quản lý và theo dõi các đợt nhập hàng vào kho.",
+    "newReceipt": "Nhập kho mới",
+    "createTitle": "Tạo phiếu nhập kho",
+    "detailTitle": "Chi tiết phiếu nhập kho",
+    "backToList": "Danh sách phiếu",
+    "selectWarehouse": "Chọn kho nhập",
+    "filterWarehouse": "Lọc theo kho",
+    "allWarehouses": "Tất cả các kho",
+    "note": "Ghi chú",
+    "notePlaceholder": "Nhập thông tin ghi chú cho phiếu nhập này (tùy chọn)…",
+    "itemsTitle": "Danh sách mặt hàng nhập",
+    "addLine": "Thêm mặt hàng",
+    "productCol": "Sản phẩm",
+    "quantityCol": "Số lượng",
+    "actionCol": "Thao tác",
+    "removeLine": "Xoá dòng",
+    "cancel": "Huỷ",
+    "saveReceipt": "Lưu phiếu nhập kho",
+    "saving": "Đang lưu…",
+    "receiptNumber": "Mã phiếu",
+    "warehouse": "Kho nhập",
+    "createdAt": "Ngày tạo",
+    "createdBy": "Người tạo",
+    "itemCount": "Số mặt hàng",
+    "totalQuantity": "Tổng số lượng",
+    "status": "Trạng thái",
+    "actions": "Thao tác",
+    "viewDetail": "Chi tiết",
+    "loading": "Đang tải dữ liệu…",
+    "emptyReceipts": "Chưa có phiếu nhập kho nào.",
+    "statuses": {
+      "completed": "Đã hoàn thành"
+    },
+    "errors": {
+      "warehouseRequired": "Vui lòng chọn kho nhập.",
+      "invalidLines": "Vui lòng chọn sản phẩm và nhập số lượng hợp lệ cho tất cả các dòng.",
+      "WAREHOUSE_NOT_FOUND": "Kho không tồn tại hoặc không thuộc quyền quản lý.",
+      "PRODUCT_NOT_FOUND": "Một hoặc nhiều sản phẩm không tồn tại.",
+      "INVALID_RECEIPT_LINES": "Danh sách sản phẩm nhập không hợp lệ.",
+      "createFailed": "Không thể tạo phiếu nhập kho. Vui lòng thử lại.",
+      "loadDetailFailed": "Không thể tải chi tiết phiếu nhập kho."
     }
   },
   "auth": {
