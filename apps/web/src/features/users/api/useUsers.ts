@@ -7,7 +7,7 @@ import type {
 } from "@vlxd/shared";
 
 import { apiClient } from "../../../lib/apiClient.js";
-import { getCurrentSessionKey, useCurrentUser } from "../../auth/api/useAuth.js";
+import { getCurrentSessionKey, useCurrentUser } from "../../auth/index.js";
 
 export const USERS_QUERY_KEY = ["users"] as const;
 export const TITLES_QUERY_KEY = ["titles"] as const;
@@ -48,11 +48,10 @@ export function useTitles() {
 
 export function useCreateUser() {
   const queryClient = useQueryClient();
-  const { data: session } = useCurrentUser();
-  const activeSessionKey = session ? `${session.tenant.id}:${session.user.id}` : null;
 
   return useMutation<UserItem, Error, CreateUserRequest>({
     mutationFn: async (newUser) => {
+      const callSessionKey = getCurrentSessionKey();
       const { data, error, response } = await apiClient.POST("/users", {
         body: newUser,
       });
@@ -67,10 +66,13 @@ export function useCreateUser() {
         throw new Error("CREATE_USER_FAILED");
       }
 
+      if (callSessionKey && getCurrentSessionKey() !== callSessionKey) {
+        throw new Error("AUTH_CONTEXT_CHANGED");
+      }
+
       return data;
     },
     onSuccess: () => {
-      if (getCurrentSessionKey() !== activeSessionKey) return;
       void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
     },
   });

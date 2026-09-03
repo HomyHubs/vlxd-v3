@@ -3,7 +3,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { CreateStockReceiptPage } from "../../inventory/pages/CreateStockReceiptPage.js";
 import { ProductsPage } from "../../products/pages/ProductsPage.js";
+import { CreateSalesOrderPage } from "../../sales-orders/pages/CreateSalesOrderPage.js";
 import { useCreateUser } from "../../users/api/useUsers.js";
 import { UsersPage } from "../../users/pages/UsersPage.js";
 import {
@@ -1058,16 +1060,21 @@ describe("Cross-tenant cache isolation", () => {
     // Seed Tenant B user cache with a known item
     queryClient.setQueryData(["users", "tenant-b"], { items: [{ id: "existing-b" }] });
 
-    let mutationTrigger: (() => void) | null = null;
+    let mutationTrigger: (() => Promise<void>) | null = null;
+    let mutationError: Error | null = null;
     function MutationComponent() {
       const createUserMutation = useCreateUser();
-      mutationTrigger = () => {
-        createUserMutation.mutate({
-          fullName: "Should Not Apply",
-          email: "stale@tenant-a.local",
-          password: "password123",
-          titleId: "t-sales",
-        });
+      mutationTrigger = async () => {
+        try {
+          await createUserMutation.mutateAsync({
+            fullName: "Should Not Apply",
+            email: "stale@tenant-a.local",
+            password: "password123",
+            titleId: "t-sales",
+          });
+        } catch (err: unknown) {
+          mutationError = err as Error;
+        }
       };
       return <div>Mutation Runner</div>;
     }
@@ -1079,7 +1086,7 @@ describe("Cross-tenant cache isolation", () => {
     );
 
     // 1. Trigger mutation under Tenant A (held in flight)
-    mutationTrigger!();
+    void mutationTrigger!();
 
     await waitFor(() => {
       expect(resolveCreateUser).not.toBeNull();
@@ -1104,10 +1111,330 @@ describe("Cross-tenant cache isolation", () => {
       ),
     );
 
-    // 4. Assert: Tenant B user cache is untouched and was not invalidated or polluted
+    // 4. Assert: Mutation promise rejected with AUTH_CONTEXT_CHANGED
+    await waitFor(() => {
+      expect(mutationError).not.toBeNull();
+      expect(mutationError?.message).toBe("AUTH_CONTEXT_CHANGED");
+    });
+
+    // 5. Assert: Tenant B user cache is untouched and was not invalidated or polluted
     await new Promise((r) => setTimeout(r, 50));
     expect(queryClient.getQueryData(["users", "tenant-b"])).toEqual({
       items: [{ id: "existing-b" }],
     });
+  });
+
+  it("in-flight CreateSalesOrderPage mutation: resolving delayed mutation across identity change rejects with AUTH_CONTEXT_CHANGED and does not navigate or affect Tenant B", async () => {
+    let resolveCreateOrder: ((res: Response) => void) | null = null;
+    const tenantAOwner = {
+      user: {
+        id: "owner-a",
+        email: "owner-a@vlxd.local",
+        fullName: "Chủ Cửa Hàng A",
+        status: "active" as const,
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["orders.create", "orders.view", "sales.create", "sales.view"],
+      },
+      tenant: {
+        id: "tenant-a",
+        name: "Cửa Hàng A",
+        code: "tenant-a",
+        plan: "free" as const,
+      },
+    };
+
+    const tenantBOwner = {
+      user: {
+        id: "owner-b",
+        email: "owner-b@vlxd.local",
+        fullName: "Chủ Cửa Hàng B",
+        status: "active" as const,
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["orders.create", "orders.view", "sales.create", "sales.view"],
+      },
+      tenant: {
+        id: "tenant-b",
+        name: "Cửa Hàng B",
+        code: "tenant-b",
+        plan: "free" as const,
+      },
+    };
+
+    const fetchMock = vi.fn().mockImplementation((req: Request | string) => {
+      const url = typeof req === "string" ? req : req.url;
+      if (url.includes("/auth/me")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(tenantAOwner), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      if (url.includes("/customers")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [{ id: "cust-1", code: "KH-01", name: "Khách A", phone: "0901" }],
+              total: 1,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      if (url.includes("/warehouses")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [{ id: "wh-1", code: "WH-01", name: "Kho A" }],
+              total: 1,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      if (url.includes("/products")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: "prod-1",
+                  sku: "XM-01",
+                  name: "Xi măng Hà Tiên",
+                  unitName: "Bao",
+                  price: 85000,
+                },
+              ],
+              total: 1,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      if (url.includes("/sales-orders")) {
+        return new Promise<Response>((resolve) => {
+          resolveCreateOrder = resolve;
+        });
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    resetTenantTracker("tenant-a:owner-a");
+    queryClient.setQueryData(AUTH_QUERY_KEY, tenantAOwner);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/orders/new"]}>
+          <Routes>
+            <Route element={<ProtectedRoute />}>
+              <Route path="/orders/new" element={<CreateSalesOrderPage />} />
+              <Route
+                path="/orders/:id"
+                element={<div data-testid="order-detail-page">Tenant Stale Order Detail</div>}
+              />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Wait for form data and defaults to load
+    await waitFor(() => {
+      expect(screen.getByTestId("order-customer-select")).toBeInTheDocument();
+      expect(screen.getByTestId("submit-order-button")).toBeInTheDocument();
+    });
+
+    // Wait for defaults (customerId, warehouseId, product on line 0) to be populated
+    await waitFor(() => {
+      const customerInput = screen.getByTestId("order-customer-select").querySelector("input")!;
+      expect(customerInput.value).toBe("cust-1");
+    });
+
+    // Submit the sales order under Tenant A
+    const submitBtn = screen.getByTestId("submit-order-button");
+    fireEvent.click(submitBtn);
+
+    // Verify the POST request is in flight
+    await waitFor(() => {
+      expect(resolveCreateOrder).not.toBeNull();
+    });
+
+    // Identity switch to Tenant B occurs while POST is in flight
+    resetTenantTracker("tenant-b:owner-b");
+    queryClient.setQueryData(AUTH_QUERY_KEY, tenantBOwner);
+
+    // Now delayed POST resolves with Tenant A order id
+    resolveCreateOrder!(
+      new Response(
+        JSON.stringify({
+          id: "order-tenant-a-999",
+          customerId: "cust-1",
+          warehouseId: "wh-1",
+          status: "pending",
+          totalAmount: 85000,
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    // Wait and verify: order detail route of Tenant A was NOT navigated to
+    await new Promise((r) => setTimeout(r, 100));
+    expect(screen.queryByTestId("order-detail-page")).not.toBeInTheDocument();
+    expect(screen.queryByText("order-tenant-a-999")).not.toBeInTheDocument();
+  });
+
+  it("in-flight CreateStockReceiptPage mutation: resolving delayed mutation across identity change rejects with AUTH_CONTEXT_CHANGED and does not navigate or affect Tenant B", async () => {
+    let resolveCreateReceipt: ((res: Response) => void) | null = null;
+    const tenantAOwner = {
+      user: {
+        id: "owner-a",
+        email: "owner-a@vlxd.local",
+        fullName: "Chủ Cửa Hàng A",
+        status: "active" as const,
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["inventory.manage"],
+      },
+      tenant: {
+        id: "tenant-a",
+        name: "Cửa Hàng A",
+        code: "tenant-a",
+        plan: "free" as const,
+      },
+    };
+
+    const tenantBOwner = {
+      user: {
+        id: "owner-b",
+        email: "owner-b@vlxd.local",
+        fullName: "Chủ Cửa Hàng B",
+        status: "active" as const,
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["inventory.manage"],
+      },
+      tenant: {
+        id: "tenant-b",
+        name: "Cửa Hàng B",
+        code: "tenant-b",
+        plan: "free" as const,
+      },
+    };
+
+    const fetchMock = vi.fn().mockImplementation((req: Request | string) => {
+      const url = typeof req === "string" ? req : req.url;
+      if (url.includes("/auth/me")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(tenantAOwner), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      if (url.includes("/warehouses")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [{ id: "wh-1", code: "WH-01", name: "Kho A" }],
+              total: 1,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      if (url.includes("/products")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: "prod-1",
+                  sku: "XM-01",
+                  name: "Xi măng Hà Tiên",
+                  unitName: "Bao",
+                  price: 85000,
+                },
+              ],
+              total: 1,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      if (url.includes("/stock-receipts")) {
+        return new Promise<Response>((resolve) => {
+          resolveCreateReceipt = resolve;
+        });
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    resetTenantTracker("tenant-a:owner-a");
+    queryClient.setQueryData(AUTH_QUERY_KEY, tenantAOwner);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/inventory/receipts/new"]}>
+          <Routes>
+            <Route element={<ProtectedRoute />}>
+              <Route path="/inventory/receipts/new" element={<CreateStockReceiptPage />} />
+              <Route
+                path="/inventory/receipts/:id"
+                element={<div data-testid="receipt-detail-page">Tenant Stale Receipt Detail</div>}
+              />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Wait for form data and defaults to load
+    await waitFor(() => {
+      expect(screen.getByTestId("warehouse-select")).toBeInTheDocument();
+      expect(screen.getByTestId("submit-receipt-button")).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      const warehouseInput = screen.getByTestId("warehouse-select").querySelector("input")!;
+      expect(warehouseInput.value).toBe("wh-1");
+    });
+
+    // Submit the stock receipt under Tenant A
+    const submitBtn = screen.getByTestId("submit-receipt-button");
+    fireEvent.click(submitBtn);
+
+    // Verify the POST request is in flight
+    await waitFor(() => {
+      expect(resolveCreateReceipt).not.toBeNull();
+    });
+
+    // Identity switch to Tenant B occurs while POST is in flight
+    resetTenantTracker("tenant-b:owner-b");
+    queryClient.setQueryData(AUTH_QUERY_KEY, tenantBOwner);
+
+    // Now delayed POST resolves with Tenant A receipt id
+    resolveCreateReceipt!(
+      new Response(
+        JSON.stringify({
+          id: "receipt-tenant-a-888",
+          warehouseId: "wh-1",
+          status: "completed",
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    // Wait and verify: receipt detail route of Tenant A was NOT navigated to
+    await new Promise((r) => setTimeout(r, 100));
+    expect(screen.queryByTestId("receipt-detail-page")).not.toBeInTheDocument();
+    expect(screen.queryByText("receipt-tenant-a-888")).not.toBeInTheDocument();
   });
 });

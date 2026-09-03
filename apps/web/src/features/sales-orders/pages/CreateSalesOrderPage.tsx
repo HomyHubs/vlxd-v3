@@ -27,7 +27,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 
-import { AppHeader } from "../../auth/index.js";
+import { AppHeader, getCurrentSessionKey } from "../../auth/index.js";
 import { useCustomers } from "../../customers/index.js";
 import { useProducts } from "../../products/api/useProducts.js";
 import { useWarehouses } from "../../warehouses/index.js";
@@ -77,6 +77,18 @@ export function CreateSalesOrderPage() {
       setWarehouseId(warehouses[0]!.id);
     }
   }, [warehouses, warehouseId]);
+
+  useEffect(() => {
+    if (products.length > 0 && lines.length === 1 && !lines[0]!.productId) {
+      setLines([
+        {
+          productId: products[0]!.id,
+          quantity: 1,
+          unitPrice: 0,
+        },
+      ]);
+    }
+  }, [products, lines]);
 
   const handleAddLine = () => {
     setLines([...lines, { productId: "", quantity: 1, unitPrice: 0 }]);
@@ -133,6 +145,7 @@ export function CreateSalesOrderPage() {
       return;
     }
 
+    const submitSessionKey = getCurrentSessionKey();
     try {
       const result = await createMutation.mutateAsync({
         customerId,
@@ -145,8 +158,15 @@ export function CreateSalesOrderPage() {
         })),
       });
 
+      if (submitSessionKey && getCurrentSessionKey() !== submitSessionKey) {
+        return;
+      }
+
       void navigate(`/orders/${result.id}`);
     } catch (err: unknown) {
+      if (err instanceof Error && err.message === "AUTH_CONTEXT_CHANGED") {
+        return;
+      }
       if (err instanceof Error) {
         if (err.name === "INSUFFICIENT_STOCK" || err.message.includes("INSUFFICIENT_STOCK")) {
           setErrorMessage(
@@ -226,6 +246,7 @@ export function CreateSalesOrderPage() {
                         onChange={(e) => setCustomerId(e.target.value)}
                         required
                         disabled={customersQuery.isLoading}
+                        data-testid="order-customer-select"
                       >
                         {customers.map((c) => (
                           <MenuItem key={c.id} value={c.id}>
@@ -244,6 +265,7 @@ export function CreateSalesOrderPage() {
                         onChange={(e) => setWarehouseId(e.target.value)}
                         required
                         disabled={warehousesQuery.isLoading}
+                        data-testid="order-warehouse-select"
                       >
                         {warehouses.map((w) => (
                           <MenuItem key={w.id} value={w.id}>
@@ -312,6 +334,7 @@ export function CreateSalesOrderPage() {
                                     handleLineChange(idx, "productId", e.target.value)
                                   }
                                   required
+                                  data-testid={`order-product-select-${idx}`}
                                 >
                                   {products.map((p) => (
                                     <MenuItem key={p.id} value={p.id}>
@@ -413,6 +436,7 @@ export function CreateSalesOrderPage() {
                   startIcon={<SaveIcon />}
                   disabled={createMutation.isPending}
                   id="submit-order-btn"
+                  data-testid="submit-order-button"
                 >
                   {createMutation.isPending
                     ? t("common.saving", "Đang xử lý...")

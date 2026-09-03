@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AUTH_QUERY_KEY, resetTenantTracker } from "../../auth/api/useAuth.js";
+import { AUTH_QUERY_KEY, resetTenantTracker } from "../../auth/index.js";
 import { UsersPage } from "../pages/UsersPage.js";
 
 afterEach(() => {

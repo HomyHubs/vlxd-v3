@@ -3,7 +3,7 @@ import type { CreateCustomerRequest, Customer, CustomerListResponse } from "@vlx
 
 import { apiClient } from "../../../lib/apiClient.js";
 
-import { getCurrentSessionKey, useCurrentUser } from "../../auth/api/useAuth.js";
+import { getCurrentSessionKey, useCurrentUser } from "../../auth/index.js";
 
 export const CUSTOMERS_QUERY_KEY = ["customers"] as const;
 
@@ -24,11 +24,10 @@ export function useCustomers() {
 
 export function useCreateCustomer() {
   const queryClient = useQueryClient();
-  const { data: session } = useCurrentUser();
-  const activeSessionKey = session ? `${session.tenant.id}:${session.user.id}` : null;
 
   return useMutation<Customer, Error, CreateCustomerRequest>({
     mutationFn: async (input) => {
+      const callSessionKey = getCurrentSessionKey();
       const { data, error } = await apiClient.POST("/customers", {
         body: {
           code: input.code,
@@ -37,7 +36,12 @@ export function useCreateCustomer() {
           ...(input.address ? { address: input.address } : {}),
         },
       });
-      if (data) return data;
+      if (data) {
+        if (callSessionKey && getCurrentSessionKey() !== callSessionKey) {
+          throw new Error("AUTH_CONTEXT_CHANGED");
+        }
+        return data;
+      }
       const code =
         error && typeof error === "object" && "code" in error
           ? String(error.code)
@@ -45,7 +49,6 @@ export function useCreateCustomer() {
       throw new Error(code);
     },
     onSuccess: async () => {
-      if (getCurrentSessionKey() !== activeSessionKey) return;
       await queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
     },
   });

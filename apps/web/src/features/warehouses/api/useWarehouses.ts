@@ -3,7 +3,7 @@ import type { CreateWarehouseRequest, Warehouse, WarehouseListResponse } from "@
 
 import { apiClient } from "../../../lib/apiClient.js";
 
-import { getCurrentSessionKey, useCurrentUser } from "../../auth/api/useAuth.js";
+import { getCurrentSessionKey, useCurrentUser } from "../../auth/index.js";
 
 export const WAREHOUSES_QUERY_KEY = ["warehouses"] as const;
 
@@ -24,13 +24,17 @@ export function useWarehouses() {
 
 export function useCreateWarehouse() {
   const queryClient = useQueryClient();
-  const { data: session } = useCurrentUser();
-  const activeSessionKey = session ? `${session.tenant.id}:${session.user.id}` : null;
 
   return useMutation<Warehouse, Error, CreateWarehouseRequest>({
     mutationFn: async (input) => {
+      const callSessionKey = getCurrentSessionKey();
       const { data, error } = await apiClient.POST("/warehouses", { body: input });
-      if (data) return data;
+      if (data) {
+        if (callSessionKey && getCurrentSessionKey() !== callSessionKey) {
+          throw new Error("AUTH_CONTEXT_CHANGED");
+        }
+        return data;
+      }
       const code =
         error && typeof error === "object" && "code" in error
           ? String(error.code)
@@ -38,7 +42,6 @@ export function useCreateWarehouse() {
       throw new Error(code);
     },
     onSuccess: async () => {
-      if (getCurrentSessionKey() !== activeSessionKey) return;
       await queryClient.invalidateQueries({ queryKey: WAREHOUSES_QUERY_KEY });
     },
   });

@@ -6,7 +6,7 @@ import type {
 } from "@vlxd/shared";
 
 import { apiClient } from "../../../lib/apiClient.js";
-import { getCurrentSessionKey, useCurrentUser } from "../../auth/api/useAuth.js";
+import { getCurrentSessionKey, useCurrentUser } from "../../auth/index.js";
 import { PRODUCTS_QUERY_KEY } from "../../products/api/useProducts.js";
 
 export const SALES_ORDERS_QUERY_KEY = ["sales-orders"] as const;
@@ -58,11 +58,10 @@ export function useSalesOrder(id: string) {
 
 export function useCreateSalesOrder() {
   const queryClient = useQueryClient();
-  const { data: session } = useCurrentUser();
-  const activeSessionKey = session ? `${session.tenant.id}:${session.user.id}` : null;
 
   return useMutation<SalesOrderDetailResponse, Error, CreateSalesOrderRequest>({
     mutationFn: async (input) => {
+      const callSessionKey = getCurrentSessionKey();
       const { data, error } = await apiClient.POST("/sales-orders", {
         body: {
           customerId: input.customerId,
@@ -71,7 +70,12 @@ export function useCreateSalesOrder() {
           ...(input.note ? { note: input.note } : {}),
         },
       });
-      if (data) return data;
+      if (data) {
+        if (callSessionKey && getCurrentSessionKey() !== callSessionKey) {
+          throw new Error("AUTH_CONTEXT_CHANGED");
+        }
+        return data;
+      }
       const code =
         error && typeof error === "object" && "code" in error
           ? String(error.code)
@@ -83,7 +87,6 @@ export function useCreateSalesOrder() {
       throw err;
     },
     onSuccess: async () => {
-      if (getCurrentSessionKey() !== activeSessionKey) return;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: SALES_ORDERS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY }),

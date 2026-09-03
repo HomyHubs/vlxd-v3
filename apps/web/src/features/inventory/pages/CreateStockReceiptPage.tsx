@@ -22,11 +22,11 @@ import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import SaveIcon from "@mui/icons-material/Save";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 
-import { AppHeader } from "../../auth/index.js";
+import { AppHeader, getCurrentSessionKey } from "../../auth/index.js";
 import { useProducts } from "../../products/api/useProducts.js";
 import { useWarehouses } from "../../warehouses/index.js";
 import { useCreateStockReceipt } from "../api/useStockReceipts.js";
@@ -51,6 +51,18 @@ export function CreateStockReceiptPage() {
 
   const warehouses = warehousesQuery.data?.items ?? [];
   const products = productsQuery.data?.items ?? [];
+
+  useEffect(() => {
+    if (!warehouseId && warehouses.length > 0) {
+      setWarehouseId(warehouses[0]!.id);
+    }
+  }, [warehouses, warehouseId]);
+
+  useEffect(() => {
+    if (products.length > 0 && lines.length === 1 && !lines[0]!.productId) {
+      setLines([{ productId: products[0]!.id, quantity: 1 }]);
+    }
+  }, [products, lines]);
 
   const handleAddLine = () => {
     setLines([...lines, { productId: "", quantity: 1 }]);
@@ -90,14 +102,23 @@ export function CreateStockReceiptPage() {
       return;
     }
 
+    const submitSessionKey = getCurrentSessionKey();
     try {
       const result = await createMutation.mutateAsync({
         warehouseId,
         note: note.trim() || undefined,
         lines,
       });
+
+      if (submitSessionKey && getCurrentSessionKey() !== submitSessionKey) {
+        return;
+      }
+
       void navigate(`/inventory/receipts/${result.id}`);
     } catch (err: unknown) {
+      if (err instanceof Error && err.message === "AUTH_CONTEXT_CHANGED") {
+        return;
+      }
       const code = err instanceof Error ? err.message : "UNKNOWN";
       setErrorMessage(
         t(`inventory.errors.${code}`, {

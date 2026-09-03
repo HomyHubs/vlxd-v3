@@ -6,7 +6,7 @@ import type {
 } from "@vlxd/shared";
 
 import { apiClient } from "../../../lib/apiClient.js";
-import { getCurrentSessionKey, useCurrentUser } from "../../auth/api/useAuth.js";
+import { getCurrentSessionKey, useCurrentUser } from "../../auth/index.js";
 import { PRODUCTS_QUERY_KEY } from "../../products/api/useProducts.js";
 
 export const STOCK_RECEIPTS_QUERY_KEY = ["stock-receipts"] as const;
@@ -57,11 +57,10 @@ export function useStockReceipt(id: string) {
 
 export function useCreateStockReceipt() {
   const queryClient = useQueryClient();
-  const { data: session } = useCurrentUser();
-  const activeSessionKey = session ? `${session.tenant.id}:${session.user.id}` : null;
 
   return useMutation<StockReceiptDetailResponse, Error, CreateStockReceiptRequest>({
     mutationFn: async (input) => {
+      const callSessionKey = getCurrentSessionKey();
       const { data, error } = await apiClient.POST("/stock-receipts", {
         body: {
           warehouseId: input.warehouseId,
@@ -69,7 +68,12 @@ export function useCreateStockReceipt() {
           ...(input.note ? { note: input.note } : {}),
         },
       });
-      if (data) return data;
+      if (data) {
+        if (callSessionKey && getCurrentSessionKey() !== callSessionKey) {
+          throw new Error("AUTH_CONTEXT_CHANGED");
+        }
+        return data;
+      }
       const code =
         error && typeof error === "object" && "code" in error
           ? String(error.code)
@@ -77,7 +81,6 @@ export function useCreateStockReceipt() {
       throw new Error(code);
     },
     onSuccess: async () => {
-      if (getCurrentSessionKey() !== activeSessionKey) return;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: STOCK_RECEIPTS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY }),
