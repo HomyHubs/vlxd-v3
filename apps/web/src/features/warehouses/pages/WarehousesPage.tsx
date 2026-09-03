@@ -38,9 +38,16 @@ export function WarehousesPage() {
   });
 
   async function submit(input: CreateWarehouseRequest) {
-    await createWarehouse.mutateAsync(input);
-    reset();
-    setOpen(false);
+    try {
+      await createWarehouse.mutateAsync(input);
+      reset();
+      setOpen(false);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "AUTH_CONTEXT_CHANGED") {
+        reset();
+        setOpen(false);
+      }
+    }
   }
 
   return (

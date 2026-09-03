@@ -806,6 +806,7 @@ components:
               PRODUCT_LIMIT_REACHED,
               PRODUCT_SKU_EXISTS,
               UNIT_NOT_FOUND,
+              AUTH_CONTEXT_CHANGED,
             ]
         message: { type: string }
     Warehouse:
@@ -847,6 +848,7 @@ components:
               VALIDATION_ERROR,
               WAREHOUSE_LIMIT_REACHED,
               WAREHOUSE_CODE_EXISTS,
+              AUTH_CONTEXT_CHANGED,
             ]
         message: { type: string }
     CreateStockReceiptLineInput:
@@ -960,7 +962,14 @@ components:
         code:
           type: string
           enum:
-            [UNAUTHORIZED, FORBIDDEN, WAREHOUSE_NOT_FOUND, PRODUCT_NOT_FOUND, INVALID_RECEIPT_LINES]
+            [
+              UNAUTHORIZED,
+              FORBIDDEN,
+              WAREHOUSE_NOT_FOUND,
+              PRODUCT_NOT_FOUND,
+              INVALID_RECEIPT_LINES,
+              AUTH_CONTEXT_CHANGED,
+            ]
         message: { type: string }
     Customer:
       type: object
@@ -1008,7 +1017,14 @@ components:
         code:
           type: string
           enum:
-            [UNAUTHORIZED, FORBIDDEN, VALIDATION_ERROR, CUSTOMER_CODE_EXISTS, INVALID_CUSTOMER_DATA]
+            [
+              UNAUTHORIZED,
+              FORBIDDEN,
+              VALIDATION_ERROR,
+              CUSTOMER_CODE_EXISTS,
+              INVALID_CUSTOMER_DATA,
+              AUTH_CONTEXT_CHANGED,
+            ]
         message: { type: string }
     CreateSalesOrderLineInput:
       type: object
@@ -1146,6 +1162,7 @@ components:
               PRODUCT_NOT_FOUND,
               INSUFFICIENT_STOCK,
               INVALID_ORDER_LINES,
+              AUTH_CONTEXT_CHANGED,
             ]
         message: { type: string }
     TitleItem:
@@ -1220,5 +1237,6 @@ components:
               TITLE_NOT_FOUND,
               EMAIL_EXISTS,
               INVALID_INPUT,
+              AUTH_CONTEXT_CHANGED,
             ]
         message: { type: string }

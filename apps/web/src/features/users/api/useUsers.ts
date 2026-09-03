@@ -7,7 +7,11 @@ import type {
 } from "@vlxd/shared";
 
 import { apiClient } from "../../../lib/apiClient.js";
-import { getCurrentSessionKey, useCurrentUser } from "../../auth/index.js";
+import {
+  getCurrentSessionContext,
+  getCurrentSessionKey,
+  useCurrentUser,
+} from "../../auth/index.js";
 
 export const USERS_QUERY_KEY = ["users"] as const;
 export const TITLES_QUERY_KEY = ["titles"] as const;
@@ -52,9 +56,25 @@ export function useCreateUser() {
   return useMutation<UserItem, Error, CreateUserRequest>({
     mutationFn: async (newUser) => {
       const callSessionKey = getCurrentSessionKey();
+      const callContext = getCurrentSessionContext();
+      const headers: Record<string, string> = {};
+      if (callContext) {
+        headers["x-expected-tenant-id"] = callContext.tenantId;
+        headers["x-session-context"] = callContext.sessionKey;
+      }
+
       const { data, error, response } = await apiClient.POST("/users", {
         body: newUser,
+        headers,
       });
+
+      if (response?.status === 409) {
+        const errCode =
+          error && typeof error === "object" && "code" in error ? String(error.code) : "";
+        if (errCode === "AUTH_CONTEXT_CHANGED") {
+          throw new Error("AUTH_CONTEXT_CHANGED");
+        }
+      }
 
       if (error || !data) {
         if (response.status === 409) {

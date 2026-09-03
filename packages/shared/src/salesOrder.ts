@@ -90,6 +90,7 @@ export const SalesOrderErrorResponseSchema = z.object({
     "PRODUCT_NOT_FOUND",
     "INSUFFICIENT_STOCK",
     "INVALID_ORDER_LINES",
+    "AUTH_CONTEXT_CHANGED",
   ]),
   message: z.string(),
 });

@@ -38,6 +38,7 @@ export const UserErrorResponseSchema = z.object({
     "TITLE_NOT_FOUND",
     "EMAIL_EXISTS",
     "INVALID_INPUT",
+    "AUTH_CONTEXT_CHANGED",
   ]),
   message: z.string(),
 });

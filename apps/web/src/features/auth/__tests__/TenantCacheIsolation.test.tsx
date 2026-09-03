@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CreateStockReceiptPage } from "../../inventory/pages/CreateStockReceiptPage.js";
+import { useCreateProduct } from "../../products/api/useProducts.js";
 import { ProductsPage } from "../../products/pages/ProductsPage.js";
 import { CreateSalesOrderPage } from "../../sales-orders/pages/CreateSalesOrderPage.js";
 import { useCreateUser } from "../../users/api/useUsers.js";
@@ -1436,5 +1437,87 @@ describe("Cross-tenant cache isolation", () => {
     await new Promise((r) => setTimeout(r, 100));
     expect(screen.queryByTestId("receipt-detail-page")).not.toBeInTheDocument();
     expect(screen.queryByText("receipt-tenant-a-888")).not.toBeInTheDocument();
+  });
+
+  it("server-side race: when server responds with 409 AUTH_CONTEXT_CHANGED due to header mismatch, mutation rejects cleanly", async () => {
+    let capturedHeaders: Record<string, string> = {};
+    const fetchMock = vi.fn().mockImplementation((req: Request | string, init?: RequestInit) => {
+      const url = typeof req === "string" ? req : req.url;
+      if (url.includes("/auth/me")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              user: {
+                id: "owner-a",
+                email: "owner-a@vlxd.local",
+                fullName: "Chủ Cửa Hàng A",
+                status: "active" as const,
+                titles: ["Chủ cửa hàng"],
+                capabilities: ["products.manage"],
+              },
+              tenant: {
+                id: "tenant-a",
+                name: "Cửa Hàng A",
+                code: "tenant-a",
+                plan: "free" as const,
+              },
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      if (url.includes("/products")) {
+        if (init?.headers) {
+          const raw = init.headers;
+          if (
+            typeof raw === "object" &&
+            raw !== null &&
+            "get" in raw &&
+            typeof raw.get === "function"
+          ) {
+            capturedHeaders = {
+              "x-expected-tenant-id": String(raw.get("x-expected-tenant-id") ?? ""),
+              "x-session-context": String(raw.get("x-session-context") ?? ""),
+            };
+          } else {
+            capturedHeaders = raw as Record<string, string>;
+          }
+        }
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              code: "AUTH_CONTEXT_CHANGED",
+              message: "Session context changed. Please refresh and retry.",
+            }),
+            { status: 409, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    resetTenantTracker("tenant-a:owner-a", "tenant-a");
+
+    const { result } = renderHook(() => useCreateProduct(), {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      ),
+    });
+
+    await expect(
+      result.current.mutateAsync({
+        name: "Xi măng Bỉm Sơn",
+        sku: "XM-BS-01",
+        unitCode: "bao",
+      }),
+    ).rejects.toThrow("AUTH_CONTEXT_CHANGED");
+
+    expect(capturedHeaders["x-expected-tenant-id"]).toBe("tenant-a");
+    expect(capturedHeaders["x-session-context"]).toBe("tenant-a:owner-a");
   });
 });

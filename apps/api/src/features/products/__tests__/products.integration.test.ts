@@ -143,6 +143,44 @@ describe("products integration", () => {
       expect(listedB.statusCode).toBe(200);
       expect(listedB.json()).toMatchObject({ total: 1, items: [{ sku: "GACH-001" }] });
 
+      // Server-side cross-tab race test:
+      // Client context is Tenant A ("tenant-dev-001"), but server cookie is already Tenant B (cookieB).
+      // Verify that POST /products rejects with 409 AUTH_CONTEXT_CHANGED and NO row is written to Tenant B database!
+      const racePost = await server.inject({
+        method: "POST",
+        url: "/products",
+        cookies: { [SESSION_COOKIE_NAME]: cookieB },
+        headers: {
+          "x-expected-tenant-id": "tenant-dev-001",
+          "x-session-context": "tenant-dev-001:user-dev-owner-001",
+        },
+        payload: { sku: "CROSS-TAB-RACE-SKU", name: "Cross Tab Race Product", unitCode: "bao" },
+      });
+      expect(racePost.statusCode).toBe(409);
+      expect(racePost.json()).toMatchObject({
+        code: "AUTH_CONTEXT_CHANGED",
+      });
+
+      // Verify that NO product was created in database for Tenant B!
+      const raceDbCheck = await pool.query(
+        "SELECT id, tenant_id FROM products WHERE sku = 'CROSS-TAB-RACE-SKU'",
+      );
+      expect(raceDbCheck.rowCount).toBe(0);
+
+      // Verify that GET /products also rejects with 409 AUTH_CONTEXT_CHANGED when context mismatches
+      const raceGet = await server.inject({
+        method: "GET",
+        url: "/products?page=1&pageSize=10",
+        cookies: { [SESSION_COOKIE_NAME]: cookieB },
+        headers: {
+          "x-expected-tenant-id": "tenant-dev-001",
+        },
+      });
+      expect(raceGet.statusCode).toBe(409);
+      expect(raceGet.json()).toMatchObject({
+        code: "AUTH_CONTEXT_CHANGED",
+      });
+
       const tenantReassigned = await pool.query(
         "UPDATE users SET tenant_id = 'tenant-dev-002' WHERE id = 'user-dev-owner-001'",
       );

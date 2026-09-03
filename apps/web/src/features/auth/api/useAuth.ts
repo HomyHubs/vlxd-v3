@@ -6,8 +6,16 @@ import { apiClient } from "../../../lib/apiClient.js";
 
 export const AUTH_QUERY_KEY = ["auth", "me"] as const;
 
+import {
+  getCurrentSessionContext,
+  getCurrentSessionKey,
+  resetTenantTracker as resetSessionContextTracker,
+  setSessionContext,
+} from "./sessionContext.js";
+
+export { getCurrentSessionContext, getCurrentSessionKey };
+
 let authGeneration = 0;
-let currentSessionKey: string | null = null; // `${tenantId}:${userId}`
 
 const AUTH_SYNC_KEY = "vlxd_auth_sync";
 let authBroadcastChannel: BroadcastChannel | null = null;
@@ -32,10 +40,6 @@ export function bumpAuthGeneration() {
   authGeneration++;
 }
 
-export function getCurrentSessionKey(): string | null {
-  return currentSessionKey;
-}
-
 export function broadcastAuthTransition() {
   try {
     authBroadcastChannel?.postMessage({ type: "AUTH_CHANGED", timestamp: Date.now() });
@@ -53,8 +57,11 @@ export function clearTenantCache(queryClient: QueryClient) {
   });
 }
 
-export function resetTenantTracker(sessionKey: string | null = null) {
-  currentSessionKey = sessionKey;
+export function resetTenantTracker(
+  sessionKey: string | null = null,
+  tenantId: string | null = null,
+) {
+  resetSessionContextTracker(sessionKey, tenantId);
   authGeneration = 0;
 }
 
@@ -63,7 +70,7 @@ export function handleRemoteAuthTransition(queryClient: QueryClient) {
   clearTenantCache(queryClient);
   void queryClient.cancelQueries({ queryKey: AUTH_QUERY_KEY });
   // Immediately fail-closed to null so all protected subtrees unmount synchronously
-  currentSessionKey = null;
+  setSessionContext(null, null);
   queryClient.setQueryData(AUTH_QUERY_KEY, null);
   // Then initiate fresh refetch
   void queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
@@ -98,10 +105,11 @@ export function useCurrentUser() {
       const newUserId = query.data?.user?.id ?? null;
       const newSessionKey = newTenantId && newUserId ? `${newTenantId}:${newUserId}` : null;
 
-      if (currentSessionKey !== null && currentSessionKey !== newSessionKey) {
+      const previousSessionKey = getCurrentSessionKey();
+      if (previousSessionKey !== null && previousSessionKey !== newSessionKey) {
         clearTenantCache(queryClient);
       }
-      currentSessionKey = newSessionKey;
+      setSessionContext(newTenantId, newSessionKey);
     }
   }, [query.data, query.isSuccess, queryClient]);
 
@@ -133,7 +141,7 @@ export function useLogin() {
     onSuccess: (data) => {
       authGeneration++;
       void queryClient.cancelQueries({ queryKey: AUTH_QUERY_KEY });
-      currentSessionKey = `${data.tenant.id}:${data.user.id}`;
+      setSessionContext(data.tenant.id, `${data.tenant.id}:${data.user.id}`);
       clearTenantCache(queryClient);
       queryClient.setQueryData(AUTH_QUERY_KEY, data);
       broadcastAuthTransition();
@@ -159,7 +167,7 @@ export function useLogout() {
     onSuccess: () => {
       authGeneration++;
       void queryClient.cancelQueries({ queryKey: AUTH_QUERY_KEY });
-      currentSessionKey = null;
+      setSessionContext(null, null);
       clearTenantCache(queryClient);
       queryClient.setQueryData(AUTH_QUERY_KEY, null);
       broadcastAuthTransition();

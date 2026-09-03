@@ -72,9 +72,16 @@ export function ProductsPage() {
   });
 
   async function submit(input: CreateProductRequest) {
-    await createProduct.mutateAsync(input);
-    reset();
-    setOpen(false);
+    try {
+      await createProduct.mutateAsync(input);
+      reset();
+      setOpen(false);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "AUTH_CONTEXT_CHANGED") {
+        reset();
+        setOpen(false);
+      }
+    }
   }
 
   const createError = createProduct.error?.message;

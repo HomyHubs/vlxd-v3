@@ -26,6 +26,29 @@ export function createRequireCapability(authService: AuthService) {
           .send({ code: "UNAUTHORIZED", message: "Phiên đăng nhập không hợp lệ" });
       }
 
+      // Precondition checks: X-Expected-Tenant-Id and X-Session-Context
+      const expectedTenantId = (request.headers["x-expected-tenant-id"] ??
+        request.headers["X-Expected-Tenant-Id"]) as string | undefined;
+      const expectedSessionContext = (request.headers["x-session-context"] ??
+        request.headers["X-Session-Context"]) as string | undefined;
+
+      if (expectedTenantId && expectedTenantId !== session.tenant.id) {
+        return reply.code(409).send({
+          code: "AUTH_CONTEXT_CHANGED",
+          message: "Ngữ cảnh tenant đã thay đổi trên phiên đăng nhập hiện tại",
+        });
+      }
+
+      if (expectedSessionContext) {
+        const currentSessionContext = `${session.tenant.id}:${session.user.id}`;
+        if (expectedSessionContext !== currentSessionContext) {
+          return reply.code(409).send({
+            code: "AUTH_CONTEXT_CHANGED",
+            message: "Ngữ cảnh phiên đăng nhập đã thay đổi",
+          });
+        }
+      }
+
       request.session = session;
 
       const userCaps = session.user.capabilities ?? [];

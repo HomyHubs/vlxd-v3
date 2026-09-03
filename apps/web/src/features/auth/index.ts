@@ -1,6 +1,7 @@
 export {
   AUTH_QUERY_KEY,
   getCurrentSessionKey,
+  getCurrentSessionContext,
   resetTenantTracker,
   useCurrentUser,
   useLogin,

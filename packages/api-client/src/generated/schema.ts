@@ -349,7 +349,7 @@ export interface components {
         };
         ProductErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "PRODUCT_LIMIT_REACHED" | "PRODUCT_SKU_EXISTS" | "UNIT_NOT_FOUND";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "PRODUCT_LIMIT_REACHED" | "PRODUCT_SKU_EXISTS" | "UNIT_NOT_FOUND" | "AUTH_CONTEXT_CHANGED";
             message: string;
         };
         Warehouse: {
@@ -369,7 +369,7 @@ export interface components {
         };
         WarehouseErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "WAREHOUSE_LIMIT_REACHED" | "WAREHOUSE_CODE_EXISTS";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "WAREHOUSE_LIMIT_REACHED" | "WAREHOUSE_CODE_EXISTS" | "AUTH_CONTEXT_CHANGED";
             message: string;
         };
         CreateStockReceiptLineInput: {
@@ -425,7 +425,7 @@ export interface components {
         };
         StockReceiptErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "FORBIDDEN" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INVALID_RECEIPT_LINES";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INVALID_RECEIPT_LINES" | "AUTH_CONTEXT_CHANGED";
             message: string;
         };
         Customer: {
@@ -449,7 +449,7 @@ export interface components {
         };
         CustomerErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "CUSTOMER_CODE_EXISTS" | "INVALID_CUSTOMER_DATA";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "CUSTOMER_CODE_EXISTS" | "INVALID_CUSTOMER_DATA" | "AUTH_CONTEXT_CHANGED";
             message: string;
         };
         CreateSalesOrderLineInput: {
@@ -515,7 +515,7 @@ export interface components {
         };
         SalesOrderErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "FORBIDDEN" | "ORDER_NOT_FOUND" | "CUSTOMER_NOT_FOUND" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "INVALID_ORDER_LINES";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "ORDER_NOT_FOUND" | "CUSTOMER_NOT_FOUND" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "INVALID_ORDER_LINES" | "AUTH_CONTEXT_CHANGED";
             message: string;
         };
         TitleItem: {
@@ -549,7 +549,7 @@ export interface components {
         };
         UserErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "TITLE_NOT_FOUND" | "EMAIL_EXISTS" | "INVALID_INPUT";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "TITLE_NOT_FOUND" | "EMAIL_EXISTS" | "INVALID_INPUT" | "AUTH_CONTEXT_CHANGED";
             message: string;
         };
     };

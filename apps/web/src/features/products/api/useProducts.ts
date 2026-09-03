@@ -3,7 +3,11 @@ import type { CreateProductRequest, Product, ProductListResponse } from "@vlxd/s
 
 import { apiClient } from "../../../lib/apiClient.js";
 
-import { getCurrentSessionKey, useCurrentUser } from "../../auth/index.js";
+import {
+  getCurrentSessionContext,
+  getCurrentSessionKey,
+  useCurrentUser,
+} from "../../auth/index.js";
 
 export const PRODUCTS_QUERY_KEY = ["products"] as const;
 
@@ -32,11 +36,31 @@ export function useCreateProduct() {
   return useMutation<Product, Error, CreateProductRequest>({
     mutationFn: async (input) => {
       const callSessionKey = getCurrentSessionKey();
-      const { data, error } = await apiClient.POST("/products", { body: input });
-      if (data) {
-        if (callSessionKey && getCurrentSessionKey() !== callSessionKey) {
+      const callContext = getCurrentSessionContext();
+      const headers: Record<string, string> = {};
+      if (callContext) {
+        headers["x-expected-tenant-id"] = callContext.tenantId;
+        headers["x-session-context"] = callContext.sessionKey;
+      }
+
+      const { data, error, response } = await apiClient.POST("/products", {
+        body: input,
+        headers,
+      });
+
+      if (response?.status === 409) {
+        const errCode =
+          error && typeof error === "object" && "code" in error ? String(error.code) : "";
+        if (errCode === "AUTH_CONTEXT_CHANGED") {
           throw new Error("AUTH_CONTEXT_CHANGED");
         }
+      }
+
+      if (callSessionKey && getCurrentSessionKey() !== callSessionKey) {
+        throw new Error("AUTH_CONTEXT_CHANGED");
+      }
+
+      if (data) {
         return data;
       }
       const code =

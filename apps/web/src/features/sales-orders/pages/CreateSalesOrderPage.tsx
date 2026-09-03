@@ -80,11 +80,12 @@ export function CreateSalesOrderPage() {
 
   useEffect(() => {
     if (products.length > 0 && lines.length === 1 && !lines[0]!.productId) {
+      const defaultProduct = products[0] as unknown as { id: string; price?: number };
       setLines([
         {
-          productId: products[0]!.id,
+          productId: defaultProduct.id,
           quantity: 1,
-          unitPrice: 0,
+          unitPrice: typeof defaultProduct.price === "number" ? defaultProduct.price : 0,
         },
       ]);
     }
@@ -99,11 +100,7 @@ export function CreateSalesOrderPage() {
     setLines(lines.filter((_, idx) => idx !== index));
   };
 
-  const handleLineChange = (
-    index: number,
-    field: "productId" | "quantity" | "unitPrice",
-    value: string | number,
-  ) => {
+  const handleLineChange = (index: number, field: keyof OrderLineItem, value: string | number) => {
     setLines(
       lines.map((line, idx) => {
         if (idx !== index) return line;
@@ -137,10 +134,10 @@ export function CreateSalesOrderPage() {
       return;
     }
 
-    const invalidLines = lines.some((l) => !l.productId || l.quantity <= 0 || l.unitPrice < 0);
+    const invalidLines = lines.some((l) => !l.productId || l.quantity <= 0 || l.unitPrice <= 0);
     if (invalidLines) {
       setErrorMessage(
-        t("orders.errors.invalidLines", "Vui lòng chọn sản phẩm, số lượng và đơn giá hợp lệ"),
+        t("orders.errors.invalidLines", "Vui lòng chọn sản phẩm, số lượng và đơn giá hợp lệ (> 0)"),
       );
       return;
     }

@@ -24,6 +24,7 @@ export const WarehouseErrorResponseSchema = z.object({
     "VALIDATION_ERROR",
     "WAREHOUSE_LIMIT_REACHED",
     "WAREHOUSE_CODE_EXISTS",
+    "AUTH_CONTEXT_CHANGED",
   ]),
   message: z.string(),
 });

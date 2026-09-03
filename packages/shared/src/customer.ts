@@ -28,6 +28,7 @@ export const CustomerErrorResponseSchema = z.object({
     "VALIDATION_ERROR",
     "CUSTOMER_CODE_EXISTS",
     "INVALID_CUSTOMER_DATA",
+    "AUTH_CONTEXT_CHANGED",
   ]),
   message: z.string(),
 });

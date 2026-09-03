@@ -45,6 +45,7 @@ export const ProductErrorResponseSchema = z.object({
     "PRODUCT_LIMIT_REACHED",
     "PRODUCT_SKU_EXISTS",
     "UNIT_NOT_FOUND",
+    "AUTH_CONTEXT_CHANGED",
   ]),
   message: z.string(),
 });

@@ -28,6 +28,7 @@ export const customerRoutes: FastifyPluginAsync<CustomerRoutesOptions> = (server
           200: CustomerListResponseSchema,
           401: CustomerErrorResponseSchema,
           403: CustomerErrorResponseSchema,
+          409: CustomerErrorResponseSchema,
         },
       },
     },

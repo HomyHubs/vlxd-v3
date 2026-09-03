@@ -28,6 +28,7 @@ export const warehouseRoutes: FastifyPluginAsync<WarehouseRoutesOptions> = (serv
           200: WarehouseListResponseSchema,
           401: WarehouseErrorResponseSchema,
           403: WarehouseErrorResponseSchema,
+          409: WarehouseErrorResponseSchema,
         },
       },
     },
