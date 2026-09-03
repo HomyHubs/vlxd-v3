@@ -26,6 +26,28 @@ services:
       - ./db/migrations:/db/migrations:ro
     command: ["--migrations-dir", "/db/migrations", "up"]
 
+  seed:
+    image: postgres:18-alpine
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-vlxd_dev}
+    volumes:
+      - ./db/seeds:/db/seeds:ro
+    command:
+      [
+        "psql",
+        "-h",
+        "db",
+        "-U",
+        "${POSTGRES_USER:-vlxd}",
+        "-d",
+        "${POSTGRES_DB:-vlxd}",
+        "-f",
+        "/db/seeds/dev.sql",
+      ]
+
   api:
     build:
       context: .
@@ -48,7 +70,7 @@ services:
       - /workspace/packages/shared/node_modules
       - /workspace/packages/api-client/node_modules
     depends_on:
-      migrate:
+      seed:
         condition: service_completed_successfully
 
   web:

@@ -452,11 +452,15 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — PR #7: Hoàn thành giải quyết triệt để các findings từ Round 3 của `/gpt-web-review`:
-- B1 (Cross-tenant cache isolation): Thêm `clearTenantCache(queryClient)` huỷ query đang chạy và dọn sạch cache dữ liệu nghiệp vụ khi logout, login hoặc thay đổi tenant identity; bổ sung `tenantId` vào query keys của `users` và `titles`; tạo regression test `TenantCacheIsolation.test.tsx` mô phỏng response bị delay ở tenant thứ 2 để chứng minh 100% không rò rỉ dữ liệu.
-- B2 (Đồng bộ ma trận quyền thực tế giữa migration SQL, seed và UI test): Cập nhật `dev.sql` khởi tạo đầy đủ titles và role group mappings cho `tenant-dev-001` để gán chính xác `SALES` title cho `sales@vlxd.local`; cập nhật `RoleMatrixUI.test.tsx` khớp hoàn toàn với chính sách phân quyền thực tế trong migration (`inventory.view`, `customers.manage` cho SALES); bổ sung test suite cho quyền `sales.view` read-only.
-- B3 (Bảo vệ entry point tạo đơn hàng ở empty state): Điều kiện hoá nút "Tạo đơn hàng đầu tiên" tại empty state của `SalesOrderListPage.tsx` với `canCreateSalesOrder`.
-Toàn bộ cổng gác cục bộ `pnpm check` và `pnpm contracts:check` pass 100% (111 tests [71 api tests + 40 web tests], 0 lint warnings, clean build). Đang chuẩn bị push commit và trigger Round 4 review.
+Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — PR #7: Hoàn thành giải quyết triệt để finding B1 và đề xuất N2 từ Round 4 của `/gpt-web-review`:
+- B1 (Chống tự huỷ/revert authentication query khi chuyển đổi tenant hoặc hết hạn session):
+  - Sửa `clearTenantCache(queryClient)` thêm predicate `{ predicate: (query) => query.queryKey[0] !== "auth" }` cho cả `cancelQueries()` và `removeQueries()`, bảo đảm tuyệt đối không bao giờ can thiệp hay revert query `["auth", "me"]`.
+  - Tách logic dọn cache nghiệp vụ ra khỏi `queryFn` của `useCurrentUser()` chuyển sang `useEffect` kích hoạt khi identity thay đổi (`newTenantId !== currentTenantId`), giữ `queryFn` là hàm thuần tuý chỉ fetch dữ liệu.
+  - Bổ sung 2 test suite theo luồng production trong `TenantCacheIsolation.test.tsx`:
+    1. Bắt đầu với auth cache của Tenant A, refetch thực sự `AUTH_QUERY_KEY` với dữ liệu Tenant B, xác nhận auth cache lưu trữ thành công Tenant B (không bị revert) và toàn bộ query của Tenant A bị dọn sạch khỏi cache.
+    2. Bắt đầu với auth cache của Tenant A, refetch thực sự `AUTH_QUERY_KEY` nhận 401 Unauthorized, xác nhận auth cache trở về `null`, toàn bộ query nghiệp vụ bị dọn sạch và UI render Unauthenticated.
+- N2 (Đồng bộ bootstrap seed trong docker compose): Thêm service `seed` vào `compose.dev.yml` tự động chạy `psql -f /db/seeds/dev.sql` ngay sau khi `migrate` hoàn tất.
+Toàn bộ cổng gác cục bộ `pnpm check` và `pnpm contracts:check` pass 100% (113 tests [71 api tests + 42 web tests], 0 lint warnings, clean build). Đang chuẩn bị push commit và trigger Round 5 review.
 
 ### Đã xong
 
@@ -484,11 +488,12 @@ Toàn bộ cổng gác cục bộ `pnpm check` và `pnpm contracts:check` pass 1
   - [x] Fix Round 1 Findings — Loại bỏ email/PII khỏi auth service error logging, thêm test suite kiểm tra bảo mật log.
   - [x] Fix Round 2 Findings — Enforce capability-based route guards & dashboard links across all business surfaces, hide mutation buttons when lacking manage/create capability, decouple migration backfill from test email, resolve capabilities before session insert, add Role-Matrix UI suite for OWNER, SALES, WAREHOUSE.
   - [x] Fix Round 3 Findings — Enforce cross-tenant cache isolation, align authoritative capabilities in dev seed and UI tests, guard empty-state sales order CTA, add delayed-response cache isolation test and read-only sales tests.
-  - [x] Cổng gác tất định: `pnpm check` (format, lint 0 warnings, typecheck 4/4 packages, 111 tests pass [71 api tests + 40 web tests], production build, contracts lint & drift check) pass 100%.
+  - [x] Fix Round 4 Findings — Sửa `cancelQueries` predicate loại trừ auth query, chuyển tenant cache clearing sang `useEffect` của `useCurrentUser`, thêm 2 test suite production-path cho Tenant B và 401, thêm `seed` service vào `compose.dev.yml`.
+  - [x] Cổng gác tất định: `pnpm check` (format, lint 0 warnings, typecheck 4/4 packages, 113 tests pass [71 api tests + 42 web tests], production build, contracts lint & drift check) pass 100%.
 
 ### Đang làm dở
 
-- [ ] Push commit Round 3 fix lên PR #7 (`feature/slice-6`) và thực hiện Round 4 review loop `/gpt-web-review`.
+- [ ] Push commit Round 4 fix lên PR #7 (`feature/slice-6`) và thực hiện Round 5 review loop `/gpt-web-review`.
 
 ### Bước tiếp theo
 

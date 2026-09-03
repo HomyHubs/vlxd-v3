@@ -3,10 +3,16 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { UsersPage } from "../../users/pages/UsersPage.js";
-import { AUTH_QUERY_KEY, clearTenantCache } from "../api/useAuth.js";
+import {
+  AUTH_QUERY_KEY,
+  clearTenantCache,
+  resetTenantTracker,
+  useCurrentUser,
+} from "../api/useAuth.js";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  resetTenantTracker(null);
 });
 
 describe("Cross-tenant cache isolation", () => {
@@ -156,5 +162,195 @@ describe("Cross-tenant cache isolation", () => {
       expect(screen.getByText("bob@tenant-b.local")).toBeInTheDocument();
     });
     expect(screen.queryByText("Alice A (Tenant A)")).not.toBeInTheDocument();
+  });
+
+  it("production path: refetching AUTH_QUERY_KEY with Tenant B replaces auth cache and purges Tenant A non-auth queries without self-cancellation", async () => {
+    function AuthConsumer() {
+      const { data: session, isLoading } = useCurrentUser();
+      if (isLoading) return <div>Loading...</div>;
+      if (!session) return <div>Unauthenticated</div>;
+      return (
+        <div>
+          <div data-testid="user-name">{session.user.fullName}</div>
+          <div data-testid="tenant-name">{session.tenant.name}</div>
+        </div>
+      );
+    }
+
+    const tenantASession = {
+      user: {
+        id: "user-a",
+        email: "alice@tenant-a.local",
+        fullName: "Alice A (Tenant A)",
+        status: "active" as const,
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["users.manage"],
+      },
+      tenant: {
+        id: "tenant-a",
+        name: "Cửa Hàng A",
+        code: "tenant-a",
+        plan: "free" as const,
+      },
+    };
+
+    const tenantBSession = {
+      user: {
+        id: "user-b",
+        email: "bob@tenant-b.local",
+        fullName: "Bob B (Tenant B)",
+        status: "active" as const,
+        titles: ["Nhân viên bán hàng"],
+        capabilities: ["sales.view"],
+      },
+      tenant: {
+        id: "tenant-b",
+        name: "Cửa Hàng B",
+        code: "tenant-b",
+        plan: "free" as const,
+      },
+    };
+
+    let authResponse = tenantASession;
+
+    const fetchMock = vi.fn().mockImplementation((req: Request | string) => {
+      const url = typeof req === "string" ? req : req.url;
+      if (url.includes("/auth/me")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(authResponse), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    resetTenantTracker("tenant-a");
+    queryClient.setQueryData(AUTH_QUERY_KEY, tenantASession);
+    queryClient.setQueryData(["users", "tenant-a"], { items: [{ id: "user-a" }] });
+    queryClient.setQueryData(["titles", "tenant-a"], { items: [{ id: "t-owner" }] });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthConsumer />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("user-name")).toHaveTextContent("Alice A (Tenant A)");
+    expect(screen.getByTestId("tenant-name")).toHaveTextContent("Cửa Hàng A");
+    expect(queryClient.getQueryData(["users", "tenant-a"])).toBeDefined();
+
+    // Trigger production refetch with Tenant B
+    authResponse = tenantBSession;
+    await queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
+
+    // Verify auth query successfully committed Tenant B without self-cancellation
+    await waitFor(() => {
+      expect(screen.getByTestId("user-name")).toHaveTextContent("Bob B (Tenant B)");
+      expect(screen.getByTestId("tenant-name")).toHaveTextContent("Cửa Hàng B");
+    });
+
+    const cachedAuth = queryClient.getQueryData(AUTH_QUERY_KEY);
+    expect(cachedAuth).toEqual(tenantBSession);
+
+    // Verify Tenant A non-auth queries were cleanly purged
+    expect(queryClient.getQueryData(["users", "tenant-a"])).toBeUndefined();
+    expect(queryClient.getQueryData(["titles", "tenant-a"])).toBeUndefined();
+  });
+
+  it("production path: refetching AUTH_QUERY_KEY with 401 clears auth cache to null and purges non-auth queries", async () => {
+    function AuthConsumer() {
+      const { data: session, isLoading } = useCurrentUser();
+      if (isLoading) return <div>Loading...</div>;
+      if (!session) return <div>Unauthenticated</div>;
+      return (
+        <div>
+          <div data-testid="user-name">{session.user.fullName}</div>
+          <div data-testid="tenant-name">{session.tenant.name}</div>
+        </div>
+      );
+    }
+
+    const tenantASession = {
+      user: {
+        id: "user-a",
+        email: "alice@tenant-a.local",
+        fullName: "Alice A (Tenant A)",
+        status: "active" as const,
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["users.manage"],
+      },
+      tenant: {
+        id: "tenant-a",
+        name: "Cửa Hàng A",
+        code: "tenant-a",
+        plan: "free" as const,
+      },
+    };
+
+    let is401 = false;
+
+    const fetchMock = vi.fn().mockImplementation((req: Request | string) => {
+      const url = typeof req === "string" ? req : req.url;
+      if (url.includes("/auth/me")) {
+        if (is401) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Unauthorized" } }),
+              {
+                status: 401,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
+          );
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify(tenantASession), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    resetTenantTracker("tenant-a");
+    queryClient.setQueryData(AUTH_QUERY_KEY, tenantASession);
+    queryClient.setQueryData(["users", "tenant-a"], { items: [{ id: "user-a" }] });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthConsumer />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("user-name")).toHaveTextContent("Alice A (Tenant A)");
+    expect(queryClient.getQueryData(["users", "tenant-a"])).toBeDefined();
+
+    // Trigger production refetch with 401
+    is401 = true;
+    await queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
+
+    // Verify auth query committed null and rendered Unauthenticated
+    await waitFor(() => {
+      expect(screen.getByText("Unauthenticated")).toBeInTheDocument();
+    });
+
+    const cachedAuth = queryClient.getQueryData(AUTH_QUERY_KEY);
+    expect(cachedAuth).toBeNull();
+
+    // Verify non-auth queries were purged
+    expect(queryClient.getQueryData(["users", "tenant-a"])).toBeUndefined();
   });
 });

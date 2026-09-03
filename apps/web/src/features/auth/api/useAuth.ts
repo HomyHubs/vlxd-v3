@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AuthSessionResponse, LoginRequest } from "@vlxd/shared";
 
@@ -8,38 +9,45 @@ export const AUTH_QUERY_KEY = ["auth", "me"] as const;
 let currentTenantId: string | null = null;
 
 export function clearTenantCache(queryClient: QueryClient) {
-  void queryClient.cancelQueries();
+  void queryClient.cancelQueries({
+    predicate: (query) => query.queryKey[0] !== "auth",
+  });
   queryClient.removeQueries({
     predicate: (query) => query.queryKey[0] !== "auth",
   });
 }
 
+export function resetTenantTracker(tenantId: string | null = null) {
+  currentTenantId = tenantId;
+}
+
 export function useCurrentUser() {
   const queryClient = useQueryClient();
 
-  return useQuery<AuthSessionResponse | null>({
+  const query = useQuery<AuthSessionResponse | null>({
     queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
       const { data, error, response } = await apiClient.GET("/auth/me");
       if (response.status === 401 || error) {
-        if (currentTenantId !== null) {
-          clearTenantCache(queryClient);
-          currentTenantId = null;
-        }
         return null;
       }
-
-      const newTenantId = data?.tenant?.id ?? null;
-      if (currentTenantId !== null && currentTenantId !== newTenantId) {
-        clearTenantCache(queryClient);
-      }
-      currentTenantId = newTenantId;
-
       return data ?? null;
     },
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
+
+  useEffect(() => {
+    if (query.isSuccess) {
+      const newTenantId = query.data?.tenant?.id ?? null;
+      if (currentTenantId !== null && currentTenantId !== newTenantId) {
+        clearTenantCache(queryClient);
+      }
+      currentTenantId = newTenantId;
+    }
+  }, [query.data, query.isSuccess, queryClient]);
+
+  return query;
 }
 
 export function useLogin() {
