@@ -48,6 +48,9 @@ describe("stock receipts integration tests (full transaction & stock update)", (
     const stockReceipts = splitMigration(
       await readMigration("202609020004_create_stock_receipt_tables.sql"),
     );
+    const ceilingMigration = splitMigration(
+      await readMigration("202609030006_add_stock_levels_ceiling.sql"),
+    );
     const seed = await readFile(resolve(process.cwd(), "../../db/seeds/dev.sql"), "utf8");
 
     const pool = createDatabasePool(started.getConnectionUri());
@@ -60,6 +63,7 @@ describe("stock receipts integration tests (full transaction & stock update)", (
       await pool.query(seed);
       await pool.query(inventory[0]);
       await pool.query(stockReceipts[0]);
+      await pool.query(ceilingMigration[0]);
 
       // Seed warehouse and product
       await database
@@ -245,6 +249,70 @@ describe("stock receipts integration tests (full transaction & stock update)", (
       expect(JSON.parse(overflowRes.body)).toMatchObject({
         code: "INVALID_RECEIPT_LINES",
       });
+
+      // 9. Concurrent missing-row receipts for brand-new warehouse & product
+      await database
+        .insertInto("warehouses")
+        .values({
+          id: "wh-new-001",
+          tenant_id: "tenant-dev-001",
+          code: "WH-NEW-001",
+          name: "Kho Mới",
+        })
+        .execute();
+
+      await database
+        .insertInto("products")
+        .values({
+          id: "prod-sand-001",
+          tenant_id: "tenant-dev-001",
+          unit_id: "unit-bao",
+          sku: "CAT-001",
+          name: "Cát xây dựng",
+        })
+        .execute();
+
+      // Verify no stock row exists initially
+      const noStock = await database
+        .selectFrom("stock_levels")
+        .selectAll()
+        .where("warehouse_id", "=", "wh-new-001")
+        .where("product_id", "=", "prod-sand-001")
+        .executeTakeFirst();
+      expect(noStock).toBeUndefined();
+
+      // Execute concurrent receipts for missing row
+      const [resA, resB] = await Promise.all([
+        app.inject({
+          method: "POST",
+          url: "/stock-receipts",
+          cookies,
+          payload: {
+            warehouseId: "wh-new-001",
+            lines: [{ productId: "prod-sand-001", quantity: 500 }],
+          },
+        }),
+        app.inject({
+          method: "POST",
+          url: "/stock-receipts",
+          cookies,
+          payload: {
+            warehouseId: "wh-new-001",
+            lines: [{ productId: "prod-sand-001", quantity: 300 }],
+          },
+        }),
+      ]);
+
+      expect(resA.statusCode).toBe(201);
+      expect(resB.statusCode).toBe(201);
+
+      const combinedStock = await database
+        .selectFrom("stock_levels")
+        .selectAll()
+        .where("warehouse_id", "=", "wh-new-001")
+        .where("product_id", "=", "prod-sand-001")
+        .executeTakeFirst();
+      expect(combinedStock?.quantity).toBe(800);
 
       await app.close();
     } finally {

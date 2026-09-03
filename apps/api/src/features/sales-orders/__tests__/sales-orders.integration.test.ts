@@ -57,6 +57,9 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
     const salesOrders = splitMigration(
       await readMigration("202609030005_create_sales_order_tables.sql"),
     );
+    const ceilingMigration = splitMigration(
+      await readMigration("202609030006_add_stock_levels_ceiling.sql"),
+    );
     const seed = await readFile(resolve(process.cwd(), "../../db/seeds/dev.sql"), "utf8");
 
     const pool = createDatabasePool(started.getConnectionUri());
@@ -70,6 +73,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
       await pool.query(inventory[0]);
       await pool.query(stockReceipts[0]);
       await pool.query(salesOrders[0]);
+      await pool.query(ceilingMigration[0]);
 
       // Seed warehouse and product
       await database

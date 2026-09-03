@@ -254,6 +254,23 @@ export function createStockReceiptService(
           if (isUniqueViolation && attempt < MAX_ATTEMPTS) {
             continue;
           }
+
+          const isCeilingViolation =
+            typeof error === "object" &&
+            error !== null &&
+            "code" in error &&
+            (error as { code?: string }).code === "23514" &&
+            "constraint" in error &&
+            (error as { constraint?: string }).constraint === "stock_levels_quantity_ceiling";
+
+          if (isCeilingViolation) {
+            return {
+              success: false,
+              code: "INVALID_RECEIPT_LINES",
+              message: `Tồn kho sau khi nhập vượt quá giới hạn tối đa (${MAX_STOCK_LEVEL_QUANTITY.toLocaleString()})`,
+            };
+          }
+
           throw error;
         }
       }

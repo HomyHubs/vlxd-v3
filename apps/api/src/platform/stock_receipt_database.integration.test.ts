@@ -42,6 +42,9 @@ describe("stock receipt database migration and rollback", () => {
     const stockReceipts = splitMigration(
       await readMigration("202609020004_create_stock_receipt_tables.sql"),
     );
+    const ceilingMigration = splitMigration(
+      await readMigration("202609030006_add_stock_levels_ceiling.sql"),
+    );
     const seed = await readFile(resolve(process.cwd(), "../../db/seeds/dev.sql"), "utf8");
 
     const pool = createDatabasePool(started.getConnectionUri());
@@ -156,7 +159,24 @@ describe("stock receipt database migration and rollback", () => {
           .execute(),
       ).rejects.toThrow();
 
-      // 8. Rollback migration down
+      // 8. Apply ceiling migration up and verify constraint
+      await pool.query(ceilingMigration[0]);
+
+      await expect(
+        database
+          .insertInto("stock_levels")
+          .values({
+            warehouse_id: "wh-001",
+            product_id: "prod-001",
+            quantity: 1_000_000_001,
+          })
+          .execute(),
+      ).rejects.toThrow();
+
+      // Rollback ceiling migration down
+      await pool.query(ceilingMigration[1]);
+
+      // 9. Rollback stock receipts migration down
       await pool.query(stockReceipts[1]);
 
       // 9. Tables should no longer exist
