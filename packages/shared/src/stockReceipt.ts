@@ -1,8 +1,17 @@
 import { z } from "zod";
 
+export const MAX_STOCK_RECEIPT_LINE_QUANTITY = 1_000_000;
+
 export const CreateStockReceiptLineInputSchema = z.object({
   productId: z.string().min(1),
-  quantity: z.number().int().positive("Số lượng phải lớn hơn 0"),
+  quantity: z
+    .number()
+    .int("Số lượng phải là số nguyên")
+    .positive("Số lượng phải lớn hơn 0")
+    .max(
+      MAX_STOCK_RECEIPT_LINE_QUANTITY,
+      `Số lượng không được vượt quá ${MAX_STOCK_RECEIPT_LINE_QUANTITY.toLocaleString()}`,
+    ),
 });
 
 export const CreateStockReceiptRequestSchema = z.object({

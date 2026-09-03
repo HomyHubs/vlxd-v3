@@ -1,11 +1,12 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 
-import type {
-  CreateStockReceiptRequest,
-  StockReceiptDetailResponse,
-  StockReceiptLine,
-  StockReceiptListItem,
-  StockReceiptListResponse,
+import {
+  MAX_STOCK_RECEIPT_LINE_QUANTITY,
+  type CreateStockReceiptRequest,
+  type StockReceiptDetailResponse,
+  type StockReceiptLine,
+  type StockReceiptListItem,
+  type StockReceiptListResponse,
 } from "@vlxd/shared";
 import type { Kysely } from "kysely";
 
@@ -42,7 +43,7 @@ export interface StockReceiptServiceDependencies {
 
 function generateReceiptNumber(): string {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const randomSuffix = randomBytes(4).toString("hex").toUpperCase();
   return `PN-${dateStr}-${randomSuffix}`;
 }
 
@@ -97,6 +98,20 @@ export function createStockReceiptService(
 
       const productMap = new Map(products.map((p) => [p.id, p]));
 
+      // Aggregate requested quantities per product and validate safe integer / domain bounds
+      const aggregatedQuantities = new Map<string, number>();
+      for (const line of input.lines) {
+        const nextQty = (aggregatedQuantities.get(line.productId) ?? 0) + line.quantity;
+        if (!Number.isSafeInteger(nextQty) || nextQty > MAX_STOCK_RECEIPT_LINE_QUANTITY) {
+          return {
+            success: false,
+            code: "INVALID_RECEIPT_LINES",
+            message: `Tổng số lượng nhập cho một sản phẩm không được vượt quá ${MAX_STOCK_RECEIPT_LINE_QUANTITY.toLocaleString()}`,
+          };
+        }
+        aggregatedQuantities.set(line.productId, nextQty);
+      }
+
       // Get user name for response
       const user = await db
         .selectFrom("users")
@@ -106,100 +121,120 @@ export function createStockReceiptService(
 
       const createdByName = user?.fullName ?? "Người dùng";
 
-      // Execute transaction: create receipt + lines + movements + upsert stock levels
-      return db.transaction().execute(async (trx) => {
-        const receiptId = `sr-${randomUUID()}`;
-        const receiptNumber = generateReceiptNumber();
-        const now = new Date();
+      // Execute transaction with collision retry for receipt_number
+      const MAX_ATTEMPTS = 3;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          return await db.transaction().execute(async (trx) => {
+            const receiptId = `sr-${randomUUID()}`;
+            const receiptNumber = generateReceiptNumber();
+            const now = new Date();
 
-        await trx
-          .insertInto("stock_receipts")
-          .values({
-            id: receiptId,
-            tenant_id: tenantId,
-            warehouse_id: input.warehouseId,
-            receipt_number: receiptNumber,
-            status: "completed",
-            note: input.note ?? null,
-            created_by: userId,
-          })
-          .execute();
+            await trx
+              .insertInto("stock_receipts")
+              .values({
+                id: receiptId,
+                tenant_id: tenantId,
+                warehouse_id: input.warehouseId,
+                receipt_number: receiptNumber,
+                status: "completed",
+                note: input.note ?? null,
+                created_by: userId,
+              })
+              .execute();
 
-        const createdLines: StockReceiptLine[] = [];
-        let totalQuantity = 0;
+            const createdLines: StockReceiptLine[] = [];
+            let totalQuantity = 0;
 
-        for (const line of input.lines) {
-          const lineId = `srl-${randomUUID()}`;
-          const prod = productMap.get(line.productId)!;
+            for (const line of input.lines) {
+              const lineId = `srl-${randomUUID()}`;
+              const prod = productMap.get(line.productId)!;
 
-          await trx
-            .insertInto("stock_receipt_lines")
-            .values({
-              id: lineId,
-              stock_receipt_id: receiptId,
-              product_id: line.productId,
-              quantity: line.quantity,
-            })
-            .execute();
+              await trx
+                .insertInto("stock_receipt_lines")
+                .values({
+                  id: lineId,
+                  stock_receipt_id: receiptId,
+                  product_id: line.productId,
+                  quantity: line.quantity,
+                })
+                .execute();
 
-          const movementId = `sm-${randomUUID()}`;
-          await trx
-            .insertInto("stock_movements")
-            .values({
-              id: movementId,
-              tenant_id: tenantId,
-              warehouse_id: input.warehouseId,
-              product_id: line.productId,
-              quantity: line.quantity,
-              type: "inbound_receipt",
-              reference_id: receiptId,
-            })
-            .execute();
+              const movementId = `sm-${randomUUID()}`;
+              await trx
+                .insertInto("stock_movements")
+                .values({
+                  id: movementId,
+                  tenant_id: tenantId,
+                  warehouse_id: input.warehouseId,
+                  product_id: line.productId,
+                  quantity: line.quantity,
+                  type: "inbound_receipt",
+                  reference_id: receiptId,
+                })
+                .execute();
 
-          // Upsert stock_level atomically
-          await trx
-            .insertInto("stock_levels")
-            .values({
-              warehouse_id: input.warehouseId,
-              product_id: line.productId,
-              quantity: line.quantity,
-            })
-            .onConflict((oc) =>
-              oc.columns(["warehouse_id", "product_id"]).doUpdateSet((eb) => ({
-                quantity: eb("stock_levels.quantity", "+", line.quantity),
-                updated_at: now,
-              })),
-            )
-            .execute();
+              // Upsert stock_level atomically
+              await trx
+                .insertInto("stock_levels")
+                .values({
+                  warehouse_id: input.warehouseId,
+                  product_id: line.productId,
+                  quantity: line.quantity,
+                })
+                .onConflict((oc) =>
+                  oc.columns(["warehouse_id", "product_id"]).doUpdateSet((eb) => ({
+                    quantity: eb("stock_levels.quantity", "+", line.quantity),
+                    updated_at: now,
+                  })),
+                )
+                .execute();
 
-          createdLines.push({
-            id: lineId,
-            productId: line.productId,
-            productSku: prod.sku,
-            productName: prod.name,
-            unitName: prod.unitName,
-            quantity: line.quantity,
+              createdLines.push({
+                id: lineId,
+                productId: line.productId,
+                productSku: prod.sku,
+                productName: prod.name,
+                unitName: prod.unitName,
+                quantity: line.quantity,
+              });
+
+              totalQuantity += line.quantity;
+            }
+
+            const receiptDetail: StockReceiptDetailResponse = {
+              id: receiptId,
+              receiptNumber,
+              warehouseId: warehouse.id,
+              warehouseCode: warehouse.code,
+              warehouseName: warehouse.name,
+              status: "completed",
+              note: input.note ?? null,
+              createdByName,
+              createdAt: now.toISOString(),
+              totalQuantity,
+              lines: createdLines,
+            };
+
+            return { success: true, receipt: receiptDetail };
           });
+        } catch (error: unknown) {
+          const isUniqueViolation =
+            typeof error === "object" &&
+            error !== null &&
+            "code" in error &&
+            (error as { code?: string }).code === "23505" &&
+            "constraint" in error &&
+            (error as { constraint?: string }).constraint === "stock_receipts_tenant_number_unique";
 
-          totalQuantity += line.quantity;
+          if (isUniqueViolation && attempt < MAX_ATTEMPTS) {
+            continue;
+          }
+          throw error;
         }
+      }
 
-        const receiptDetail: StockReceiptDetailResponse = {
-          id: receiptId,
-          receiptNumber,
-          warehouseId: warehouse.id,
-          warehouseCode: warehouse.code,
-          warehouseName: warehouse.name,
-          status: "completed",
-          note: input.note ?? null,
-          createdByName,
-          createdAt: now.toISOString(),
-          totalQuantity,
-          lines: createdLines,
-        };
-
-        return { success: true, receipt: receiptDetail };
-      });
+      throw new Error("Không thể tạo mã phiếu nhập sau nhiều lần thử");
     },
 
     async list(tenantId, query) {

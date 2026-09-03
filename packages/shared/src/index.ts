@@ -47,6 +47,7 @@ export {
 } from "./warehouse.js";
 
 export {
+  MAX_STOCK_RECEIPT_LINE_QUANTITY,
   CreateStockReceiptLineInputSchema,
   CreateStockReceiptRequestSchema,
   StockReceiptDetailResponseSchema,

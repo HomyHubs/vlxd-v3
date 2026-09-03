@@ -674,7 +674,7 @@ components:
       required: [productId, quantity]
       properties:
         productId: { type: string }
-        quantity: { type: integer, minimum: 1 }
+        quantity: { type: integer, minimum: 1, maximum: 1000000 }
     CreateStockReceiptRequest:
       type: object
       additionalProperties: false

@@ -245,4 +245,34 @@ describe("stock receipt routes unit tests", () => {
     expect(getById).toHaveBeenCalledWith("tenant-1", "sr-123");
     await app.close();
   });
+
+  it("returns 400 when quantity exceeds maximum allowed bound", async () => {
+    const stockReceiptService = {
+      list: vi.fn(),
+      create: vi.fn(),
+      getById: vi.fn(),
+    } as StockReceiptService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      stockReceiptService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/stock-receipts",
+      cookies: { vlxd_session: "valid-token" },
+      payload: {
+        warehouseId: "wh-1",
+        lines: [{ productId: "prod-1", quantity: 10_000_000 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: "INVALID_RECEIPT_LINES" });
+    await app.close();
+  });
 });
