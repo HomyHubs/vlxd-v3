@@ -55,31 +55,49 @@ describe("RBAC database migration and rollback", () => {
     const database = createDatabase(pool);
 
     try {
-      // 1. Setup base migrations and seed
+      // 1. Setup base migrations
       await pool.query(appMeta[0]);
       await pool.query(auth[0]);
       await pool.query(products[0]);
-      await pool.query(seed);
       await pool.query(inventory[0]);
       await pool.query(stockReceipts[0]);
       await pool.query(salesOrders[0]);
       await pool.query(ceiling[0]);
 
+      // Create a pre-existing user before RBAC to test backfill
+      await pool.query(`
+        INSERT INTO tenants (id, name, code, plan) VALUES ('tenant-pre-001', 'Tenant Pre', 'pre', 'free') ON CONFLICT DO NOTHING;
+        INSERT INTO users (id, tenant_id, email, full_name, password_hash, status)
+        VALUES ('user-pre-001', 'tenant-pre-001', 'legacy@vlxd.local', 'Legacy User', 'hash', 'active');
+      `);
+
       // 2. Apply RBAC migration up
       await pool.query(rbac[0]);
 
-      // 3. Verify capabilities seeded
+      // Verify pre-existing legacy user without title is backfilled with OWNER
+      const legacyUserTitles = await database
+        .selectFrom("user_titles")
+        .selectAll()
+        .where("user_id", "=", "user-pre-001")
+        .execute();
+      expect(legacyUserTitles.length).toBe(1);
+      expect(legacyUserTitles[0]?.title_id).toBe("title-owner-tenant-pre-001");
+
+      // 3. Apply development seed (runs after all migrations as in docker compose / local development)
+      await pool.query(seed);
+
+      // 4. Verify capabilities seeded
       const capabilities = await database.selectFrom("capabilities").selectAll().execute();
       expect(capabilities.length).toBeGreaterThanOrEqual(8);
       const capIds = capabilities.map((c) => c.id);
       expect(capIds).toContain("users.manage");
       expect(capIds).toContain("sales.create");
 
-      // 4. Verify role groups seeded
+      // 5. Verify role groups seeded
       const roleGroups = await database.selectFrom("role_groups").selectAll().execute();
       expect(roleGroups.length).toBeGreaterThanOrEqual(3);
 
-      // 5. Verify default titles created for tenant-dev-001
+      // 6. Verify default titles created for tenant-dev-001
       const titles = await database
         .selectFrom("titles")
         .selectAll()
@@ -90,14 +108,23 @@ describe("RBAC database migration and rollback", () => {
       expect(titleCodes).toContain("OWNER");
       expect(titleCodes).toContain("SALES");
 
-      // 6. Verify user-dev-owner-001 is assigned to title-owner
-      const userTitles = await database
+      // 7. Verify user-dev-owner-001 is assigned to title-owner
+      const ownerUserTitles = await database
         .selectFrom("user_titles")
         .selectAll()
         .where("user_id", "=", "user-dev-owner-001")
         .execute();
-      expect(userTitles.length).toBe(1);
-      expect(userTitles[0]?.title_id).toBe("title-owner-tenant-dev-001");
+      expect(ownerUserTitles.length).toBe(1);
+      expect(ownerUserTitles[0]?.title_id).toBe("title-owner-tenant-dev-001");
+
+      // 8. Verify user-dev-sales-001 is assigned to title-sales by the seed
+      const salesUserTitles = await database
+        .selectFrom("user_titles")
+        .selectAll()
+        .where("user_id", "=", "user-dev-sales-001")
+        .execute();
+      expect(salesUserTitles.length).toBe(1);
+      expect(salesUserTitles[0]?.title_id).toBe("title-sales-tenant-dev-001");
 
       // 7. Verify unique constraint: cannot create duplicate title code in same tenant
       await expect(

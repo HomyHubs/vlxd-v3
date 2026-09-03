@@ -452,7 +452,11 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — PR #7: Hoàn thành sửa các findings từ Round 2 của `/gpt-web-review` (enforce capability-based navigation & route guards cho toàn bộ business surfaces, ẩn mutation buttons theo capability, decouple migration backfill khỏi fixture email, resolve capabilities trước khi insert session, bổ sung bộ role-matrix UI tests cho OWNER, SALES, WAREHOUSE). Toàn bộ cổng gác cục bộ `pnpm check` và `pnpm contracts:check` pass 100% (106 tests [71 api tests + 35 web tests], 0 lint warnings). Đang chuẩn bị push commit và trigger Round 3 review.
+Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — PR #7: Hoàn thành giải quyết triệt để các findings từ Round 3 của `/gpt-web-review`:
+- B1 (Cross-tenant cache isolation): Thêm `clearTenantCache(queryClient)` huỷ query đang chạy và dọn sạch cache dữ liệu nghiệp vụ khi logout, login hoặc thay đổi tenant identity; bổ sung `tenantId` vào query keys của `users` và `titles`; tạo regression test `TenantCacheIsolation.test.tsx` mô phỏng response bị delay ở tenant thứ 2 để chứng minh 100% không rò rỉ dữ liệu.
+- B2 (Đồng bộ ma trận quyền thực tế giữa migration SQL, seed và UI test): Cập nhật `dev.sql` khởi tạo đầy đủ titles và role group mappings cho `tenant-dev-001` để gán chính xác `SALES` title cho `sales@vlxd.local`; cập nhật `RoleMatrixUI.test.tsx` khớp hoàn toàn với chính sách phân quyền thực tế trong migration (`inventory.view`, `customers.manage` cho SALES); bổ sung test suite cho quyền `sales.view` read-only.
+- B3 (Bảo vệ entry point tạo đơn hàng ở empty state): Điều kiện hoá nút "Tạo đơn hàng đầu tiên" tại empty state của `SalesOrderListPage.tsx` với `canCreateSalesOrder`.
+Toàn bộ cổng gác cục bộ `pnpm check` và `pnpm contracts:check` pass 100% (111 tests [71 api tests + 40 web tests], 0 lint warnings, clean build). Đang chuẩn bị push commit và trigger Round 4 review.
 
 ### Đã xong
 
@@ -479,11 +483,12 @@ Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — PR #7:
   - [x] Task 6.4 — RBAC enforcement trên toàn bộ business routes (`products.*`, `warehouses.*`, `stock-receipts.*`, `customers.*`, `sales-orders.*`, `users.*`) với 403 FORBIDDEN khi thiếu capability, cập nhật OpenAPI 3.1 và error schema enums.
   - [x] Fix Round 1 Findings — Loại bỏ email/PII khỏi auth service error logging, thêm test suite kiểm tra bảo mật log.
   - [x] Fix Round 2 Findings — Enforce capability-based route guards & dashboard links across all business surfaces, hide mutation buttons when lacking manage/create capability, decouple migration backfill from test email, resolve capabilities before session insert, add Role-Matrix UI suite for OWNER, SALES, WAREHOUSE.
-  - [x] Cổng gác tất định: `pnpm check` (format, lint 0 warnings, typecheck 4/4 packages, 106 tests pass [71 api tests + 35 web tests], production build, contracts lint & drift check) pass 100%.
+  - [x] Fix Round 3 Findings — Enforce cross-tenant cache isolation, align authoritative capabilities in dev seed and UI tests, guard empty-state sales order CTA, add delayed-response cache isolation test and read-only sales tests.
+  - [x] Cổng gác tất định: `pnpm check` (format, lint 0 warnings, typecheck 4/4 packages, 111 tests pass [71 api tests + 40 web tests], production build, contracts lint & drift check) pass 100%.
 
 ### Đang làm dở
 
-- [ ] Push commit Round 2 fix lên PR #7 (`feature/slice-6`) và thực hiện Round 3 review loop `/gpt-web-review`.
+- [ ] Push commit Round 3 fix lên PR #7 (`feature/slice-6`) và thực hiện Round 4 review loop `/gpt-web-review`.
 
 ### Bước tiếp theo
 

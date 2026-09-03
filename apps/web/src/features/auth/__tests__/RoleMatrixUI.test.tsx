@@ -112,7 +112,7 @@ function renderAppWithRole(capabilities: string[], initialEntry = "/") {
         }),
       );
     }
-    if (url.includes("/orders")) {
+    if (url.includes("/sales-orders")) {
       return Promise.resolve(
         new Response(JSON.stringify({ items: [], total: 0, page: 1, limit: 10 }), {
           status: 200,
@@ -196,10 +196,19 @@ describe("Role-Matrix UI Visibility and Route Guards", () => {
     "inventory.manage",
     "sales.view",
     "sales.create",
+    "customers.manage",
     "users.manage",
   ];
 
-  const SALES_CAPS = ["products.view", "sales.view", "sales.create"];
+  const SALES_CAPS = [
+    "products.view",
+    "inventory.view",
+    "sales.view",
+    "sales.create",
+    "customers.manage",
+  ];
+
+  const READ_ONLY_SALES_CAPS = ["products.view", "inventory.view", "sales.view"];
 
   const WAREHOUSE_CAPS = ["products.view", "inventory.view", "inventory.manage"];
 
@@ -229,26 +238,28 @@ describe("Role-Matrix UI Visibility and Route Guards", () => {
       expect(await screen.findByTestId("create-receipt-btn")).toBeInTheDocument();
     });
 
-    it("renders New Order button on SalesOrderListPage for OWNER", async () => {
+    it("renders New Order and empty state buttons on SalesOrderListPage for OWNER", async () => {
       renderAppWithRole(OWNER_CAPS, "/orders");
       expect(await screen.findByTestId("new-sales-order-btn")).toBeInTheDocument();
+      expect(await screen.findByTestId("create-first-order-btn")).toBeInTheDocument();
     });
   });
 
-  describe("SALES Role", () => {
-    it("renders only Products and Orders navigation links, hiding Inventory, Warehouses, and Users", async () => {
+  describe("SALES Role (Full Sales with inventory.view, sales.create, customers.manage)", () => {
+    it("renders Products, Warehouses, Receipts, and Orders navigation links, but hides Users Settings", async () => {
       renderAppWithRole(SALES_CAPS, "/");
 
       expect(await screen.findByTestId("nav-products-btn")).toBeInTheDocument();
+      expect(screen.getByTestId("nav-warehouses-btn")).toBeInTheDocument();
+      expect(screen.getByTestId("nav-receipts-btn")).toBeInTheDocument();
       expect(screen.getByTestId("nav-orders-btn")).toBeInTheDocument();
-      expect(screen.queryByTestId("nav-warehouses-btn")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("nav-receipts-btn")).not.toBeInTheDocument();
       expect(screen.queryByTestId("nav-settings-users-btn")).not.toBeInTheDocument();
     });
 
-    it("renders New Order button on SalesOrderListPage for SALES", async () => {
+    it("renders New Order and empty state buttons on SalesOrderListPage for SALES", async () => {
       renderAppWithRole(SALES_CAPS, "/orders");
       expect(await screen.findByTestId("new-sales-order-btn")).toBeInTheDocument();
+      expect(await screen.findByTestId("create-first-order-btn")).toBeInTheDocument();
     });
 
     it("hides Add Product button on ProductsPage for SALES", async () => {
@@ -257,7 +268,19 @@ describe("Role-Matrix UI Visibility and Route Guards", () => {
       expect(screen.queryByTestId("add-product-btn")).not.toBeInTheDocument();
     });
 
-    it("redirects direct access to unauthorized routes (/inventory/receipts/new, /settings/users) to / for SALES", async () => {
+    it("hides Add Warehouse button on WarehousesPage for SALES", async () => {
+      renderAppWithRole(SALES_CAPS, "/warehouses");
+      expect(await screen.findByRole("heading", { name: /kho/i })).toBeInTheDocument();
+      expect(screen.queryByTestId("add-warehouse-btn")).not.toBeInTheDocument();
+    });
+
+    it("hides New Receipt button on StockReceiptListPage for SALES", async () => {
+      renderAppWithRole(SALES_CAPS, "/inventory/receipts");
+      expect(await screen.findByRole("heading", { name: /nhập kho/i })).toBeInTheDocument();
+      expect(screen.queryByTestId("create-receipt-btn")).not.toBeInTheDocument();
+    });
+
+    it("redirects direct access to /inventory/receipts/new to / for SALES", async () => {
       renderAppWithRole(SALES_CAPS, "/inventory/receipts/new");
       expect(await screen.findByTestId("dashboard-home")).toBeInTheDocument();
       expect(screen.queryByTestId("create-receipt-page")).not.toBeInTheDocument();
@@ -266,6 +289,21 @@ describe("Role-Matrix UI Visibility and Route Guards", () => {
     it("redirects direct access to /settings/users to / for SALES", async () => {
       renderAppWithRole(SALES_CAPS, "/settings/users");
       expect(await screen.findByTestId("dashboard-home")).toBeInTheDocument();
+    });
+  });
+
+  describe("READ-ONLY SALES Role (sales.view without sales.create)", () => {
+    it("hides both header New Order and empty-state Create First Order buttons on SalesOrderListPage", async () => {
+      renderAppWithRole(READ_ONLY_SALES_CAPS, "/orders");
+      expect(await screen.findByRole("heading", { name: /đơn bán hàng/i })).toBeInTheDocument();
+      expect(screen.queryByTestId("new-sales-order-btn")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("create-first-order-btn")).not.toBeInTheDocument();
+    });
+
+    it("redirects direct access to /orders/new to / for read-only sales", async () => {
+      renderAppWithRole(READ_ONLY_SALES_CAPS, "/orders/new");
+      expect(await screen.findByTestId("dashboard-home")).toBeInTheDocument();
+      expect(screen.queryByTestId("create-order-page")).not.toBeInTheDocument();
     });
   });
 

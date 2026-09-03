@@ -26,15 +26,33 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Explicitly assign dev sales user to SALES title if user_titles table exists
+-- Explicitly assign titles and role groups if RBAC tables exist
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_titles') THEN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'titles') THEN
+    INSERT INTO titles (id, tenant_id, code, name)
+    VALUES
+      ('title-owner-tenant-dev-001', 'tenant-dev-001', 'OWNER', 'Chủ cửa hàng'),
+      ('title-sales-tenant-dev-001', 'tenant-dev-001', 'SALES', 'Nhân viên bán hàng'),
+      ('title-wh-tenant-dev-001', 'tenant-dev-001', 'WAREHOUSE', 'Thủ kho')
+    ON CONFLICT (tenant_id, code) DO NOTHING;
+
+    INSERT INTO title_role_groups (title_id, role_group_id)
+    VALUES
+      ('title-owner-tenant-dev-001', 'rg-admin'),
+      ('title-sales-tenant-dev-001', 'rg-sales'),
+      ('title-wh-tenant-dev-001', 'rg-warehouse')
+    ON CONFLICT DO NOTHING;
+
+    -- Assign owner
+    INSERT INTO user_titles (user_id, title_id, tenant_id)
+    VALUES ('user-dev-owner-001', 'title-owner-tenant-dev-001', 'tenant-dev-001')
+    ON CONFLICT (user_id, title_id) DO NOTHING;
+
+    -- Assign sales
     DELETE FROM user_titles WHERE user_id = 'user-dev-sales-001';
     INSERT INTO user_titles (user_id, title_id, tenant_id)
-    SELECT 'user-dev-sales-001', id, tenant_id
-    FROM titles
-    WHERE tenant_id = 'tenant-dev-001' AND code = 'SALES'
-    ON CONFLICT DO NOTHING;
+    VALUES ('user-dev-sales-001', 'title-sales-tenant-dev-001', 'tenant-dev-001')
+    ON CONFLICT (user_id, title_id) DO NOTHING;
   END IF;
 END $$;

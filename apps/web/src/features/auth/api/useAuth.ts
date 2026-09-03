@@ -1,18 +1,40 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AuthSessionResponse, LoginRequest } from "@vlxd/shared";
 
 import { apiClient } from "../../../lib/apiClient.js";
 
 export const AUTH_QUERY_KEY = ["auth", "me"] as const;
 
+let currentTenantId: string | null = null;
+
+export function clearTenantCache(queryClient: QueryClient) {
+  void queryClient.cancelQueries();
+  queryClient.removeQueries({
+    predicate: (query) => query.queryKey[0] !== "auth",
+  });
+}
+
 export function useCurrentUser() {
+  const queryClient = useQueryClient();
+
   return useQuery<AuthSessionResponse | null>({
     queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
       const { data, error, response } = await apiClient.GET("/auth/me");
       if (response.status === 401 || error) {
+        if (currentTenantId !== null) {
+          clearTenantCache(queryClient);
+          currentTenantId = null;
+        }
         return null;
       }
+
+      const newTenantId = data?.tenant?.id ?? null;
+      if (currentTenantId !== null && currentTenantId !== newTenantId) {
+        clearTenantCache(queryClient);
+      }
+      currentTenantId = newTenantId;
+
       return data ?? null;
     },
     retry: false,
@@ -39,6 +61,8 @@ export function useLogin() {
       return data;
     },
     onSuccess: (data) => {
+      currentTenantId = data.tenant.id;
+      clearTenantCache(queryClient);
       queryClient.setQueryData(AUTH_QUERY_KEY, data);
     },
   });
@@ -56,6 +80,8 @@ export function useLogout() {
       return data;
     },
     onSuccess: () => {
+      currentTenantId = null;
+      clearTenantCache(queryClient);
       queryClient.setQueryData(AUTH_QUERY_KEY, null);
     },
   });

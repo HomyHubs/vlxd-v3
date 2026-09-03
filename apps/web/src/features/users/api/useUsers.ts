@@ -7,13 +7,17 @@ import type {
 } from "@vlxd/shared";
 
 import { apiClient } from "../../../lib/apiClient.js";
+import { useCurrentUser } from "../../auth/index.js";
 
 export const USERS_QUERY_KEY = ["users"] as const;
 export const TITLES_QUERY_KEY = ["titles"] as const;
 
 export function useUsers() {
+  const { data: session } = useCurrentUser();
+  const tenantId = session?.tenant?.id;
+
   return useQuery<UserListResponse>({
-    queryKey: USERS_QUERY_KEY,
+    queryKey: tenantId ? [...USERS_QUERY_KEY, tenantId] : USERS_QUERY_KEY,
     queryFn: async () => {
       const { data, error, response } = await apiClient.GET("/users");
       if (error || !data) {
@@ -25,8 +29,11 @@ export function useUsers() {
 }
 
 export function useTitles() {
+  const { data: session } = useCurrentUser();
+  const tenantId = session?.tenant?.id;
+
   return useQuery<TitleListResponse>({
-    queryKey: TITLES_QUERY_KEY,
+    queryKey: tenantId ? [...TITLES_QUERY_KEY, tenantId] : TITLES_QUERY_KEY,
     queryFn: async () => {
       const { data, error } = await apiClient.GET("/titles");
       if (error || !data) {

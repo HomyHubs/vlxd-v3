@@ -183,16 +183,19 @@ export function SalesOrderListPage() {
                         <Typography color="text.secondary" gutterBottom>
                           {t("orders.emptyList", "Chưa có đơn bán hàng nào")}
                         </Typography>
-                        <Button
-                          component={RouterLink}
-                          to="/orders/new"
-                          variant="outlined"
-                          size="small"
-                          startIcon={<AddIcon />}
-                          sx={{ mt: 1 }}
-                        >
-                          {t("orders.createFirst", "Tạo đơn hàng đầu tiên")}
-                        </Button>
+                        {canCreateSalesOrder && (
+                          <Button
+                            component={RouterLink}
+                            to="/orders/new"
+                            variant="outlined"
+                            size="small"
+                            startIcon={<AddIcon />}
+                            sx={{ mt: 1 }}
+                            data-testid="create-first-order-btn"
+                          >
+                            {t("orders.createFirst", "Tạo đơn hàng đầu tiên")}
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ) : (

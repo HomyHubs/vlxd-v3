@@ -70,12 +70,12 @@ describe("users and rbac integration test", () => {
       await pool.query(appMeta[0]);
       await pool.query(auth[0]);
       await pool.query(products[0]);
-      await pool.query(seed);
       await pool.query(inventory[0]);
       await pool.query(stockReceipts[0]);
       await pool.query(salesOrders[0]);
       await pool.query(ceiling[0]);
       await pool.query(rbac[0]);
+      await pool.query(seed);
 
       const authService = createAuthService({ database });
       const usersService = createUsersService(database);
@@ -169,6 +169,31 @@ describe("users and rbac integration test", () => {
       expect(salesBody.user.titles).toContain("Nhân viên bán hàng");
       expect(salesBody.user.capabilities).toContain("sales.create");
       expect(salesBody.user.capabilities).not.toContain("users.manage");
+
+      // 5b. Verify seeded dev sales user (sales@vlxd.local) also has SALES capabilities from seed
+      const seededSalesLoginRes = await app.inject({
+        method: "POST",
+        url: "/auth/login",
+        payload: {
+          email: "sales@vlxd.local",
+          password: "MatKhau@123",
+        },
+      });
+      expect(seededSalesLoginRes.statusCode).toBe(200);
+      const seededSalesBody = JSON.parse(seededSalesLoginRes.body) as AuthSessionResponse;
+      expect(seededSalesBody.user.titles).toContain("Nhân viên bán hàng");
+      expect(seededSalesBody.user.capabilities).toEqual(
+        expect.arrayContaining([
+          "products.view",
+          "inventory.view",
+          "sales.view",
+          "sales.create",
+          "customers.manage",
+        ]),
+      );
+      expect(seededSalesBody.user.capabilities).not.toContain("users.manage");
+      expect(seededSalesBody.user.capabilities).not.toContain("products.manage");
+      expect(seededSalesBody.user.capabilities).not.toContain("inventory.manage");
 
       const salesCookieHeader = salesLoginRes.headers["set-cookie"];
       const salesTokenMatch = new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`).exec(
