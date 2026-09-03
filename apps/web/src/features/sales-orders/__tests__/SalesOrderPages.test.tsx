@@ -135,10 +135,15 @@ vi.mock("../../auth/index.js", () => ({
   AppHeader: () => <div data-testid="app-header">Header Mock</div>,
   useCurrentUser: () => ({
     data: {
-      user: { id: "u1", fullName: "Chủ cửa hàng" },
+      user: {
+        id: "u1",
+        fullName: "Chủ cửa hàng",
+        capabilities: ["sales.create", "sales.view"],
+      },
       tenant: { id: "t1", name: "Cửa hàng VLXD" },
     },
   }),
+  useHasCapability: (cap: string) => ["sales.create", "sales.view"].includes(cap),
   useLogout: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 

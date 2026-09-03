@@ -81,6 +81,22 @@ vi.mock("../../warehouses/index.js", () => ({
   }),
 }));
 
+vi.mock("../../auth/index.js", () => ({
+  AppHeader: () => <div data-testid="app-header">Header Mock</div>,
+  useCurrentUser: () => ({
+    data: {
+      user: {
+        id: "u1",
+        fullName: "Chủ cửa hàng",
+        capabilities: ["inventory.manage", "inventory.view"],
+      },
+      tenant: { id: "t1", name: "Cửa hàng VLXD" },
+    },
+  }),
+  useHasCapability: (cap: string) => ["inventory.manage", "inventory.view"].includes(cap),
+  useLogout: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 vi.mock("../../products/api/useProducts.js", () => ({
   PRODUCTS_QUERY_KEY: ["products"],
   useProducts: () => ({

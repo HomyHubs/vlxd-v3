@@ -18,11 +18,12 @@ import { useTranslation } from "react-i18next";
 import type { CreateWarehouseRequest } from "@vlxd/shared";
 import { CreateWarehouseRequestSchema } from "@vlxd/shared";
 
-import { AppHeader } from "../../auth/index.js";
+import { AppHeader, useHasCapability } from "../../auth/index.js";
 import { useCreateWarehouse, useWarehouses } from "../api/useWarehouses.js";
 
 export function WarehousesPage() {
   const { t } = useTranslation();
+  const canManageInventory = useHasCapability("inventory.manage");
   const [open, setOpen] = useState(false);
   const warehouses = useWarehouses();
   const createWarehouse = useCreateWarehouse();
@@ -54,9 +55,15 @@ export function WarehousesPage() {
               </Typography>
               <Typography color="text.secondary">{t("warehouses.description")}</Typography>
             </Box>
-            <Button variant="contained" onClick={() => setOpen(true)}>
-              {t("warehouses.add")}
-            </Button>
+            {canManageInventory && (
+              <Button
+                variant="contained"
+                onClick={() => setOpen(true)}
+                data-testid="add-warehouse-btn"
+              >
+                {t("warehouses.add")}
+              </Button>
+            )}
           </Stack>
           {warehouses.isError && <Alert severity="error">{t("warehouses.loadError")}</Alert>}
           <Stack spacing={1}>

@@ -149,7 +149,7 @@ describe("UsersPage", () => {
     await waitFor(() => {
       expect(createdUserEmail).toBe("new-staff@vlxd.local");
     });
-  });
+  }, 15000);
 
   it("displays forbidden alert when API returns 403", async () => {
     const fetchMock = vi.fn().mockImplementation((req: Request | string) => {

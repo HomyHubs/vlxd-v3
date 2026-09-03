@@ -25,7 +25,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
 
-import { AppHeader } from "../../auth/index.js";
+import { AppHeader, useHasCapability } from "../../auth/index.js";
 import { useCustomers } from "../../customers/index.js";
 import { useWarehouses } from "../../warehouses/index.js";
 import { useSalesOrders } from "../api/useSalesOrders.js";
@@ -50,6 +50,7 @@ function formatDate(iso: string): string {
 
 export function SalesOrderListPage() {
   const { t } = useTranslation();
+  const canCreateSalesOrder = useHasCapability("sales.create");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [customerId, setCustomerId] = useState<string>("");
@@ -78,15 +79,18 @@ export function SalesOrderListPage() {
             <Typography variant="h5" component="h1" fontWeight="bold">
               {t("orders.listTitle", "Quản lý đơn bán hàng")}
             </Typography>
-            <Button
-              component={RouterLink}
-              to="/orders/new"
-              variant="contained"
-              startIcon={<AddIcon />}
-              id="new-sales-order-btn"
-            >
-              {t("orders.createNew", "Tạo đơn hàng")}
-            </Button>
+            {canCreateSalesOrder && (
+              <Button
+                component={RouterLink}
+                to="/orders/new"
+                variant="contained"
+                startIcon={<AddIcon />}
+                id="new-sales-order-btn"
+                data-testid="new-sales-order-btn"
+              >
+                {t("orders.createNew", "Tạo đơn hàng")}
+              </Button>
+            )}
           </Box>
 
           <Card variant="outlined">

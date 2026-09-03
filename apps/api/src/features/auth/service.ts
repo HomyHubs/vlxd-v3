@@ -147,6 +147,13 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
         };
       }
 
+      const { titles, capabilities } = await getUserTitlesAndCapabilities(
+        db,
+        user.id,
+        user.tenant_id,
+        logger,
+      );
+
       // Generate opaque cryptographically random session token
       const sessionToken = randomBytes(32).toString("base64url");
       const hashedSessionToken = hashSessionToken(sessionToken);
@@ -161,13 +168,6 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
           expires_at: expiresAt,
         })
         .execute();
-
-      const { titles, capabilities } = await getUserTitlesAndCapabilities(
-        db,
-        user.id,
-        tenant.id,
-        logger,
-      );
 
       return {
         success: true,

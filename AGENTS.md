@@ -452,7 +452,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — Đã hoàn thành 100%, vượt qua toàn bộ cổng gác cục bộ `pnpm check` và `pnpm contracts:check`. Đang tiến hành tạo PR #7 và thực hiện `/gpt-web-review` với ChatGPT Web qua Chrome DevTools MCP.
+Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — PR #7: Hoàn thành sửa các findings từ Round 2 của `/gpt-web-review` (enforce capability-based navigation & route guards cho toàn bộ business surfaces, ẩn mutation buttons theo capability, decouple migration backfill khỏi fixture email, resolve capabilities trước khi insert session, bổ sung bộ role-matrix UI tests cho OWNER, SALES, WAREHOUSE). Toàn bộ cổng gác cục bộ `pnpm check` và `pnpm contracts:check` pass 100% (106 tests [71 api tests + 35 web tests], 0 lint warnings). Đang chuẩn bị push commit và trigger Round 3 review.
 
 ### Đã xong
 
@@ -477,11 +477,13 @@ Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — Đã h
   - [x] Task 6.2 — OpenAPI 3.1 spec, Fastify `/titles`, `/users` (GET, POST), middleware `createRequireCapability`, argon2id password hashing, email uniqueness check.
   - [x] Task 6.3 — Hook `useHasCapability`, UI `/settings/users`, dialog tạo tài khoản nhân viên, điều kiện hoá menu điều hướng và ProtectedRoute theo `users.manage`, badge chức danh trên header, i18n vi/en, component tests pass.
   - [x] Task 6.4 — RBAC enforcement trên toàn bộ business routes (`products.*`, `warehouses.*`, `stock-receipts.*`, `customers.*`, `sales-orders.*`, `users.*`) với 403 FORBIDDEN khi thiếu capability, cập nhật OpenAPI 3.1 và error schema enums.
-  - [x] Cổng gác tất định: `pnpm check` (format, lint 0 warnings, typecheck 4/4 packages, 87 tests pass [68 api tests + 19 web tests], production build, contracts lint & drift check) pass 100%.
+  - [x] Fix Round 1 Findings — Loại bỏ email/PII khỏi auth service error logging, thêm test suite kiểm tra bảo mật log.
+  - [x] Fix Round 2 Findings — Enforce capability-based route guards & dashboard links across all business surfaces, hide mutation buttons when lacking manage/create capability, decouple migration backfill from test email, resolve capabilities before session insert, add Role-Matrix UI suite for OWNER, SALES, WAREHOUSE.
+  - [x] Cổng gác tất định: `pnpm check` (format, lint 0 warnings, typecheck 4/4 packages, 106 tests pass [71 api tests + 35 web tests], production build, contracts lint & drift check) pass 100%.
 
 ### Đang làm dở
 
-- [ ] Mở PR #7 (`feature/slice-6` -> `dev`) và chạy review loop `/gpt-web-review` với ChatGPT Web qua Chrome DevTools MCP.
+- [ ] Push commit Round 2 fix lên PR #7 (`feature/slice-6`) và thực hiện Round 3 review loop `/gpt-web-review`.
 
 ### Bước tiếp theo
 

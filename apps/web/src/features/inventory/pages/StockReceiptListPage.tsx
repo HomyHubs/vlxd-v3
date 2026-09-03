@@ -22,12 +22,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
 
-import { AppHeader } from "../../auth/index.js";
+import { AppHeader, useHasCapability } from "../../auth/index.js";
 import { useWarehouses } from "../../warehouses/index.js";
 import { useStockReceipts } from "../api/useStockReceipts.js";
 
 export function StockReceiptListPage() {
   const { t } = useTranslation();
+  const canManageInventory = useHasCapability("inventory.manage");
   const [warehouseFilter, setWarehouseFilter] = useState<string>("");
   const warehousesQuery = useWarehouses();
   const receiptsQuery = useStockReceipts(1, 50, warehouseFilter || undefined);
@@ -52,15 +53,17 @@ export function StockReceiptListPage() {
               </Typography>
               <Typography color="text.secondary">{t("inventory.listDescription")}</Typography>
             </Box>
-            <Button
-              component={RouterLink}
-              to="/inventory/receipts/new"
-              variant="contained"
-              startIcon={<AddIcon />}
-              data-testid="create-receipt-btn"
-            >
-              {t("inventory.newReceipt")}
-            </Button>
+            {canManageInventory && (
+              <Button
+                component={RouterLink}
+                to="/inventory/receipts/new"
+                variant="contained"
+                startIcon={<AddIcon />}
+                data-testid="create-receipt-btn"
+              >
+                {t("inventory.newReceipt")}
+              </Button>
+            )}
           </Stack>
 
           <Card variant="outlined">
