@@ -75,6 +75,9 @@ export {
 } from "./customer.js";
 
 export {
+  MAX_ORDER_LINE_QUANTITY,
+  MAX_ORDER_UNIT_PRICE,
+  MAX_ORDER_TOTAL_AMOUNT,
   CreateSalesOrderLineInputSchema,
   CreateSalesOrderRequestSchema,
   SalesOrderDetailResponseSchema,

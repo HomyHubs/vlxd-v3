@@ -833,8 +833,8 @@ components:
       required: [productId, quantity, unitPrice]
       properties:
         productId: { type: string }
-        quantity: { type: integer, minimum: 1 }
-        unitPrice: { type: integer, minimum: 0 }
+        quantity: { type: integer, minimum: 1, maximum: 1000000 }
+        unitPrice: { type: integer, minimum: 0, maximum: 100000000000 }
     CreateSalesOrderRequest:
       type: object
       additionalProperties: false

@@ -333,4 +333,65 @@ describe("sales order routes unit tests", () => {
     expect(body.code).toBe("ORDER_NOT_FOUND");
     await app.close();
   });
+
+  it("returns 400 when quantity exceeds maximum allowed bound", async () => {
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+    } as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      payload: {
+        customerId: "cust-1",
+        warehouseId: "wh-1",
+        lines: [{ productId: "prod-1", quantity: 10_000_000, unitPrice: 10000 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: "INVALID_ORDER_LINES" });
+    await app.close();
+  });
+
+  it("returns 400 when unitPrice exceeds maximum allowed bound", async () => {
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+    } as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      payload: {
+        customerId: "cust-1",
+        warehouseId: "wh-1",
+        lines: [{ productId: "prod-1", quantity: 1, unitPrice: 1_000_000_000_000 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    await app.close();
+  });
 });

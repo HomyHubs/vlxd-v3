@@ -1,12 +1,14 @@
 import { randomBytes, randomUUID } from "node:crypto";
 
-import type {
-  CreateSalesOrderRequest,
-  SalesOrderDetailResponse,
-  SalesOrderLine,
-  SalesOrderListItem,
-  SalesOrderListResponse,
-  SalesOrderQuery,
+import {
+  MAX_ORDER_LINE_QUANTITY,
+  MAX_ORDER_TOTAL_AMOUNT,
+  type CreateSalesOrderRequest,
+  type SalesOrderDetailResponse,
+  type SalesOrderLine,
+  type SalesOrderListItem,
+  type SalesOrderListResponse,
+  type SalesOrderQuery,
 } from "@vlxd/shared";
 import type { Kysely } from "kysely";
 
@@ -125,13 +127,39 @@ export function createSalesOrderService(
 
       const productMap = new Map(products.map((p) => [p.id, p]));
 
-      // Aggregate requested quantities per product
+      // Aggregate requested quantities per product and validate safe integer / domain bounds
       const requestedQuantities = new Map<string, number>();
       for (const line of input.lines) {
-        requestedQuantities.set(
-          line.productId,
-          (requestedQuantities.get(line.productId) ?? 0) + line.quantity,
-        );
+        const nextQty = (requestedQuantities.get(line.productId) ?? 0) + line.quantity;
+        if (!Number.isSafeInteger(nextQty) || nextQty > MAX_ORDER_LINE_QUANTITY) {
+          return {
+            success: false,
+            code: "INVALID_ORDER_LINES",
+            message: `Tổng số lượng sản phẩm không được vượt quá ${MAX_ORDER_LINE_QUANTITY.toLocaleString()}`,
+          };
+        }
+        requestedQuantities.set(line.productId, nextQty);
+      }
+
+      // Calculate total amount and validate safe integer bounds
+      let totalAmount = 0;
+      for (const line of input.lines) {
+        const lineTotal = line.quantity * line.unitPrice;
+        if (!Number.isSafeInteger(lineTotal) || lineTotal > MAX_ORDER_TOTAL_AMOUNT) {
+          return {
+            success: false,
+            code: "INVALID_ORDER_LINES",
+            message: "Thành tiền của sản phẩm vượt quá giới hạn tính toán cho phép",
+          };
+        }
+        totalAmount += lineTotal;
+        if (!Number.isSafeInteger(totalAmount) || totalAmount > MAX_ORDER_TOTAL_AMOUNT) {
+          return {
+            success: false,
+            code: "INVALID_ORDER_LINES",
+            message: "Tổng giá trị đơn hàng vượt quá giới hạn tính toán cho phép",
+          };
+        }
       }
 
       // Sort product IDs for deterministic locking order across concurrent transactions
@@ -182,12 +210,6 @@ export function createSalesOrderService(
                   `Sản phẩm "${prod?.name ?? productId}" không đủ tồn kho (cần ${reqQty}, hiện có ${currentStock})`,
                 );
               }
-            }
-
-            // Calculate total amount
-            let totalAmount = 0;
-            for (const line of input.lines) {
-              totalAmount += line.quantity * line.unitPrice;
             }
 
             await trx

@@ -1,9 +1,24 @@
 import { z } from "zod";
 
+export const MAX_ORDER_LINE_QUANTITY = 1_000_000;
+export const MAX_ORDER_UNIT_PRICE = 100_000_000_000; // 100 billion VND
+export const MAX_ORDER_TOTAL_AMOUNT = 1_000_000_000_000; // 1 trillion VND
+
 export const CreateSalesOrderLineInputSchema = z.object({
   productId: z.string().min(1),
-  quantity: z.number().int().positive("Số lượng phải lớn hơn 0"),
-  unitPrice: z.number().int().nonnegative("Đơn giá không được âm"),
+  quantity: z
+    .number()
+    .int("Số lượng phải là số nguyên")
+    .positive("Số lượng phải lớn hơn 0")
+    .max(
+      MAX_ORDER_LINE_QUANTITY,
+      `Số lượng không được vượt quá ${MAX_ORDER_LINE_QUANTITY.toLocaleString()}`,
+    ),
+  unitPrice: z
+    .number()
+    .int("Đơn giá phải là số nguyên")
+    .nonnegative("Đơn giá không được âm")
+    .max(MAX_ORDER_UNIT_PRICE, "Đơn giá không được vượt quá 100.000.000.000 đ"),
 });
 
 export const CreateSalesOrderRequestSchema = z.object({
