@@ -8,7 +8,7 @@ import {
   ProductSchema,
 } from "@vlxd/shared";
 
-import { SESSION_COOKIE_NAME, type AuthService } from "../auth/index.js";
+import { createRequireCapability, type AuthService } from "../auth/index.js";
 import type { ProductService } from "./service.js";
 
 export interface ProductRoutesOptions {
@@ -18,28 +18,23 @@ export interface ProductRoutesOptions {
 
 export const productRoutes: FastifyPluginAsync<ProductRoutesOptions> = (server, options) => {
   const app = server.withTypeProvider<ZodTypeProvider>();
-
-  async function sessionFor(request: {
-    cookies: Record<string, string | undefined>;
-    log: Parameters<AuthService["getMe"]>[1];
-  }) {
-    const token = request.cookies[SESSION_COOKIE_NAME];
-    return token ? options.authService.getMe(token, request.log) : null;
-  }
+  const requireCap = createRequireCapability(options.authService);
 
   app.get(
     "/products",
     {
+      preHandler: [requireCap("products.view")],
       schema: {
         querystring: ProductListQuerySchema,
-        response: { 200: ProductListResponseSchema, 401: ProductErrorResponseSchema },
+        response: {
+          200: ProductListResponseSchema,
+          401: ProductErrorResponseSchema,
+          403: ProductErrorResponseSchema,
+        },
       },
     },
     async (request, reply) => {
-      const session = await sessionFor(request);
-      if (!session) {
-        return reply.code(401).send({ code: "UNAUTHORIZED", message: "Chưa đăng nhập" });
-      }
+      const session = request.session!;
       return reply
         .code(200)
         .send(await options.productService.list(session.tenant.id, request.query));
@@ -49,22 +44,21 @@ export const productRoutes: FastifyPluginAsync<ProductRoutesOptions> = (server, 
   app.post(
     "/products",
     {
+      preHandler: [requireCap("products.manage")],
       schema: {
         body: CreateProductRequestSchema,
         response: {
           201: ProductSchema,
           400: ProductErrorResponseSchema,
           401: ProductErrorResponseSchema,
+          403: ProductErrorResponseSchema,
           409: ProductErrorResponseSchema,
           422: ProductErrorResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const session = await sessionFor(request);
-      if (!session) {
-        return reply.code(401).send({ code: "UNAUTHORIZED", message: "Chưa đăng nhập" });
-      }
+      const session = request.session!;
       const result = await options.productService.create(
         session.tenant.id,
         session.tenant.plan,

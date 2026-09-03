@@ -170,6 +170,7 @@ export interface TitleRoleGroupTable {
 export interface UserTitleTable {
   user_id: string;
   title_id: string;
+  tenant_id: string;
 }
 
 export interface Database {

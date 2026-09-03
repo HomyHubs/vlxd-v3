@@ -31,7 +31,14 @@ export const CreateUserRequestSchema = z.object({
 });
 
 export const UserErrorResponseSchema = z.object({
-  code: z.enum(["UNAUTHORIZED", "FORBIDDEN", "TITLE_NOT_FOUND", "EMAIL_EXISTS", "INVALID_INPUT"]),
+  code: z.enum([
+    "UNAUTHORIZED",
+    "FORBIDDEN",
+    "VALIDATION_ERROR",
+    "TITLE_NOT_FOUND",
+    "EMAIL_EXISTS",
+    "INVALID_INPUT",
+  ]),
   message: z.string(),
 });
 

@@ -146,6 +146,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductErrorResponse"
+        "403":
+          description: Permission denied (requires products.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductErrorResponse"
     post:
       operationId: createProduct
       summary: Create a product for the authenticated tenant
@@ -170,6 +176,12 @@ paths:
                 $ref: "#/components/schemas/ProductErrorResponse"
         "401":
           description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductErrorResponse"
+        "403":
+          description: Permission denied (requires products.manage)
           content:
             application/json:
               schema:
@@ -203,6 +215,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WarehouseErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WarehouseErrorResponse"
     post:
       operationId: createWarehouse
       summary: Create a warehouse for the authenticated tenant
@@ -227,6 +245,12 @@ paths:
                 $ref: "#/components/schemas/WarehouseErrorResponse"
         "401":
           description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WarehouseErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.manage)
           content:
             application/json:
               schema:
@@ -270,6 +294,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StockReceiptErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockReceiptErrorResponse"
     post:
       operationId: createStockReceipt
       summary: Create an inbound stock receipt and update stock levels
@@ -294,6 +324,12 @@ paths:
                 $ref: "#/components/schemas/StockReceiptErrorResponse"
         "401":
           description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockReceiptErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.manage)
           content:
             application/json:
               schema:
@@ -326,6 +362,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StockReceiptErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockReceiptErrorResponse"
         "404":
           description: Stock receipt not found
           content:
@@ -345,6 +387,12 @@ paths:
                 $ref: "#/components/schemas/CustomerListResponse"
         "401":
           description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerErrorResponse"
+        "403":
+          description: Permission denied (requires customers.manage)
           content:
             application/json:
               schema:
@@ -373,6 +421,12 @@ paths:
                 $ref: "#/components/schemas/CustomerErrorResponse"
         "401":
           description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerErrorResponse"
+        "403":
+          description: Permission denied (requires customers.manage)
           content:
             application/json:
               schema:
@@ -413,6 +467,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SalesOrderErrorResponse"
+        "403":
+          description: Permission denied (requires sales.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesOrderErrorResponse"
     post:
       operationId: createSalesOrder
       summary: Create a sales order and deduct inventory
@@ -437,6 +497,12 @@ paths:
                 $ref: "#/components/schemas/SalesOrderErrorResponse"
         "401":
           description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesOrderErrorResponse"
+        "403":
+          description: Permission denied (requires sales.create)
           content:
             application/json:
               schema:
@@ -475,6 +541,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SalesOrderErrorResponse"
+        "403":
+          description: Permission denied (requires sales.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesOrderErrorResponse"
         "404":
           description: Sales order not found
           content:
@@ -494,6 +566,12 @@ paths:
                 $ref: "#/components/schemas/TitleListResponse"
         "401":
           description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+        "403":
+          description: Permission denied (requires users.manage)
           content:
             application/json:
               schema:
@@ -720,7 +798,15 @@ components:
       properties:
         code:
           type: string
-          enum: [UNAUTHORIZED, PRODUCT_LIMIT_REACHED, PRODUCT_SKU_EXISTS, UNIT_NOT_FOUND]
+          enum:
+            [
+              UNAUTHORIZED,
+              FORBIDDEN,
+              VALIDATION_ERROR,
+              PRODUCT_LIMIT_REACHED,
+              PRODUCT_SKU_EXISTS,
+              UNIT_NOT_FOUND,
+            ]
         message: { type: string }
     Warehouse:
       type: object
@@ -754,7 +840,14 @@ components:
       properties:
         code:
           type: string
-          enum: [UNAUTHORIZED, WAREHOUSE_LIMIT_REACHED, WAREHOUSE_CODE_EXISTS]
+          enum:
+            [
+              UNAUTHORIZED,
+              FORBIDDEN,
+              VALIDATION_ERROR,
+              WAREHOUSE_LIMIT_REACHED,
+              WAREHOUSE_CODE_EXISTS,
+            ]
         message: { type: string }
     CreateStockReceiptLineInput:
       type: object
@@ -866,7 +959,8 @@ components:
       properties:
         code:
           type: string
-          enum: [UNAUTHORIZED, WAREHOUSE_NOT_FOUND, PRODUCT_NOT_FOUND, INVALID_RECEIPT_LINES]
+          enum:
+            [UNAUTHORIZED, FORBIDDEN, WAREHOUSE_NOT_FOUND, PRODUCT_NOT_FOUND, INVALID_RECEIPT_LINES]
         message: { type: string }
     Customer:
       type: object
@@ -913,7 +1007,8 @@ components:
       properties:
         code:
           type: string
-          enum: [UNAUTHORIZED, CUSTOMER_CODE_EXISTS, INVALID_CUSTOMER_DATA]
+          enum:
+            [UNAUTHORIZED, FORBIDDEN, VALIDATION_ERROR, CUSTOMER_CODE_EXISTS, INVALID_CUSTOMER_DATA]
         message: { type: string }
     CreateSalesOrderLineInput:
       type: object
@@ -1044,6 +1139,7 @@ components:
           enum:
             [
               UNAUTHORIZED,
+              FORBIDDEN,
               ORDER_NOT_FOUND,
               CUSTOMER_NOT_FOUND,
               WAREHOUSE_NOT_FOUND,
@@ -1116,5 +1212,13 @@ components:
       properties:
         code:
           type: string
-          enum: [UNAUTHORIZED, FORBIDDEN, TITLE_NOT_FOUND, EMAIL_EXISTS, INVALID_INPUT]
+          enum:
+            [
+              UNAUTHORIZED,
+              FORBIDDEN,
+              VALIDATION_ERROR,
+              TITLE_NOT_FOUND,
+              EMAIL_EXISTS,
+              INVALID_INPUT,
+            ]
         message: { type: string }

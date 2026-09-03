@@ -68,6 +68,7 @@ export const StockReceiptDetailResponseSchema = z.object({
 export const StockReceiptErrorResponseSchema = z.object({
   code: z.enum([
     "UNAUTHORIZED",
+    "FORBIDDEN",
     "WAREHOUSE_NOT_FOUND",
     "PRODUCT_NOT_FOUND",
     "INVALID_RECEIPT_LINES",

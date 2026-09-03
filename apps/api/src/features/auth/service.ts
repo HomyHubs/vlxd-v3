@@ -34,6 +34,8 @@ export interface AuthServiceDependencies {
 async function getUserTitlesAndCapabilities(
   db: Kysely<Database>,
   userId: string,
+  tenantId: string,
+  logger?: AuthLogger,
 ): Promise<{ titles: string[]; capabilities: string[] }> {
   try {
     const userTitleRows = await db
@@ -41,6 +43,8 @@ async function getUserTitlesAndCapabilities(
       .innerJoin("titles", "titles.id", "user_titles.title_id")
       .select(["titles.name as titleName", "titles.id as titleId"])
       .where("user_titles.user_id", "=", userId)
+      .where("user_titles.tenant_id", "=", tenantId)
+      .where("titles.tenant_id", "=", tenantId)
       .execute();
 
     const titles = userTitleRows.map((t) => t.titleName);
@@ -63,8 +67,20 @@ async function getUserTitlesAndCapabilities(
 
     const capabilities = Array.from(new Set(capRows.map((c) => c.capabilityId)));
     return { titles, capabilities };
-  } catch {
-    return { titles: [], capabilities: [] };
+  } catch (error: unknown) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: string }).code === "42P01"
+    ) {
+      // Table does not exist (e.g. running on older migration slice before RBAC tables)
+      return { titles: [], capabilities: [] };
+    }
+    if (logger?.error) {
+      logger.error({ err: error, userId, tenantId }, "Failed to load user titles and capabilities");
+    }
+    throw error;
   }
 }
 
@@ -137,7 +153,12 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
         })
         .execute();
 
-      const { titles, capabilities } = await getUserTitlesAndCapabilities(db, user.id);
+      const { titles, capabilities } = await getUserTitlesAndCapabilities(
+        db,
+        user.id,
+        tenant.id,
+        logger,
+      );
 
       return {
         success: true,
@@ -168,7 +189,7 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
       await db.deleteFrom("sessions").where("id", "=", hashedSessionToken).execute();
     },
 
-    async getMe(sessionToken) {
+    async getMe(sessionToken, logger) {
       if (!sessionToken) return null;
       const hashedSessionToken = hashSessionToken(sessionToken);
 
@@ -200,7 +221,12 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
         return null;
       }
 
-      const { titles, capabilities } = await getUserTitlesAndCapabilities(db, session.userId);
+      const { titles, capabilities } = await getUserTitlesAndCapabilities(
+        db,
+        session.userId,
+        session.tenantId,
+        logger,
+      );
 
       return {
         user: {

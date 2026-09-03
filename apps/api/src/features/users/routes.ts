@@ -29,7 +29,7 @@ export const usersRoutes: FastifyPluginAsync<UsersRoutesOptions> = (server, opti
     return token ? options.authService.getMe(token, request.log) : null;
   }
 
-  // GET /titles - List available titles
+  // GET /titles - List available titles (requires users.manage)
   app.get(
     "/titles",
     {
@@ -37,6 +37,7 @@ export const usersRoutes: FastifyPluginAsync<UsersRoutesOptions> = (server, opti
         response: {
           200: TitleListResponseSchema,
           401: UserErrorResponseSchema,
+          403: UserErrorResponseSchema,
         },
       },
     },
@@ -44,6 +45,13 @@ export const usersRoutes: FastifyPluginAsync<UsersRoutesOptions> = (server, opti
       const session = await getSession(request);
       if (!session) {
         return reply.code(401).send({ code: "UNAUTHORIZED", message: "Yêu cầu đăng nhập" });
+      }
+
+      if (!session.user.capabilities.includes("users.manage")) {
+        return reply.code(403).send({
+          code: "FORBIDDEN",
+          message: "Bạn không có quyền quản lý người dùng (yêu cầu quyền: users.manage)",
+        });
       }
 
       const items = await options.usersService.listTitles(session.tenant.id);

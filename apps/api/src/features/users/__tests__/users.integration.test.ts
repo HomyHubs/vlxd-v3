@@ -14,6 +14,8 @@ import { buildApp } from "../../../app.js";
 import { SESSION_COOKIE_NAME } from "../../auth/index.js";
 import { createAuthService } from "../../auth/service.js";
 import { createDatabase, createDatabasePool } from "../../../platform/database.js";
+import { createProductService } from "../../products/index.js";
+import { createWarehouseService } from "../../warehouses/index.js";
 import { createUsersService } from "../service.js";
 
 describe("users and rbac integration test", () => {
@@ -77,10 +79,14 @@ describe("users and rbac integration test", () => {
 
       const authService = createAuthService({ database });
       const usersService = createUsersService(database);
+      const productService = createProductService({ database });
+      const warehouseService = createWarehouseService({ database });
 
       const app = await buildApp({
         authService,
         usersService,
+        productService,
+        warehouseService,
         checkDatabase: () => Promise.resolve(true),
         logger: false,
       });
@@ -200,7 +206,84 @@ describe("users and rbac integration test", () => {
         code: "FORBIDDEN",
       });
 
+      // 8. Sales user attempts GET /titles -> 403 FORBIDDEN (requires users.manage)
+      const forbiddenGetTitles = await app.inject({
+        method: "GET",
+        url: "/titles",
+        cookies: salesCookies,
+      });
+      expect(forbiddenGetTitles.statusCode).toBe(403);
+      expect(JSON.parse(forbiddenGetTitles.body)).toMatchObject({
+        code: "FORBIDDEN",
+      });
+
+      // 9. Sales user attempts POST /products -> 403 FORBIDDEN (requires products.manage)
+      const forbiddenPostProducts = await app.inject({
+        method: "POST",
+        url: "/products",
+        cookies: salesCookies,
+        payload: {
+          name: "Xi măng Hà Tiên",
+          sku: "XM-HT-001",
+          unitCode: "bao",
+        },
+      });
+      expect(forbiddenPostProducts.statusCode).toBe(403);
+      expect(JSON.parse(forbiddenPostProducts.body)).toMatchObject({
+        code: "FORBIDDEN",
+      });
+
+      // 10. Sales user attempts POST /warehouses -> 403 FORBIDDEN (requires inventory.manage)
+      const forbiddenPostWarehouse = await app.inject({
+        method: "POST",
+        url: "/warehouses",
+        cookies: salesCookies,
+        payload: {
+          name: "Kho phụ",
+          code: "KHO-PHU",
+          address: "123 Đường B",
+        },
+      });
+      expect(forbiddenPostWarehouse.statusCode).toBe(403);
+      expect(JSON.parse(forbiddenPostWarehouse.body)).toMatchObject({
+        code: "FORBIDDEN",
+      });
+
+      // 11. Owner CAN successfully call POST /products (has products.manage)
+      const ownerPostProduct = await app.inject({
+        method: "POST",
+        url: "/products",
+        cookies: ownerCookies,
+        payload: {
+          name: "Xi măng Hà Tiên",
+          sku: "XM-HT-001",
+          unitCode: "bao",
+        },
+      });
+      expect(ownerPostProduct.statusCode).toBe(201);
+
       await app.close();
+
+      // 12. Test down migration rollback safety:
+      // Executing down migration must deactivate non-OWNER users created under RBAC
+      // and purge their active sessions to prevent privilege escalation on rollback.
+      await pool.query(rbac[1]);
+
+      const salesUserRow = await pool.query<{ status: string }>(
+        "SELECT status FROM users WHERE email = 'nv-banhang@vlxd.local'",
+      );
+      expect(salesUserRow.rows[0]?.status).toBe("inactive");
+
+      const salesSessionRows = await pool.query("SELECT * FROM sessions WHERE user_id = $1", [
+        createdUser.id,
+      ]);
+      expect(salesSessionRows.rows.length).toBe(0);
+
+      // Verify rbac tables dropped
+      const checkTables = await pool.query<{ count: string }>(
+        "SELECT count(*) FROM information_schema.tables WHERE table_name IN ('user_titles', 'title_role_groups', 'titles', 'role_group_capabilities', 'role_groups', 'capabilities')",
+      );
+      expect(Number(checkTables.rows[0]?.count)).toBe(0);
     } finally {
       await pool.end();
     }

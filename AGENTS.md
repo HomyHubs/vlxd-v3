@@ -476,7 +476,8 @@ Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — Đã h
   - [x] Task 6.1 — Migration `202609030007_create_rbac_tables.sql` (bảng `capabilities`, `role_groups`, `role_group_capabilities`, `titles`, `title_role_groups`, `user_titles`, seed quyền và chức danh mặc định, rollback integration test).
   - [x] Task 6.2 — OpenAPI 3.1 spec, Fastify `/titles`, `/users` (GET, POST), middleware `createRequireCapability`, argon2id password hashing, email uniqueness check.
   - [x] Task 6.3 — Hook `useHasCapability`, UI `/settings/users`, dialog tạo tài khoản nhân viên, điều kiện hoá menu điều hướng và ProtectedRoute theo `users.manage`, badge chức danh trên header, i18n vi/en, component tests pass.
-  - [x] Cổng gác tất định: `pnpm check` (format, lint 0 warnings, typecheck 4/4 packages, 74 tests pass, production build, contracts lint & drift check) pass 100%.
+  - [x] Task 6.4 — RBAC enforcement trên toàn bộ business routes (`products.*`, `warehouses.*`, `stock-receipts.*`, `customers.*`, `sales-orders.*`, `users.*`) với 403 FORBIDDEN khi thiếu capability, cập nhật OpenAPI 3.1 và error schema enums.
+  - [x] Cổng gác tất định: `pnpm check` (format, lint 0 warnings, typecheck 4/4 packages, 87 tests pass [68 api tests + 19 web tests], production build, contracts lint & drift check) pass 100%.
 
 ### Đang làm dở
 

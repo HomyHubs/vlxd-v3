@@ -11,15 +11,17 @@ const mockSession = {
     fullName: "Chủ cửa hàng",
     tenantId: "tenant-1",
     status: "active" as const,
+    titles: ["Chủ cửa hàng"],
+    capabilities: ["customers.manage"],
   },
   tenant: { id: "tenant-1", name: "Store", code: "store", plan: "free" },
 };
 
-function createMockAuthService(): AuthService {
+function createMockAuthService(customSession = mockSession): AuthService {
   return {
     login: vi.fn(),
     logout: vi.fn(),
-    getMe: vi.fn().mockResolvedValue(mockSession),
+    getMe: vi.fn().mockResolvedValue(customSession),
   };
 }
 
@@ -162,6 +164,57 @@ describe("customer routes unit tests", () => {
     expect(response.statusCode).toBe(409);
     const body = response.json<{ code: string }>();
     expect(body.code).toBe("CUSTOMER_CODE_EXISTS");
+    await app.close();
+  });
+
+  it("returns 403 when user lacks customers.manage for GET /customers", async () => {
+    const noCapSession = {
+      ...mockSession,
+      user: { ...mockSession.user, capabilities: [] },
+    };
+    const customerService = { list: vi.fn(), create: vi.fn() } as CustomerService;
+    const app = await buildApp({
+      authService: createMockAuthService(noCapSession),
+      customerService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/customers",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ code: "FORBIDDEN" });
+    await app.close();
+  });
+
+  it("returns 403 when user lacks customers.manage for POST /customers", async () => {
+    const noCapSession = {
+      ...mockSession,
+      user: { ...mockSession.user, capabilities: [] },
+    };
+    const customerService = { list: vi.fn(), create: vi.fn() } as CustomerService;
+    const app = await buildApp({
+      authService: createMockAuthService(noCapSession),
+      customerService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/customers",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      payload: { code: "KH-01", name: "Khách test" },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ code: "FORBIDDEN" });
     await app.close();
   });
 });

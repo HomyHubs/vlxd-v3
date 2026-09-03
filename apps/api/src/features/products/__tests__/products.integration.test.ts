@@ -44,10 +44,15 @@ describe("products integration", () => {
       resolve(process.cwd(), "../../db/migrations/202609020003_create_inventory_tables.sql"),
       "utf8",
     );
+    const rbacSql = await readFile(
+      resolve(process.cwd(), "../../db/migrations/202609030007_create_rbac_tables.sql"),
+      "utf8",
+    );
     const seedSql = await readFile(resolve(process.cwd(), "../../db/seeds/dev.sql"), "utf8");
     const [authUp] = upAndDown(authSql);
     const [productUp, productDown] = upAndDown(productSql);
     const [inventoryUp, inventoryDown] = upAndDown(inventorySql);
+    const [rbacUp, rbacDown] = upAndDown(rbacSql);
     const pool = createDatabasePool(started.getConnectionUri());
     const database = createDatabase(pool);
 
@@ -68,6 +73,7 @@ describe("products integration", () => {
         'active'
       );
     `);
+    await pool.query(rbacUp);
     const authService = createAuthService({ database });
     const server = await buildApp({
       authService,
@@ -159,6 +165,7 @@ describe("products integration", () => {
       const productCount = await pool.query<{ count: string }>("SELECT count(*) FROM products");
       expect(productCount.rows[0]?.count).toBe("2");
 
+      await pool.query(rbacDown);
       await pool.query(inventoryDown);
       await pool.query(productDown);
       const tables = await pool.query<{ products: string | null; units: string | null }>(

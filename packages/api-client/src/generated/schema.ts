@@ -349,7 +349,7 @@ export interface components {
         };
         ProductErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "PRODUCT_LIMIT_REACHED" | "PRODUCT_SKU_EXISTS" | "UNIT_NOT_FOUND";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "PRODUCT_LIMIT_REACHED" | "PRODUCT_SKU_EXISTS" | "UNIT_NOT_FOUND";
             message: string;
         };
         Warehouse: {
@@ -369,7 +369,7 @@ export interface components {
         };
         WarehouseErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "WAREHOUSE_LIMIT_REACHED" | "WAREHOUSE_CODE_EXISTS";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "WAREHOUSE_LIMIT_REACHED" | "WAREHOUSE_CODE_EXISTS";
             message: string;
         };
         CreateStockReceiptLineInput: {
@@ -425,7 +425,7 @@ export interface components {
         };
         StockReceiptErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INVALID_RECEIPT_LINES";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INVALID_RECEIPT_LINES";
             message: string;
         };
         Customer: {
@@ -449,7 +449,7 @@ export interface components {
         };
         CustomerErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "CUSTOMER_CODE_EXISTS" | "INVALID_CUSTOMER_DATA";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "CUSTOMER_CODE_EXISTS" | "INVALID_CUSTOMER_DATA";
             message: string;
         };
         CreateSalesOrderLineInput: {
@@ -515,7 +515,7 @@ export interface components {
         };
         SalesOrderErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "ORDER_NOT_FOUND" | "CUSTOMER_NOT_FOUND" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "INVALID_ORDER_LINES";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "ORDER_NOT_FOUND" | "CUSTOMER_NOT_FOUND" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "INVALID_ORDER_LINES";
             message: string;
         };
         TitleItem: {
@@ -549,7 +549,7 @@ export interface components {
         };
         UserErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "FORBIDDEN" | "TITLE_NOT_FOUND" | "EMAIL_EXISTS" | "INVALID_INPUT";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "TITLE_NOT_FOUND" | "EMAIL_EXISTS" | "INVALID_INPUT";
             message: string;
         };
     };
@@ -765,6 +765,15 @@ export interface operations {
                     "application/json": components["schemas"]["ProductErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires products.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductErrorResponse"];
+                };
+            };
         };
     };
     createProduct: {
@@ -800,6 +809,15 @@ export interface operations {
             };
             /** @description Authentication required */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires products.manage) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -854,6 +872,15 @@ export interface operations {
                     "application/json": components["schemas"]["WarehouseErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires inventory.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseErrorResponse"];
+                };
+            };
         };
     };
     createWarehouse: {
@@ -889,6 +916,15 @@ export interface operations {
             };
             /** @description Authentication required */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires inventory.manage) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -947,6 +983,15 @@ export interface operations {
                     "application/json": components["schemas"]["StockReceiptErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires inventory.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
         };
     };
     createStockReceipt: {
@@ -982,6 +1027,15 @@ export interface operations {
             };
             /** @description Authentication required */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires inventory.manage) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1029,6 +1083,15 @@ export interface operations {
                     "application/json": components["schemas"]["StockReceiptErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires inventory.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
             /** @description Stock receipt not found */
             404: {
                 headers: {
@@ -1060,6 +1123,15 @@ export interface operations {
             };
             /** @description Authentication required */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires customers.manage) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1102,6 +1174,15 @@ export interface operations {
             };
             /** @description Authentication required */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires customers.manage) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1152,6 +1233,15 @@ export interface operations {
                     "application/json": components["schemas"]["SalesOrderErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires sales.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
         };
     };
     createSalesOrder: {
@@ -1187,6 +1277,15 @@ export interface operations {
             };
             /** @description Authentication required */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires sales.create) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1243,6 +1342,15 @@ export interface operations {
                     "application/json": components["schemas"]["SalesOrderErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires sales.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
             /** @description Sales order not found */
             404: {
                 headers: {
@@ -1274,6 +1382,15 @@ export interface operations {
             };
             /** @description Authentication required */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires users.manage) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

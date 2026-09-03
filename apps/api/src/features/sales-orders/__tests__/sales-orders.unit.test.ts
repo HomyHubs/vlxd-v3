@@ -11,15 +11,17 @@ const mockSession = {
     fullName: "Chủ cửa hàng",
     tenantId: "tenant-1",
     status: "active" as const,
+    titles: ["Chủ cửa hàng"],
+    capabilities: ["sales.view", "sales.create"],
   },
   tenant: { id: "tenant-1", name: "Store", code: "store", plan: "free" },
 };
 
-function createMockAuthService(): AuthService {
+function createMockAuthService(customSession = mockSession): AuthService {
   return {
     login: vi.fn(),
     logout: vi.fn(),
-    getMe: vi.fn().mockResolvedValue(mockSession),
+    getMe: vi.fn().mockResolvedValue(customSession),
   };
 }
 
@@ -392,6 +394,98 @@ describe("sales order routes unit tests", () => {
     });
 
     expect(response.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("returns 403 when user lacks sales.view for GET /sales-orders", async () => {
+    const noCapSession = {
+      ...mockSession,
+      user: { ...mockSession.user, capabilities: [] },
+    };
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+    } as SalesOrderService;
+    const app = await buildApp({
+      authService: createMockAuthService(noCapSession),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/sales-orders",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ code: "FORBIDDEN" });
+    await app.close();
+  });
+
+  it("returns 403 when user lacks sales.create for POST /sales-orders", async () => {
+    const noCapSession = {
+      ...mockSession,
+      user: { ...mockSession.user, capabilities: ["sales.view"] },
+    };
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+    } as SalesOrderService;
+    const app = await buildApp({
+      authService: createMockAuthService(noCapSession),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      payload: {
+        customerId: "cust-1",
+        warehouseId: "wh-1",
+        lines: [{ productId: "prod-1", quantity: 1, unitPrice: 10000 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ code: "FORBIDDEN" });
+    await app.close();
+  });
+
+  it("returns 403 when user lacks sales.view for GET /sales-orders/:id", async () => {
+    const noCapSession = {
+      ...mockSession,
+      user: { ...mockSession.user, capabilities: [] },
+    };
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+    } as SalesOrderService;
+    const app = await buildApp({
+      authService: createMockAuthService(noCapSession),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/sales-orders/order-1",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ code: "FORBIDDEN" });
     await app.close();
   });
 });

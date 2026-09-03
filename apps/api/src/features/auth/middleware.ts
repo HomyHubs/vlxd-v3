@@ -28,7 +28,8 @@ export function createRequireCapability(authService: AuthService) {
 
       request.session = session;
 
-      if (!session.user.capabilities.includes(capability)) {
+      const userCaps = session.user.capabilities ?? [];
+      if (!userCaps.includes(capability)) {
         return reply.code(403).send({
           code: "FORBIDDEN",
           message: `Bạn không có quyền thực hiện thao tác này (yêu cầu quyền: ${capability})`,

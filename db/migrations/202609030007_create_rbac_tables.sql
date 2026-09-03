@@ -39,11 +39,13 @@ CREATE TABLE title_role_groups (
 CREATE TABLE user_titles (
   user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title_id text NOT NULL REFERENCES titles(id) ON DELETE CASCADE,
+  tenant_id text NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   PRIMARY KEY (user_id, title_id)
 );
 
 CREATE INDEX idx_user_titles_user_id ON user_titles(user_id);
 CREATE INDEX idx_user_titles_title_id ON user_titles(title_id);
+CREATE INDEX idx_user_titles_tenant_id ON user_titles(tenant_id);
 CREATE INDEX idx_title_role_groups_role_group_id ON title_role_groups(role_group_id);
 CREATE INDEX idx_role_group_capabilities_cap_id ON role_group_capabilities(capability_id);
 
@@ -112,21 +114,34 @@ INSERT INTO title_role_groups (title_id, role_group_id)
 SELECT 'title-wh-' || id, 'rg-warehouse' FROM tenants
 ON CONFLICT DO NOTHING;
 
--- Assign Owner title to existing owner users
-INSERT INTO user_titles (user_id, title_id)
-SELECT u.id, 'title-owner-' || u.tenant_id
+-- Deterministically backfill OWNER title for all pre-existing users in each tenant
+INSERT INTO user_titles (user_id, title_id, tenant_id)
+SELECT u.id, t.id, u.tenant_id
 FROM users u
-WHERE u.email LIKE '%owner%' OR u.id = 'user-dev-owner-001'
-ON CONFLICT DO NOTHING;
-
--- Assign Sales title to existing sales users
-INSERT INTO user_titles (user_id, title_id)
-SELECT u.id, 'title-sales-' || u.tenant_id
-FROM users u
-WHERE u.email LIKE '%sales%' OR u.id = 'user-dev-sales-001'
-ON CONFLICT DO NOTHING;
+JOIN titles t ON t.tenant_id = u.tenant_id AND t.code = 'OWNER'
+ON CONFLICT (user_id, title_id) DO NOTHING;
 
 -- migrate:down
+-- Prevent privilege escalation on rollback:
+-- Deactivate users with non-OWNER titles (e.g. SALES, WAREHOUSE) created under RBAC
+-- so they cannot authenticate and gain unrestricted legacy access if rolled back.
+UPDATE users
+SET status = 'inactive'
+WHERE id IN (
+  SELECT ut.user_id
+  FROM user_titles ut
+  JOIN titles t ON ut.title_id = t.id
+  WHERE t.code != 'OWNER'
+);
+
+DELETE FROM sessions
+WHERE user_id IN (
+  SELECT ut.user_id
+  FROM user_titles ut
+  JOIN titles t ON ut.title_id = t.id
+  WHERE t.code != 'OWNER'
+);
+
 DROP TABLE user_titles;
 DROP TABLE title_role_groups;
 DROP TABLE titles;

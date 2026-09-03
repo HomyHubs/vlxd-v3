@@ -51,6 +51,7 @@ describe("stock receipts integration tests (full transaction & stock update)", (
     const ceilingMigration = splitMigration(
       await readMigration("202609030006_add_stock_levels_ceiling.sql"),
     );
+    const rbac = splitMigration(await readMigration("202609030007_create_rbac_tables.sql"));
     const seed = await readFile(resolve(process.cwd(), "../../db/seeds/dev.sql"), "utf8");
 
     const pool = createDatabasePool(started.getConnectionUri());
@@ -64,6 +65,7 @@ describe("stock receipts integration tests (full transaction & stock update)", (
       await pool.query(inventory[0]);
       await pool.query(stockReceipts[0]);
       await pool.query(ceilingMigration[0]);
+      await pool.query(rbac[0]);
 
       // Seed warehouse and product
       await database

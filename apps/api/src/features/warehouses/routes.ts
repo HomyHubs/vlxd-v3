@@ -7,7 +7,7 @@ import {
   WarehouseSchema,
 } from "@vlxd/shared";
 
-import { SESSION_COOKIE_NAME, type AuthService } from "../auth/index.js";
+import { createRequireCapability, type AuthService } from "../auth/index.js";
 import type { WarehouseService } from "./service.js";
 
 export interface WarehouseRoutesOptions {
@@ -17,25 +17,22 @@ export interface WarehouseRoutesOptions {
 
 export const warehouseRoutes: FastifyPluginAsync<WarehouseRoutesOptions> = (server, options) => {
   const app = server.withTypeProvider<ZodTypeProvider>();
-
-  async function sessionFor(request: {
-    cookies: Record<string, string | undefined>;
-    log: Parameters<AuthService["getMe"]>[1];
-  }) {
-    const token = request.cookies[SESSION_COOKIE_NAME];
-    return token ? options.authService.getMe(token, request.log) : null;
-  }
+  const requireCap = createRequireCapability(options.authService);
 
   app.get(
     "/warehouses",
     {
-      schema: { response: { 200: WarehouseListResponseSchema, 401: WarehouseErrorResponseSchema } },
+      preHandler: [requireCap("inventory.view")],
+      schema: {
+        response: {
+          200: WarehouseListResponseSchema,
+          401: WarehouseErrorResponseSchema,
+          403: WarehouseErrorResponseSchema,
+        },
+      },
     },
     async (request, reply) => {
-      const session = await sessionFor(request);
-      if (!session) {
-        return reply.code(401).send({ code: "UNAUTHORIZED", message: "Not authenticated" });
-      }
+      const session = request.session!;
       return reply.code(200).send(await options.warehouseService.list(session.tenant.id));
     },
   );
@@ -43,22 +40,21 @@ export const warehouseRoutes: FastifyPluginAsync<WarehouseRoutesOptions> = (serv
   app.post(
     "/warehouses",
     {
+      preHandler: [requireCap("inventory.manage")],
       schema: {
         body: CreateWarehouseRequestSchema,
         response: {
           201: WarehouseSchema,
           400: WarehouseErrorResponseSchema,
           401: WarehouseErrorResponseSchema,
+          403: WarehouseErrorResponseSchema,
           409: WarehouseErrorResponseSchema,
           422: WarehouseErrorResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const session = await sessionFor(request);
-      if (!session) {
-        return reply.code(401).send({ code: "UNAUTHORIZED", message: "Not authenticated" });
-      }
+      const session = request.session!;
       const result = await options.warehouseService.create(
         session.tenant.id,
         session.tenant.plan,

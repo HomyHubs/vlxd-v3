@@ -69,11 +69,11 @@ describe("users routes", () => {
     expect(JSON.parse(res.body)).toMatchObject({ code: "UNAUTHORIZED" });
   });
 
-  it("GET /titles returns 200 with list of titles for authenticated user", async () => {
+  it("GET /titles returns 200 with list of titles for user with users.manage capability", async () => {
     const authService: AuthService = {
       login: vi.fn(),
       logout: vi.fn(),
-      getMe: vi.fn().mockResolvedValue(mockSalesSession),
+      getMe: vi.fn().mockResolvedValue(mockOwnerSession),
     };
     const usersService: UsersService = {
       listTitles: vi.fn().mockResolvedValue([
@@ -88,13 +88,36 @@ describe("users routes", () => {
     const res = await server.inject({
       method: "GET",
       url: "/titles",
-      cookies: { vlxd_session: "token-sales" },
+      cookies: { vlxd_session: "token-owner" },
     });
 
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body) as TitleListResponse;
     expect(body.items).toHaveLength(2);
     expect(body.items[0]?.name).toBe("Chủ cửa hàng");
+  });
+
+  it("GET /titles returns 403 when user lacks users.manage capability", async () => {
+    const authService: AuthService = {
+      login: vi.fn(),
+      logout: vi.fn(),
+      getMe: vi.fn().mockResolvedValue(mockSalesSession),
+    };
+    const usersService: UsersService = {
+      listTitles: vi.fn(),
+      listUsers: vi.fn(),
+      createUser: vi.fn(),
+    };
+
+    const server = await buildTestServer(authService, usersService);
+    const res = await server.inject({
+      method: "GET",
+      url: "/titles",
+      cookies: { vlxd_session: "token-sales" },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(JSON.parse(res.body)).toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("GET /users returns 403 when user lacks users.manage capability", async () => {

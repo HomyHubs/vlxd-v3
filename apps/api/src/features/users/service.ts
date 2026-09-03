@@ -132,6 +132,7 @@ export function createUsersService(db: Kysely<Database>): UsersService {
             .values({
               user_id: userId,
               title_id: title.id,
+              tenant_id: tenantId,
             })
             .execute();
         });

@@ -8,7 +8,7 @@ import {
   StockReceiptListResponseSchema,
 } from "@vlxd/shared";
 
-import { SESSION_COOKIE_NAME, type AuthService } from "../auth/index.js";
+import { createRequireCapability, type AuthService } from "../auth/index.js";
 import type { StockReceiptService } from "./service.js";
 
 export interface StockReceiptRoutesOptions {
@@ -31,32 +31,23 @@ export const stockReceiptRoutes: FastifyPluginAsync<StockReceiptRoutesOptions> =
   options,
 ) => {
   const app = server.withTypeProvider<ZodTypeProvider>();
-
-  async function sessionFor(request: {
-    cookies: Record<string, string | undefined>;
-    log: Parameters<AuthService["getMe"]>[1];
-  }) {
-    const token = request.cookies[SESSION_COOKIE_NAME];
-    return token ? options.authService.getMe(token, request.log) : null;
-  }
+  const requireCap = createRequireCapability(options.authService);
 
   app.get(
     "/stock-receipts",
     {
+      preHandler: [requireCap("inventory.view")],
       schema: {
         querystring: ListQuerySchema,
         response: {
           200: StockReceiptListResponseSchema,
           401: StockReceiptErrorResponseSchema,
+          403: StockReceiptErrorResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const session = await sessionFor(request);
-      if (!session) {
-        return reply.code(401).send({ code: "UNAUTHORIZED", message: "Not authenticated" });
-      }
-
+      const session = request.session!;
       const result = await options.stockReceiptService.list(session.tenant.id, request.query);
       return reply.code(200).send(result);
     },
@@ -65,22 +56,20 @@ export const stockReceiptRoutes: FastifyPluginAsync<StockReceiptRoutesOptions> =
   app.post(
     "/stock-receipts",
     {
+      preHandler: [requireCap("inventory.manage")],
       schema: {
         body: CreateStockReceiptRequestSchema,
         response: {
           201: StockReceiptDetailResponseSchema,
           400: StockReceiptErrorResponseSchema,
           401: StockReceiptErrorResponseSchema,
+          403: StockReceiptErrorResponseSchema,
           404: StockReceiptErrorResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const session = await sessionFor(request);
-      if (!session) {
-        return reply.code(401).send({ code: "UNAUTHORIZED", message: "Not authenticated" });
-      }
-
+      const session = request.session!;
       const result = await options.stockReceiptService.create(
         session.tenant.id,
         session.user.id,
@@ -99,21 +88,19 @@ export const stockReceiptRoutes: FastifyPluginAsync<StockReceiptRoutesOptions> =
   app.get(
     "/stock-receipts/:id",
     {
+      preHandler: [requireCap("inventory.view")],
       schema: {
         params: IdParamSchema,
         response: {
           200: StockReceiptDetailResponseSchema,
           401: StockReceiptErrorResponseSchema,
+          403: StockReceiptErrorResponseSchema,
           404: StockReceiptErrorResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const session = await sessionFor(request);
-      if (!session) {
-        return reply.code(401).send({ code: "UNAUTHORIZED", message: "Not authenticated" });
-      }
-
+      const session = request.session!;
       const receipt = await options.stockReceiptService.getById(
         session.tenant.id,
         request.params.id,
