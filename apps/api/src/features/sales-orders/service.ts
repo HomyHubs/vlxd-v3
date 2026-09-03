@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 
 import type {
   CreateSalesOrderRequest,
@@ -11,6 +11,13 @@ import type {
 import type { Kysely } from "kysely";
 
 import type { Database } from "../../platform/database.js";
+
+export class InsufficientStockError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InsufficientStockError";
+  }
+}
 
 export type CreateSalesOrderResult =
   | { success: true; order: SalesOrderDetailResponse }
@@ -41,8 +48,9 @@ export interface SalesOrderServiceDependencies {
 
 function generateOrderNumber(): string {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `DH-${dateStr}-${randomSuffix}`;
+  const timeSuffix = Date.now().toString(36).slice(-4).toUpperCase();
+  const randomSuffix = randomBytes(3).toString("hex").toUpperCase();
+  return `DH-${dateStr}-${timeSuffix}${randomSuffix}`;
 }
 
 export function createSalesOrderService(
@@ -126,27 +134,8 @@ export function createSalesOrderService(
         );
       }
 
-      // Check stock levels in the warehouse
-      const stockLevels = await db
-        .selectFrom("stock_levels")
-        .select(["product_id as productId", "quantity"])
-        .where("warehouse_id", "=", input.warehouseId)
-        .where("product_id", "in", productIds)
-        .execute();
-
-      const stockMap = new Map(stockLevels.map((s) => [s.productId, s.quantity]));
-
-      for (const [productId, reqQty] of requestedQuantities.entries()) {
-        const currentStock = stockMap.get(productId) ?? 0;
-        if (currentStock < reqQty) {
-          const prod = productMap.get(productId);
-          return {
-            success: false,
-            code: "INSUFFICIENT_STOCK",
-            message: `Sản phẩm "${prod?.name ?? productId}" không đủ tồn kho (cần ${reqQty}, hiện có ${currentStock})`,
-          };
-        }
-      }
+      // Sort product IDs for deterministic locking order across concurrent transactions
+      const sortedProductIds = Array.from(requestedQuantities.keys()).sort();
 
       // Get user name for response
       const user = await db
@@ -157,112 +146,161 @@ export function createSalesOrderService(
 
       const createdByName = user?.fullName ?? "Người dùng";
 
-      // Execute transaction: create order + lines + movements + deduct stock levels
-      return db.transaction().execute(async (trx) => {
-        const orderId = `so-${randomUUID()}`;
-        const orderNumber = generateOrderNumber();
-        const now = new Date();
+      // Execute transaction with collision retry for order_number
+      const MAX_ATTEMPTS = 3;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          return await db.transaction().execute(async (trx) => {
+            const orderId = `so-${randomUUID()}`;
+            const orderNumber = generateOrderNumber();
+            const now = new Date();
 
-        // Calculate total amount
-        let totalAmount = 0;
-        for (const line of input.lines) {
-          totalAmount += line.quantity * line.unitPrice;
-        }
+            // Atomically deduct stock levels with non-negative postcondition
+            for (const productId of sortedProductIds) {
+              const reqQty = requestedQuantities.get(productId)!;
+              const updateResult = await trx
+                .updateTable("stock_levels")
+                .set((eb) => ({
+                  quantity: eb("stock_levels.quantity", "-", reqQty),
+                  updated_at: now,
+                }))
+                .where("warehouse_id", "=", input.warehouseId)
+                .where("product_id", "=", productId)
+                .where("quantity", ">=", reqQty)
+                .executeTakeFirst();
 
-        await trx
-          .insertInto("sales_orders")
-          .values({
-            id: orderId,
-            tenant_id: tenantId,
-            order_number: orderNumber,
-            customer_id: input.customerId,
-            warehouse_id: input.warehouseId,
-            status: "confirmed",
-            total_amount: totalAmount,
-            note: input.note ?? null,
-            created_by: userId,
-          })
-          .execute();
+              if (Number(updateResult.numUpdatedRows ?? 0) === 0) {
+                const currentStockRow = await trx
+                  .selectFrom("stock_levels")
+                  .select("quantity")
+                  .where("warehouse_id", "=", input.warehouseId)
+                  .where("product_id", "=", productId)
+                  .executeTakeFirst();
+                const currentStock = currentStockRow?.quantity ?? 0;
+                const prod = productMap.get(productId);
+                throw new InsufficientStockError(
+                  `Sản phẩm "${prod?.name ?? productId}" không đủ tồn kho (cần ${reqQty}, hiện có ${currentStock})`,
+                );
+              }
+            }
 
-        const createdLines: SalesOrderLine[] = [];
+            // Calculate total amount
+            let totalAmount = 0;
+            for (const line of input.lines) {
+              totalAmount += line.quantity * line.unitPrice;
+            }
 
-        for (const line of input.lines) {
-          const lineId = `sol-${randomUUID()}`;
-          const prod = productMap.get(line.productId)!;
-          const lineTotal = line.quantity * line.unitPrice;
+            await trx
+              .insertInto("sales_orders")
+              .values({
+                id: orderId,
+                tenant_id: tenantId,
+                order_number: orderNumber,
+                customer_id: input.customerId,
+                warehouse_id: input.warehouseId,
+                status: "confirmed",
+                total_amount: totalAmount,
+                note: input.note ?? null,
+                created_by: userId,
+              })
+              .execute();
 
-          await trx
-            .insertInto("sales_order_lines")
-            .values({
-              id: lineId,
-              order_id: orderId,
-              product_id: line.productId,
-              quantity: line.quantity,
-              unit_price: line.unitPrice,
-              line_total: lineTotal,
-            })
-            .execute();
+            const createdLines: SalesOrderLine[] = [];
 
-          // Log outbound stock movement (negative quantity for sales issue)
-          const movementId = `sm-${randomUUID()}`;
-          await trx
-            .insertInto("stock_movements")
-            .values({
-              id: movementId,
-              tenant_id: tenantId,
-              warehouse_id: input.warehouseId,
-              product_id: line.productId,
-              quantity: -line.quantity,
-              type: "sales_issue",
-              reference_id: orderId,
-            })
-            .execute();
+            for (const line of input.lines) {
+              const lineId = `sol-${randomUUID()}`;
+              const prod = productMap.get(line.productId)!;
+              const lineTotal = line.quantity * line.unitPrice;
 
-          // Atomically deduct stock level
-          await trx
-            .updateTable("stock_levels")
-            .set((eb) => ({
-              quantity: eb("stock_levels.quantity", "-", line.quantity),
-              updated_at: now,
-            }))
-            .where("warehouse_id", "=", input.warehouseId)
-            .where("product_id", "=", line.productId)
-            .execute();
+              await trx
+                .insertInto("sales_order_lines")
+                .values({
+                  id: lineId,
+                  order_id: orderId,
+                  product_id: line.productId,
+                  quantity: line.quantity,
+                  unit_price: line.unitPrice,
+                  line_total: lineTotal,
+                })
+                .execute();
 
-          createdLines.push({
-            id: lineId,
-            productId: line.productId,
-            productSku: prod.sku,
-            productName: prod.name,
-            unitName: prod.unitName,
-            quantity: line.quantity,
-            unitPrice: line.unitPrice,
-            lineTotal,
+              // Log outbound stock movement (negative quantity for sales issue)
+              const movementId = `sm-${randomUUID()}`;
+              await trx
+                .insertInto("stock_movements")
+                .values({
+                  id: movementId,
+                  tenant_id: tenantId,
+                  warehouse_id: input.warehouseId,
+                  product_id: line.productId,
+                  quantity: -line.quantity,
+                  type: "sales_issue",
+                  reference_id: orderId,
+                })
+                .execute();
+
+              createdLines.push({
+                id: lineId,
+                productId: line.productId,
+                productSku: prod.sku,
+                productName: prod.name,
+                unitName: prod.unitName,
+                quantity: line.quantity,
+                unitPrice: line.unitPrice,
+                lineTotal,
+              });
+            }
+
+            return {
+              success: true,
+              order: {
+                id: orderId,
+                orderNumber,
+                customerId: customer.id,
+                customerCode: customer.code,
+                customerName: customer.name,
+                customerPhone: customer.phone,
+                customerAddress: customer.address,
+                warehouseId: warehouse.id,
+                warehouseCode: warehouse.code,
+                warehouseName: warehouse.name,
+                status: "confirmed",
+                totalAmount,
+                note: input.note ?? null,
+                createdByName,
+                createdAt: now.toISOString(),
+                lines: createdLines,
+              },
+            };
           });
-        }
+        } catch (err: unknown) {
+          if (err instanceof InsufficientStockError) {
+            return {
+              success: false,
+              code: "INSUFFICIENT_STOCK",
+              message: err.message,
+            };
+          }
 
-        return {
-          success: true,
-          order: {
-            id: orderId,
-            orderNumber,
-            customerId: customer.id,
-            customerCode: customer.code,
-            customerName: customer.name,
-            customerPhone: customer.phone,
-            customerAddress: customer.address,
-            warehouseId: warehouse.id,
-            warehouseCode: warehouse.code,
-            warehouseName: warehouse.name,
-            status: "confirmed",
-            totalAmount,
-            note: input.note ?? null,
-            createdByName,
-            createdAt: now.toISOString(),
-            lines: createdLines,
-          },
-        };
-      });
+          const error = err as { code?: string; constraint?: string; message?: string };
+          const isDuplicateOrderNumber =
+            error?.code === "23505" &&
+            (error?.constraint === "sales_orders_tenant_number_unique" ||
+              String(error?.message).includes("sales_orders_tenant_number_unique"));
+
+          if (isDuplicateOrderNumber && attempt < MAX_ATTEMPTS) {
+            continue;
+          }
+
+          throw err;
+        }
+      }
+
+      return {
+        success: false,
+        code: "INVALID_ORDER_LINES",
+        message: "Không thể khởi tạo mã đơn hàng sau nhiều lần thử",
+      };
     },
 
     async list(tenantId, query) {

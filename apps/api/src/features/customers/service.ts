@@ -59,17 +59,35 @@ export function createCustomerService(dependencies: CustomerServiceDependencies)
       const id = `cust-${randomUUID()}`;
       const now = new Date();
 
-      await db
-        .insertInto("customers")
-        .values({
-          id,
-          tenant_id: tenantId,
-          code: input.code,
-          name: input.name,
-          phone: input.phone ?? null,
-          address: input.address ?? null,
-        })
-        .execute();
+      try {
+        await db
+          .insertInto("customers")
+          .values({
+            id,
+            tenant_id: tenantId,
+            code: input.code,
+            name: input.name,
+            phone: input.phone ?? null,
+            address: input.address ?? null,
+          })
+          .execute();
+      } catch (err: unknown) {
+        const error = err as { code?: string; constraint?: string; message?: string };
+        const isDuplicateCode =
+          error?.code === "23505" &&
+          (error?.constraint === "customers_tenant_code_unique" ||
+            String(error?.message).includes("customers_tenant_code_unique"));
+
+        if (isDuplicateCode) {
+          return {
+            success: false,
+            code: "CUSTOMER_CODE_EXISTS",
+            message: `Mã khách hàng "${input.code}" đã tồn tại`,
+          };
+        }
+
+        throw err;
+      }
 
       return {
         success: true,

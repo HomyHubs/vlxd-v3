@@ -216,7 +216,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
       });
       expect(validOrderRes.statusCode).toBe(201);
       const createdOrder = validOrderRes.json<SalesOrderDetailResponse>();
-      expect(createdOrder.orderNumber).toMatch(/^DH-\d{8}-[A-Z0-9]{4}$/);
+      expect(createdOrder.orderNumber).toMatch(/^DH-\d{8}-[A-Z0-9]{4,}$/);
       expect(createdOrder.totalAmount).toBe(1700000); // 20 * 85000
       expect(createdOrder.lines).toHaveLength(1);
       expect(createdOrder.lines[0]).toMatchObject({
@@ -275,6 +275,77 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
       expect(detail.id).toBe(createdOrder.id);
       expect(detail.customerCode).toBe("KH-THAU-01");
       expect(detail.lines[0]?.productSku).toBe("XM-001");
+
+      // 11. Concurrency test: Two competing orders requesting 20 bags when only 30 remain
+      const concurrentOrderPayload = {
+        customerId: newCust.id,
+        warehouseId: "wh-main-001",
+        note: "Đơn cạnh tranh tồn kho",
+        lines: [{ productId: "prod-cement-001", quantity: 20, unitPrice: 85000 }],
+      };
+
+      const [orderA, orderB] = await Promise.all([
+        app.inject({
+          method: "POST",
+          url: "/sales-orders",
+          cookies,
+          payload: concurrentOrderPayload,
+        }),
+        app.inject({
+          method: "POST",
+          url: "/sales-orders",
+          cookies,
+          payload: concurrentOrderPayload,
+        }),
+      ]);
+
+      const statusCodes = [orderA.statusCode, orderB.statusCode].sort((a, b) => a - b);
+      expect(statusCodes).toEqual([201, 422]);
+
+      const failedOrder = orderA.statusCode === 422 ? orderA : orderB;
+      expect(failedOrder.json()).toMatchObject({
+        code: "INSUFFICIENT_STOCK",
+      });
+
+      // Stock must be exactly 30 - 20 = 10, never negative!
+      const stockAfterConcurrent = await database
+        .selectFrom("stock_levels")
+        .select("quantity")
+        .where("warehouse_id", "=", "wh-main-001")
+        .where("product_id", "=", "prod-cement-001")
+        .executeTakeFirst();
+      expect(stockAfterConcurrent?.quantity).toBe(10);
+
+      // 12. Concurrency test: Two concurrent customer creates with identical code
+      const duplicateCustomerCode = "KH-CONCURRENT-01";
+      const [custCreateA, custCreateB] = await Promise.all([
+        app.inject({
+          method: "POST",
+          url: "/customers",
+          cookies,
+          payload: {
+            code: duplicateCustomerCode,
+            name: "Khách hàng đồng thời A",
+          },
+        }),
+        app.inject({
+          method: "POST",
+          url: "/customers",
+          cookies,
+          payload: {
+            code: duplicateCustomerCode,
+            name: "Khách hàng đồng thời B",
+          },
+        }),
+      ]);
+
+      const custStatuses = [custCreateA.statusCode, custCreateB.statusCode].sort((a, b) => a - b);
+      expect(custStatuses).toEqual([201, 409]);
+
+      const failedCust = custCreateA.statusCode === 409 ? custCreateA : custCreateB;
+      expect(failedCust.json()).toMatchObject({
+        code: "CUSTOMER_CODE_EXISTS",
+      });
 
       await app.close();
     } finally {
