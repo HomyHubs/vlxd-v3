@@ -853,8 +853,8 @@ describe("Cross-tenant cache isolation", () => {
     await waitFor(() => {
       expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
       expect(screen.queryByTestId("header-user-name")).not.toBeInTheDocument();
+      expect(screen.getByTestId("login-screen")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("login-screen")).toBeInTheDocument();
 
     // 4. Resolve receiving tab's pending /auth/me to Tenant B
     resolveReceivingTabAuthMe!(
