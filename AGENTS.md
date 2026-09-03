@@ -452,7 +452,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 5 — Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions) — Đã hoàn thành 100% (Tasks 5.1, 5.2, 5.3, 5.4), cổng gác `pnpm check` và `pnpm contracts:check` pass 100%. Sẵn sàng tạo PR.
+Slice 5 — Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions) — Đã hoàn thành 100% (Tasks 5.1, 5.2, 5.3, 5.4), commit `0660cd0`, đã mở PR #6 (https://github.com/HomyHubs/vlxd-v3/pull/6).
 
 ### Đã xong
 
@@ -473,12 +473,11 @@ Slice 5 — Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deduction
 
 ### Đang làm dở
 
-(Không có — Slice 5 đã hoàn tất, chuẩn bị commit & PR).
+(Không có — Slice 5 đã hoàn tất và mở PR #6).
 
 ### Bước tiếp theo
 
-- [ ] Commit nhánh `feature/slice-5` và đẩy lên origin.
-- [ ] Mở Pull Request cho Slice 5.
+- [ ] Đợi review PR #6 từ Agent B (Notion AI) hoặc User.
 
 ---
 
