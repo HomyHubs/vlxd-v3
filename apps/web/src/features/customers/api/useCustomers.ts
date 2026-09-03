@@ -3,7 +3,7 @@ import type { CreateCustomerRequest, Customer, CustomerListResponse } from "@vlx
 
 import { apiClient } from "../../../lib/apiClient.js";
 
-import { useCurrentUser } from "../../auth/api/useAuth.js";
+import { getCurrentSessionKey, useCurrentUser } from "../../auth/api/useAuth.js";
 
 export const CUSTOMERS_QUERY_KEY = ["customers"] as const;
 
@@ -24,6 +24,9 @@ export function useCustomers() {
 
 export function useCreateCustomer() {
   const queryClient = useQueryClient();
+  const { data: session } = useCurrentUser();
+  const activeSessionKey = session ? `${session.tenant.id}:${session.user.id}` : null;
+
   return useMutation<Customer, Error, CreateCustomerRequest>({
     mutationFn: async (input) => {
       const { data, error } = await apiClient.POST("/customers", {
@@ -42,6 +45,7 @@ export function useCreateCustomer() {
       throw new Error(code);
     },
     onSuccess: async () => {
+      if (getCurrentSessionKey() !== activeSessionKey) return;
       await queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
     },
   });

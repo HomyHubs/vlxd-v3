@@ -35,5 +35,11 @@ export function ProtectedRoute({ requiredCapability }: ProtectedRouteProps = {})
     return <Navigate to="/" replace />;
   }
 
-  return <Outlet />;
+  const identityKey = `${session.tenant.id}:${session.user.id}`;
+
+  return (
+    <div key={identityKey} style={{ display: "contents" }}>
+      <Outlet />
+    </div>
+  );
 }

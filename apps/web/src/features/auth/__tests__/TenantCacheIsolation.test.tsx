@@ -1,18 +1,23 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ProductsPage } from "../../products/pages/ProductsPage.js";
+import { useCreateUser } from "../../users/api/useUsers.js";
 import { UsersPage } from "../../users/pages/UsersPage.js";
 import {
   AUTH_QUERY_KEY,
   clearTenantCache,
   resetTenantTracker,
+  setAuthBroadcastChannel,
   useCurrentUser,
   useLogin,
   useLogout,
 } from "../api/useAuth.js";
+import { AppHeader } from "../components/AppHeader.js";
+import { AuthProvider } from "../components/AuthProvider.js";
+import { ProtectedRoute } from "../components/ProtectedRoute.js";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -733,5 +738,376 @@ describe("Cross-tenant cache isolation", () => {
       expect(screen.getByText("Cát xây tô (Tenant B)")).toBeInTheDocument();
     });
     expect(screen.queryByText("Xi măng Hà Tiên (Tenant A)")).not.toBeInTheDocument();
+  });
+
+  it("cross-tab: receiving AUTH_CHANGED immediately fails closed, unmounts Tenant A protected content, and resolves to Tenant B", async () => {
+    let resolveReceivingTabAuthMe: ((value: Response) => void) | null = null;
+
+    const tenantASession = {
+      user: {
+        id: "user-a",
+        email: "alice@tenant-a.local",
+        fullName: "Alice A (Tenant A)",
+        status: "active" as const,
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["products.view", "users.manage"],
+      },
+      tenant: {
+        id: "tenant-a",
+        name: "Cửa Hàng A",
+        code: "tenant-a",
+        plan: "free" as const,
+      },
+    };
+
+    const tenantBSession = {
+      user: {
+        id: "user-b",
+        email: "bob@tenant-b.local",
+        fullName: "Bob B (Tenant B)",
+        status: "active" as const,
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["products.view", "users.manage"],
+      },
+      tenant: {
+        id: "tenant-b",
+        name: "Cửa Hàng B",
+        code: "tenant-b",
+        plan: "free" as const,
+      },
+    };
+
+    const fetchMock = vi.fn().mockImplementation((req: Request | string) => {
+      const url = typeof req === "string" ? req : req.url;
+      if (url.includes("/auth/me")) {
+        return new Promise<Response>((resolve) => {
+          resolveReceivingTabAuthMe = resolve;
+        });
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    // Mock BroadcastChannel
+    const listeners: ((event: MessageEvent) => void)[] = [];
+    const mockChannel = {
+      addEventListener: vi.fn((type: string, handler: (event: MessageEvent) => void) => {
+        if (type === "message") listeners.push(handler);
+      }),
+      removeEventListener: vi.fn((_type: string, handler: (event: MessageEvent) => void) => {
+        const idx = listeners.indexOf(handler);
+        if (idx >= 0) listeners.splice(idx, 1);
+      }),
+      postMessage: vi.fn(),
+      close: vi.fn(),
+    } as unknown as BroadcastChannel;
+
+    setAuthBroadcastChannel(mockChannel);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    resetTenantTracker("tenant-a:user-a");
+    queryClient.setQueryData(AUTH_QUERY_KEY, tenantASession);
+
+    function ProtectedApp() {
+      return (
+        <AuthProvider>
+          <MemoryRouter initialEntries={["/"]}>
+            <Routes>
+              <Route path="/login" element={<div data-testid="login-screen">Login Screen</div>} />
+              <Route element={<ProtectedRoute />}>
+                <Route
+                  path="/"
+                  element={
+                    <div>
+                      <AppHeader />
+                      <div data-testid="protected-content">Tenant A Dashboard</div>
+                    </div>
+                  }
+                />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      );
+    }
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ProtectedApp />
+      </QueryClientProvider>,
+    );
+
+    // 1. Initial state: Tenant A protected content is mounted
+    expect(screen.getByTestId("protected-content")).toHaveTextContent("Tenant A Dashboard");
+    expect(screen.getByTestId("header-user-name")).toHaveTextContent("Alice A (Tenant A)");
+
+    // 2. Remote tab emits AUTH_CHANGED
+    listeners.forEach((listener) => listener({ data: { type: "AUTH_CHANGED" } } as MessageEvent));
+
+    // 3. Immediately assert: Tenant A identity and protected content are ABSENT while /auth/me is pending!
+    await waitFor(() => {
+      expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("header-user-name")).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId("login-screen")).toBeInTheDocument();
+
+    // 4. Resolve receiving tab's pending /auth/me to Tenant B
+    resolveReceivingTabAuthMe!(
+      new Response(JSON.stringify(tenantBSession), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    // 5. Verify final state committed Tenant B
+    await waitFor(() => {
+      expect(queryClient.getQueryData(AUTH_QUERY_KEY)).toEqual(tenantBSession);
+    });
+  });
+
+  it("identity transition: employee dialog in UsersPage completely unmounts and discards drafts across identity change", async () => {
+    const tenantAOwner = {
+      user: {
+        id: "owner-a",
+        email: "alice@tenant-a.local",
+        fullName: "Alice A (Tenant A)",
+        status: "active" as const,
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["users.manage"],
+      },
+      tenant: {
+        id: "tenant-a",
+        name: "Cửa Hàng A",
+        code: "tenant-a",
+        plan: "free" as const,
+      },
+    };
+
+    const tenantBOwner = {
+      user: {
+        id: "owner-b",
+        email: "bob@tenant-b.local",
+        fullName: "Bob B (Tenant B)",
+        status: "active" as const,
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["users.manage"],
+      },
+      tenant: {
+        id: "tenant-b",
+        name: "Cửa Hàng B",
+        code: "tenant-b",
+        plan: "free" as const,
+      },
+    };
+
+    const fetchMock = vi.fn().mockImplementation((req: Request | string) => {
+      const url = typeof req === "string" ? req : req.url;
+      if (url.includes("/users")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ items: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      if (url.includes("/titles")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [{ id: "t-sales", code: "SALES", name: "Nhân viên bán hàng" }],
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    resetTenantTracker("tenant-a:owner-a");
+    queryClient.setQueryData(AUTH_QUERY_KEY, tenantAOwner);
+
+    function TestApp() {
+      return (
+        <MemoryRouter initialEntries={["/settings/users"]}>
+          <Routes>
+            <Route element={<ProtectedRoute requiredCapability="users.manage" />}>
+              <Route path="/settings/users" element={<UsersPage />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      );
+    }
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <TestApp />
+      </QueryClientProvider>,
+    );
+
+    // 1. Open employee dialog under Tenant A
+    const openBtn = await screen.findByTestId("add-user-btn");
+    openBtn.click();
+
+    // Fill in employee draft in dialog
+    const nameInput = await screen.findByTestId("user-fullname-input");
+    const emailInput = await screen.findByTestId("user-email-input");
+    const passInput = await screen.findByTestId("user-password-input");
+
+    expect(nameInput).toBeInTheDocument();
+    fireEvent.change(nameInput, { target: { value: "Tenant A Secret Employee" } });
+    fireEvent.change(emailInput, { target: { value: "secret@tenant-a.local" } });
+    fireEvent.change(passInput, { target: { value: "passwordSecret123" } });
+    expect((nameInput as HTMLInputElement).value).toBe("Tenant A Secret Employee");
+
+    // 2. Identity switches to Tenant B Owner
+    resetTenantTracker("tenant-b:owner-b");
+    queryClient.setQueryData(AUTH_QUERY_KEY, tenantBOwner);
+
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <TestApp />
+      </QueryClientProvider>,
+    );
+
+    // 3. Assert: Because ProtectedRoute keys Outlet by identityKey,
+    // the employee dialog from Tenant A is completely unmounted!
+    await waitFor(() => {
+      expect(screen.queryByText("Thêm nhân viên mới")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("user-fullname-input")).not.toBeInTheDocument();
+    });
+
+    // Reopening the dialog under Tenant B yields a fresh, blank form
+    const newOpenBtn = await screen.findByTestId("add-user-btn");
+    newOpenBtn.click();
+
+    const freshNameInput = await screen.findByTestId("user-fullname-input");
+    expect((freshNameInput as HTMLInputElement).value).toBe("");
+  });
+
+  it("in-flight mutation started under Tenant A does not pollute cache or update state after identity switches to Tenant B", async () => {
+    let resolveCreateUser: ((value: Response) => void) | null = null;
+
+    const tenantAOwner = {
+      user: {
+        id: "owner-a",
+        email: "alice@tenant-a.local",
+        fullName: "Alice A",
+        status: "active" as const,
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["users.manage"],
+      },
+      tenant: {
+        id: "tenant-a",
+        name: "Cửa Hàng A",
+        code: "tenant-a",
+        plan: "free" as const,
+      },
+    };
+
+    const tenantBOwner = {
+      user: {
+        id: "owner-b",
+        email: "bob@tenant-b.local",
+        fullName: "Bob B",
+        status: "active" as const,
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["users.manage"],
+      },
+      tenant: {
+        id: "tenant-b",
+        name: "Cửa Hàng B",
+        code: "tenant-b",
+        plan: "free" as const,
+      },
+    };
+
+    const fetchMock = vi.fn().mockImplementation((req: Request | string) => {
+      const url = typeof req === "string" ? req : req.url;
+      if (url.includes("/auth/me")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(tenantAOwner), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      if (url.includes("/users")) {
+        return new Promise<Response>((resolve) => {
+          resolveCreateUser = resolve;
+        });
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    resetTenantTracker("tenant-a:owner-a");
+    queryClient.setQueryData(AUTH_QUERY_KEY, tenantAOwner);
+
+    // Seed Tenant B user cache with a known item
+    queryClient.setQueryData(["users", "tenant-b"], { items: [{ id: "existing-b" }] });
+
+    let mutationTrigger: (() => void) | null = null;
+    function MutationComponent() {
+      const createUserMutation = useCreateUser();
+      mutationTrigger = () => {
+        createUserMutation.mutate({
+          fullName: "Should Not Apply",
+          email: "stale@tenant-a.local",
+          password: "password123",
+          titleId: "t-sales",
+        });
+      };
+      return <div>Mutation Runner</div>;
+    }
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MutationComponent />
+      </QueryClientProvider>,
+    );
+
+    // 1. Trigger mutation under Tenant A (held in flight)
+    mutationTrigger!();
+
+    await waitFor(() => {
+      expect(resolveCreateUser).not.toBeNull();
+    });
+
+    // 2. Identity switches to Tenant B
+    resetTenantTracker("tenant-b:owner-b");
+    queryClient.setQueryData(AUTH_QUERY_KEY, tenantBOwner);
+
+    // 3. Now the delayed Tenant A mutation resolves
+    resolveCreateUser!(
+      new Response(
+        JSON.stringify({
+          id: "new-user-a",
+          email: "stale@tenant-a.local",
+          fullName: "Should Not Apply",
+          status: "active",
+          titles: ["Nhân viên bán hàng"],
+          createdAt: "2026-09-01T00:00:00.000Z",
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    // 4. Assert: Tenant B user cache is untouched and was not invalidated or polluted
+    await new Promise((r) => setTimeout(r, 50));
+    expect(queryClient.getQueryData(["users", "tenant-b"])).toEqual({
+      items: [{ id: "existing-b" }],
+    });
   });
 });

@@ -20,6 +20,22 @@ if (typeof window !== "undefined" && "BroadcastChannel" in window) {
   }
 }
 
+export function getAuthBroadcastChannel(): BroadcastChannel | null {
+  return authBroadcastChannel;
+}
+
+export function setAuthBroadcastChannel(channel: BroadcastChannel | null) {
+  authBroadcastChannel = channel;
+}
+
+export function bumpAuthGeneration() {
+  authGeneration++;
+}
+
+export function getCurrentSessionKey(): string | null {
+  return currentSessionKey;
+}
+
 export function broadcastAuthTransition() {
   try {
     authBroadcastChannel?.postMessage({ type: "AUTH_CHANGED", timestamp: Date.now() });
@@ -42,27 +58,19 @@ export function resetTenantTracker(sessionKey: string | null = null) {
   authGeneration = 0;
 }
 
+export function handleRemoteAuthTransition(queryClient: QueryClient) {
+  authGeneration++;
+  clearTenantCache(queryClient);
+  void queryClient.cancelQueries({ queryKey: AUTH_QUERY_KEY });
+  // Immediately fail-closed to null so all protected subtrees unmount synchronously
+  currentSessionKey = null;
+  queryClient.setQueryData(AUTH_QUERY_KEY, null);
+  // Then initiate fresh refetch
+  void queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
+}
+
 export function useCurrentUser() {
   const queryClient = useQueryClient();
-
-  // Cross-tab synchronization
-  useEffect(() => {
-    if (!authBroadcastChannel) return;
-
-    const handler = (event: MessageEvent<{ type: string }>) => {
-      if (event.data?.type === "AUTH_CHANGED") {
-        authGeneration++;
-        clearTenantCache(queryClient);
-        void queryClient.cancelQueries({ queryKey: AUTH_QUERY_KEY });
-        void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
-      }
-    };
-
-    authBroadcastChannel.addEventListener("message", handler);
-    return () => {
-      authBroadcastChannel?.removeEventListener("message", handler);
-    };
-  }, [queryClient]);
 
   const query = useQuery<AuthSessionResponse | null>({
     queryKey: AUTH_QUERY_KEY,

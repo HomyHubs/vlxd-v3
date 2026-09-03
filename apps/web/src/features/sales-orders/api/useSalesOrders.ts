@@ -6,7 +6,7 @@ import type {
 } from "@vlxd/shared";
 
 import { apiClient } from "../../../lib/apiClient.js";
-import { useCurrentUser } from "../../auth/api/useAuth.js";
+import { getCurrentSessionKey, useCurrentUser } from "../../auth/api/useAuth.js";
 import { PRODUCTS_QUERY_KEY } from "../../products/api/useProducts.js";
 
 export const SALES_ORDERS_QUERY_KEY = ["sales-orders"] as const;
@@ -58,6 +58,9 @@ export function useSalesOrder(id: string) {
 
 export function useCreateSalesOrder() {
   const queryClient = useQueryClient();
+  const { data: session } = useCurrentUser();
+  const activeSessionKey = session ? `${session.tenant.id}:${session.user.id}` : null;
+
   return useMutation<SalesOrderDetailResponse, Error, CreateSalesOrderRequest>({
     mutationFn: async (input) => {
       const { data, error } = await apiClient.POST("/sales-orders", {
@@ -80,6 +83,7 @@ export function useCreateSalesOrder() {
       throw err;
     },
     onSuccess: async () => {
+      if (getCurrentSessionKey() !== activeSessionKey) return;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: SALES_ORDERS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY }),

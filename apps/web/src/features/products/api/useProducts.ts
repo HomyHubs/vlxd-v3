@@ -3,7 +3,7 @@ import type { CreateProductRequest, Product, ProductListResponse } from "@vlxd/s
 
 import { apiClient } from "../../../lib/apiClient.js";
 
-import { useCurrentUser } from "../../auth/api/useAuth.js";
+import { getCurrentSessionKey, useCurrentUser } from "../../auth/api/useAuth.js";
 
 export const PRODUCTS_QUERY_KEY = ["products"] as const;
 
@@ -28,6 +28,9 @@ export function useProducts(page: number, pageSize: number, search: string) {
 
 export function useCreateProduct() {
   const queryClient = useQueryClient();
+  const { data: session } = useCurrentUser();
+  const activeSessionKey = session ? `${session.tenant.id}:${session.user.id}` : null;
+
   return useMutation<Product, Error, CreateProductRequest>({
     mutationFn: async (input) => {
       const { data, error } = await apiClient.POST("/products", { body: input });
@@ -38,6 +41,9 @@ export function useCreateProduct() {
           : "PRODUCT_CREATE_FAILED";
       throw new Error(code);
     },
-    onSuccess: async () => queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY }),
+    onSuccess: async () => {
+      if (getCurrentSessionKey() !== activeSessionKey) return;
+      await queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY });
+    },
   });
 }

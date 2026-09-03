@@ -3,7 +3,13 @@ import { useTranslation } from "react-i18next";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Link as RouterLink } from "react-router-dom";
 
-import { AppHeader, LoginPage, ProtectedRoute, useHasCapability } from "./features/auth/index.js";
+import {
+  AppHeader,
+  AuthProvider,
+  LoginPage,
+  ProtectedRoute,
+  useHasCapability,
+} from "./features/auth/index.js";
 import { SystemHealthCard } from "./features/health/index.js";
 import {
   CreateStockReceiptPage,
@@ -102,7 +108,7 @@ function DashboardLayout() {
 
 export function App() {
   return (
-    <>
+    <AuthProvider>
       <CssBaseline />
       <BrowserRouter>
         <Routes>
@@ -134,6 +140,6 @@ export function App() {
           <Route path="*" element={<LoginPage />} />
         </Routes>
       </BrowserRouter>
-    </>
+    </AuthProvider>
   );
 }

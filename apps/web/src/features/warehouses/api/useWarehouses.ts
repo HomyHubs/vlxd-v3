@@ -3,7 +3,7 @@ import type { CreateWarehouseRequest, Warehouse, WarehouseListResponse } from "@
 
 import { apiClient } from "../../../lib/apiClient.js";
 
-import { useCurrentUser } from "../../auth/api/useAuth.js";
+import { getCurrentSessionKey, useCurrentUser } from "../../auth/api/useAuth.js";
 
 export const WAREHOUSES_QUERY_KEY = ["warehouses"] as const;
 
@@ -24,6 +24,9 @@ export function useWarehouses() {
 
 export function useCreateWarehouse() {
   const queryClient = useQueryClient();
+  const { data: session } = useCurrentUser();
+  const activeSessionKey = session ? `${session.tenant.id}:${session.user.id}` : null;
+
   return useMutation<Warehouse, Error, CreateWarehouseRequest>({
     mutationFn: async (input) => {
       const { data, error } = await apiClient.POST("/warehouses", { body: input });
@@ -34,6 +37,9 @@ export function useCreateWarehouse() {
           : "WAREHOUSE_CREATE_FAILED";
       throw new Error(code);
     },
-    onSuccess: async () => queryClient.invalidateQueries({ queryKey: WAREHOUSES_QUERY_KEY }),
+    onSuccess: async () => {
+      if (getCurrentSessionKey() !== activeSessionKey) return;
+      await queryClient.invalidateQueries({ queryKey: WAREHOUSES_QUERY_KEY });
+    },
   });
 }

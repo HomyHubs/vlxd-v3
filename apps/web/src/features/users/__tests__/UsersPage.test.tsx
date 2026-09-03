@@ -3,10 +3,12 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { AUTH_QUERY_KEY, resetTenantTracker } from "../../auth/api/useAuth.js";
 import { UsersPage } from "../pages/UsersPage.js";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  resetTenantTracker(null);
 });
 
 describe("UsersPage", () => {
@@ -30,9 +32,34 @@ describe("UsersPage", () => {
     ],
   };
 
+  const mockSession = {
+    user: {
+      id: "user-1",
+      email: "owner@vlxd.local",
+      fullName: "Chủ cửa hàng",
+      status: "active" as const,
+      titles: ["Chủ cửa hàng"],
+      capabilities: ["users.manage"],
+    },
+    tenant: {
+      id: "tenant-dev-001",
+      name: "Cửa hàng VLXD",
+      code: "vlxd",
+      plan: "free" as const,
+    },
+  };
+
   it("renders users table with full name, email, titles, and status", async () => {
     const fetchMock = vi.fn().mockImplementation((req: Request | string) => {
       const url = typeof req === "string" ? req : req.url;
+      if (url.includes("/auth/me")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(mockSession), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
       if (url.includes("/users")) {
         return Promise.resolve(
           new Response(JSON.stringify(mockUsers), {
@@ -56,6 +83,8 @@ describe("UsersPage", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    queryClient.setQueryData(AUTH_QUERY_KEY, mockSession);
+    resetTenantTracker("tenant-dev-001:user-1");
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -64,7 +93,7 @@ describe("UsersPage", () => {
     );
 
     expect(await screen.findByText("Quản lý nhân viên")).toBeInTheDocument();
-    expect(screen.getByText("owner@vlxd.local")).toBeInTheDocument();
+    expect(await screen.findByText("owner@vlxd.local")).toBeInTheDocument();
     expect(screen.getAllByText("Chủ cửa hàng").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Hoạt động")).toBeInTheDocument();
   });
@@ -77,6 +106,14 @@ describe("UsersPage", () => {
         const url = typeof req === "string" ? req : req.url;
         const method = typeof req === "string" ? init?.method : req.method;
 
+        if (url.includes("/auth/me")) {
+          return Promise.resolve(
+            new Response(JSON.stringify(mockSession), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
         if (url.includes("/users") && method === "POST") {
           let bodyStr = "";
           if (req instanceof Request) {
@@ -126,6 +163,8 @@ describe("UsersPage", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    queryClient.setQueryData(AUTH_QUERY_KEY, mockSession);
+    resetTenantTracker("tenant-dev-001:user-1");
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -138,9 +177,10 @@ describe("UsersPage", () => {
     const addBtn = screen.getByTestId("add-user-btn");
     await userEvent.click(addBtn);
 
-    expect(screen.getByTestId("user-fullname-input")).toBeInTheDocument();
+    const nameInput = await screen.findByTestId("user-fullname-input");
+    expect(nameInput).toBeInTheDocument();
 
-    await userEvent.type(screen.getByTestId("user-fullname-input"), "Nhân viên Mới");
+    await userEvent.type(nameInput, "Nhân viên Mới");
     await userEvent.type(screen.getByTestId("user-email-input"), "new-staff@vlxd.local");
     await userEvent.type(screen.getByTestId("user-password-input"), "MatKhau@123");
 
@@ -154,6 +194,14 @@ describe("UsersPage", () => {
   it("displays forbidden alert when API returns 403", async () => {
     const fetchMock = vi.fn().mockImplementation((req: Request | string) => {
       const url = typeof req === "string" ? req : req.url;
+      if (url.includes("/auth/me")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(mockSession), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
       if (url.includes("/users")) {
         return Promise.resolve(
           new Response(JSON.stringify({ code: "FORBIDDEN", message: "Forbidden" }), {
@@ -169,6 +217,8 @@ describe("UsersPage", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    queryClient.setQueryData(AUTH_QUERY_KEY, mockSession);
+    resetTenantTracker("tenant-dev-001:user-1");
 
     render(
       <QueryClientProvider client={queryClient}>

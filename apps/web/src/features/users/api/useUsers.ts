@@ -7,7 +7,7 @@ import type {
 } from "@vlxd/shared";
 
 import { apiClient } from "../../../lib/apiClient.js";
-import { useCurrentUser } from "../../auth/index.js";
+import { getCurrentSessionKey, useCurrentUser } from "../../auth/api/useAuth.js";
 
 export const USERS_QUERY_KEY = ["users"] as const;
 export const TITLES_QUERY_KEY = ["titles"] as const;
@@ -25,6 +25,7 @@ export function useUsers() {
       }
       return data;
     },
+    enabled: Boolean(tenantId),
   });
 }
 
@@ -41,11 +42,14 @@ export function useTitles() {
       }
       return data;
     },
+    enabled: Boolean(tenantId),
   });
 }
 
 export function useCreateUser() {
   const queryClient = useQueryClient();
+  const { data: session } = useCurrentUser();
+  const activeSessionKey = session ? `${session.tenant.id}:${session.user.id}` : null;
 
   return useMutation<UserItem, Error, CreateUserRequest>({
     mutationFn: async (newUser) => {
@@ -66,6 +70,7 @@ export function useCreateUser() {
       return data;
     },
     onSuccess: () => {
+      if (getCurrentSessionKey() !== activeSessionKey) return;
       void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
     },
   });
