@@ -452,7 +452,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 5 — Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions) — Đã hoàn thành 100% (Tasks 5.1, 5.2, 5.3, 5.4), commit `0660cd0`, đã mở PR #6 (https://github.com/HomyHubs/vlxd-v3/pull/6).
+Slice 5 — Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions) — Đã hoàn thành 100%, PR #6 đã được Agent B (ChatGPT Web qua Chrome DevTools MCP) review qua 6 rounds và cấp verdict `APPROVED_TO_MERGE`. Đã squash-merge tự động vào `dev` tại commit `af65166`.
 
 ### Đã xong
 
@@ -466,18 +466,20 @@ Slice 5 — Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deduction
 - [x] Slice 2 — Sản phẩm (PR #5 squash-merge vào `dev` tại `07f1476`).
 - [x] Slice 3 — Kho & tồn (đã hoàn thành trên `dev` tại commit `bed43a8`).
 - [x] Slice 4 — Nhập kho (đã hoàn thành trên `dev` tại commit `7981907`).
-- [x] Task 5.1 — Migration `customers`, `sales_orders`, `sales_order_lines`, DB types và rollback integration test.
-- [x] Task 5.2 — Contract OpenAPI 3.1 & API `POST /sales-orders`, `GET /sales-orders`, `GET /sales-orders/{id}`, `GET /customers`, `POST /customers` (atomic stock deduction, INSUFFICIENT_STOCK check, 35 unit + 9 PostgreSQL integration tests pass).
-- [x] Task 5.3 — UI Tạo đơn hàng mới (`/orders/new`) defaulting Khách lẻ, tính tổng tự động, xử lý lỗi tồn kho.
-- [x] Task 5.4 — UI Danh sách đơn và Chi tiết đơn (`/orders`, `/orders/:id`), i18n vi/en, component tests pass.
+- [x] Slice 5 — Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions). PR #6 squash-merge vào `dev` (`af65166`).
+  - [x] Task 5.1 — Migration `customers`, `sales_orders`, `sales_order_lines`, DB types và rollback integration test.
+  - [x] Task 5.2 — Contract OpenAPI 3.1 & API `POST /sales-orders`, `GET /sales-orders`, `GET /sales-orders/{id}`, `GET /customers`, `POST /customers` (atomic conditional stock deduction, INSUFFICIENT_STOCK check, bounded safe integers, high entropy order number with 3x retry on collision).
+  - [x] Task 5.3 — UI Tạo đơn hàng mới (`/orders/new`) defaulting Khách lẻ, tính tổng tự động, xử lý lỗi tồn kho.
+  - [x] Task 5.4 — UI Danh sách đơn và Chi tiết đơn (`/orders`, `/orders/:id`), i18n vi/en, component tests pass.
+  - [x] Review loop (`/gpt-web-review`): 6 rounds review nghiêm ngặt với ChatGPT Web qua Chrome DevTools MCP, giải quyết triệt để race conditions, safe integer overflow bounds, cumulative stock level ceiling với PostgreSQL check constraint `stock_levels_quantity_ceiling`, và test concurrency missing-row. 100% CI pass.
 
 ### Đang làm dở
 
-(Không có — Slice 5 đã hoàn tất và mở PR #6).
+(Không có — Slice 5 đã hoàn tất và merge vào `dev`).
 
 ### Bước tiếp theo
 
-- [ ] Đợi review PR #6 từ Agent B (Notion AI) hoặc User.
+- [ ] Lập kế hoạch và triển khai Slice tiếp theo (Slice 6: Công nợ khách hàng hoặc slice tiếp theo theo roadmap).
 
 ---
 
