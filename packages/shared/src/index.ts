@@ -48,6 +48,7 @@ export {
 
 export {
   MAX_STOCK_RECEIPT_LINE_QUANTITY,
+  MAX_STOCK_LEVEL_QUANTITY,
   CreateStockReceiptLineInputSchema,
   CreateStockReceiptRequestSchema,
   StockReceiptDetailResponseSchema,

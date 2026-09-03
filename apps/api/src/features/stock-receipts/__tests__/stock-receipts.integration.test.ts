@@ -223,6 +223,29 @@ describe("stock receipts integration tests (full transaction & stock update)", (
       expect(detailBody.lines).toHaveLength(2);
       expect(detailBody.lines[0]?.unitName).toBe("Bao");
 
+      // 8. Cumulative stock ceiling: set stock near MAX_STOCK_LEVEL_QUANTITY and verify controlled 400 error
+      await database
+        .updateTable("stock_levels")
+        .set({ quantity: 999_999_990 })
+        .where("warehouse_id", "=", "wh-main-001")
+        .where("product_id", "=", "prod-cement-001")
+        .execute();
+
+      const overflowRes = await app.inject({
+        method: "POST",
+        url: "/stock-receipts",
+        cookies,
+        payload: {
+          warehouseId: "wh-main-001",
+          lines: [{ productId: "prod-cement-001", quantity: 50 }],
+        },
+      });
+
+      expect(overflowRes.statusCode).toBe(400);
+      expect(JSON.parse(overflowRes.body)).toMatchObject({
+        code: "INVALID_RECEIPT_LINES",
+      });
+
       await app.close();
     } finally {
       await pool.end();

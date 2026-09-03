@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 
 import {
+  MAX_STOCK_LEVEL_QUANTITY,
   MAX_STOCK_RECEIPT_LINE_QUANTITY,
   type CreateStockReceiptRequest,
   type StockReceiptDetailResponse,
@@ -129,6 +130,29 @@ export function createStockReceiptService(
             const receiptId = `sr-${randomUUID()}`;
             const receiptNumber = generateReceiptNumber();
             const now = new Date();
+
+            // Lock and inspect existing stock levels to guarantee cumulative quantity <= MAX_STOCK_LEVEL_QUANTITY
+            const existingStocks = await trx
+              .selectFrom("stock_levels")
+              .select(["product_id as productId", "quantity"])
+              .where("warehouse_id", "=", input.warehouseId)
+              .where("product_id", "in", Array.from(aggregatedQuantities.keys()))
+              .forUpdate()
+              .execute();
+
+            const existingStockMap = new Map(existingStocks.map((s) => [s.productId, s.quantity]));
+
+            for (const [productId, addQty] of aggregatedQuantities) {
+              const currentQty = existingStockMap.get(productId) ?? 0;
+              if (currentQty + addQty > MAX_STOCK_LEVEL_QUANTITY) {
+                const prod = productMap.get(productId);
+                return {
+                  success: false as const,
+                  code: "INVALID_RECEIPT_LINES" as const,
+                  message: `Tồn kho sau khi nhập của sản phẩm "${prod?.name ?? productId}" vượt quá giới hạn tối đa (${MAX_STOCK_LEVEL_QUANTITY.toLocaleString()})`,
+                };
+              }
+            }
 
             await trx
               .insertInto("stock_receipts")

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const MAX_STOCK_RECEIPT_LINE_QUANTITY = 1_000_000;
+export const MAX_STOCK_LEVEL_QUANTITY = 1_000_000_000;
 
 export const CreateStockReceiptLineInputSchema = z.object({
   productId: z.string().min(1),
