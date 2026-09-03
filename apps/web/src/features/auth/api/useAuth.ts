@@ -60,3 +60,8 @@ export function useLogout() {
     },
   });
 }
+
+export function useHasCapability(capability: string): boolean {
+  const { data: session } = useCurrentUser();
+  return session?.user.capabilities?.includes(capability) ?? false;
+}

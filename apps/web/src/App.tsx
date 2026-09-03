@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Link as RouterLink } from "react-router-dom";
 
-import { AppHeader, LoginPage, ProtectedRoute } from "./features/auth/index.js";
+import { AppHeader, LoginPage, ProtectedRoute, useHasCapability } from "./features/auth/index.js";
 import { SystemHealthCard } from "./features/health/index.js";
 import {
   CreateStockReceiptPage,
@@ -17,9 +17,11 @@ import {
 } from "./features/sales-orders/index.js";
 import { ProductsPage } from "./features/products/index.js";
 import { WarehousesPage } from "./features/warehouses/index.js";
+import { UsersPage } from "./features/users/index.js";
 
 function DashboardLayout() {
   const { t } = useTranslation();
+  const canManageUsers = useHasCapability("users.manage");
 
   return (
     <>
@@ -35,7 +37,7 @@ function DashboardLayout() {
             </Typography>
           </Stack>
           <SystemHealthCard />
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} useFlexGap flexWrap="wrap">
             <Button component={RouterLink} to="/products" variant="contained">
               {t("products.open")}
             </Button>
@@ -48,6 +50,17 @@ function DashboardLayout() {
             <Button component={RouterLink} to="/orders" variant="outlined">
               {t("orders.title", "Bán hàng")}
             </Button>
+            {canManageUsers && (
+              <Button
+                component={RouterLink}
+                to="/settings/users"
+                variant="outlined"
+                color="secondary"
+                data-testid="nav-settings-users-btn"
+              >
+                {t("users.navTitle", "Cài đặt nhân viên")}
+              </Button>
+            )}
           </Stack>
         </Stack>
       </Container>
@@ -72,6 +85,9 @@ export function App() {
             <Route path="/orders" element={<SalesOrderListPage />} />
             <Route path="/orders/new" element={<CreateSalesOrderPage />} />
             <Route path="/orders/:id" element={<SalesOrderDetailPage />} />
+            <Route element={<ProtectedRoute requiredCapability="users.manage" />}>
+              <Route path="/settings/users" element={<UsersPage />} />
+            </Route>
           </Route>
           <Route path="*" element={<LoginPage />} />
         </Routes>

@@ -3,7 +3,11 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useCurrentUser } from "../api/useAuth.js";
 
-export function ProtectedRoute() {
+export interface ProtectedRouteProps {
+  requiredCapability?: string;
+}
+
+export function ProtectedRoute({ requiredCapability }: ProtectedRouteProps = {}) {
   const { data: session, isLoading } = useCurrentUser();
   const location = useLocation();
 
@@ -25,6 +29,10 @@ export function ProtectedRoute() {
 
   if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (requiredCapability && !session.user.capabilities?.includes(requiredCapability)) {
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

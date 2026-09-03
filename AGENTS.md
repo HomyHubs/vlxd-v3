@@ -452,7 +452,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 5 — Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions) — Đã hoàn thành 100%, PR #6 đã được Agent B (ChatGPT Web qua Chrome DevTools MCP) review qua 6 rounds và cấp verdict `APPROVED_TO_MERGE`. Đã squash-merge tự động vào `dev` tại commit `af65166`.
+Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — Đã hoàn thành 100%, vượt qua toàn bộ cổng gác cục bộ `pnpm check` và `pnpm contracts:check`. Đang tiến hành tạo PR #7 và thực hiện `/gpt-web-review` với ChatGPT Web qua Chrome DevTools MCP.
 
 ### Đã xong
 
@@ -472,14 +472,20 @@ Slice 5 — Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deduction
   - [x] Task 5.3 — UI Tạo đơn hàng mới (`/orders/new`) defaulting Khách lẻ, tính tổng tự động, xử lý lỗi tồn kho.
   - [x] Task 5.4 — UI Danh sách đơn và Chi tiết đơn (`/orders`, `/orders/:id`), i18n vi/en, component tests pass.
   - [x] Review loop (`/gpt-web-review`): 6 rounds review nghiêm ngặt với ChatGPT Web qua Chrome DevTools MCP, giải quyết triệt để race conditions, safe integer overflow bounds, cumulative stock level ceiling với PostgreSQL check constraint `stock_levels_quantity_ceiling`, và test concurrency missing-row. 100% CI pass.
+- [x] Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities):
+  - [x] Task 6.1 — Migration `202609030007_create_rbac_tables.sql` (bảng `capabilities`, `role_groups`, `role_group_capabilities`, `titles`, `title_role_groups`, `user_titles`, seed quyền và chức danh mặc định, rollback integration test).
+  - [x] Task 6.2 — OpenAPI 3.1 spec, Fastify `/titles`, `/users` (GET, POST), middleware `createRequireCapability`, argon2id password hashing, email uniqueness check.
+  - [x] Task 6.3 — Hook `useHasCapability`, UI `/settings/users`, dialog tạo tài khoản nhân viên, điều kiện hoá menu điều hướng và ProtectedRoute theo `users.manage`, badge chức danh trên header, i18n vi/en, component tests pass.
+  - [x] Cổng gác tất định: `pnpm check` (format, lint 0 warnings, typecheck 4/4 packages, 74 tests pass, production build, contracts lint & drift check) pass 100%.
 
 ### Đang làm dở
 
-(Không có — Slice 5 đã hoàn tất và merge vào `dev`).
+- [ ] Mở PR #7 (`feature/slice-6` -> `dev`) và chạy review loop `/gpt-web-review` với ChatGPT Web qua Chrome DevTools MCP.
 
 ### Bước tiếp theo
 
-- [ ] Lập kế hoạch và triển khai Slice tiếp theo (Slice 6: Công nợ khách hàng hoặc slice tiếp theo theo roadmap).
+- [ ] Đạt verdict `APPROVED_TO_MERGE` từ Agent B, auto-merge PR #7 vào nhánh `dev`.
+- [ ] Chuyển sang Slice tiếp theo.
 
 ---
 

@@ -40,6 +40,8 @@ describe("AppHeader", () => {
         fullName: "Chủ cửa hàng",
         tenantId: "tenant-1",
         status: "active",
+        titles: ["Chủ cửa hàng"],
+        capabilities: ["users.manage"],
       },
       tenant: {
         id: "tenant-1",
@@ -59,6 +61,7 @@ describe("AppHeader", () => {
 
     expect(screen.getByText("Cửa hàng VLXD Homy")).toBeInTheDocument();
     expect(screen.getByTestId("header-user-name")).toHaveTextContent("Chủ cửa hàng");
+    expect(screen.getByTestId("header-user-title")).toHaveTextContent("Chủ cửa hàng");
     expect(screen.getByTestId("logout-button")).toBeInTheDocument();
 
     await userEvent.click(screen.getByTestId("logout-button"));

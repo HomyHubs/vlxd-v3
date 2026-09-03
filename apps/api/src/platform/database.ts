@@ -135,6 +135,43 @@ export interface SalesOrderLineTable {
   created_at: Generated<Date>;
 }
 
+export interface CapabilityTable {
+  id: string;
+  description: string;
+  created_at: Generated<Date>;
+}
+
+export interface RoleGroupTable {
+  id: string;
+  code: string;
+  name: string;
+  created_at: Generated<Date>;
+}
+
+export interface RoleGroupCapabilityTable {
+  role_group_id: string;
+  capability_id: string;
+}
+
+export interface TitleTable {
+  id: string;
+  tenant_id: string;
+  code: string;
+  name: string;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface TitleRoleGroupTable {
+  title_id: string;
+  role_group_id: string;
+}
+
+export interface UserTitleTable {
+  user_id: string;
+  title_id: string;
+}
+
 export interface Database {
   app_meta: AppMetaTable;
   tenants: TenantTable;
@@ -150,6 +187,12 @@ export interface Database {
   customers: CustomerTable;
   sales_orders: SalesOrderTable;
   sales_order_lines: SalesOrderLineTable;
+  capabilities: CapabilityTable;
+  role_groups: RoleGroupTable;
+  role_group_capabilities: RoleGroupCapabilityTable;
+  titles: TitleTable;
+  title_role_groups: TitleRoleGroupTable;
+  user_titles: UserTitleTable;
 }
 
 export interface DatabaseLogger {

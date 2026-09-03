@@ -230,6 +230,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/titles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List available titles for user assignment */
+        get: operations["listTitles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List tenant users with their assigned titles */
+        get: operations["listUsers"];
+        put?: never;
+        /** Create a new user and assign a title */
+        post: operations["createUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -265,6 +300,8 @@ export interface components {
             tenantId: string;
             /** @enum {string} */
             status: "active" | "inactive";
+            titles: string[];
+            capabilities: string[];
         };
         AuthTenant: {
             id: string;
@@ -479,6 +516,40 @@ export interface components {
         SalesOrderErrorResponse: {
             /** @enum {string} */
             code: "UNAUTHORIZED" | "ORDER_NOT_FOUND" | "CUSTOMER_NOT_FOUND" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "INVALID_ORDER_LINES";
+            message: string;
+        };
+        TitleItem: {
+            id: string;
+            code: string;
+            name: string;
+        };
+        TitleListResponse: {
+            items: components["schemas"]["TitleItem"][];
+        };
+        UserItem: {
+            id: string;
+            /** Format: email */
+            email: string;
+            fullName: string;
+            /** @enum {string} */
+            status: "active" | "inactive";
+            titles: string[];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        UserListResponse: {
+            items: components["schemas"]["UserItem"][];
+        };
+        CreateUserRequest: {
+            /** Format: email */
+            email: string;
+            fullName: string;
+            password: string;
+            titleId: string;
+        };
+        UserErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "TITLE_NOT_FOUND" | "EMAIL_EXISTS" | "INVALID_INPUT";
             message: string;
         };
     };
@@ -1179,6 +1250,133 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
+        };
+    };
+    listTitles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of available titles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TitleListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of tenant users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires users.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+        };
+    };
+    createUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description User created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserItem"];
+                };
+            };
+            /** @description Invalid request payload */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires users.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+            /** @description Email already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
                 };
             };
         };

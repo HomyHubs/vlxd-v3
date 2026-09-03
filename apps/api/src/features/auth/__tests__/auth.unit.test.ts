@@ -23,6 +23,8 @@ function createMockAuthService(overrides: Partial<AuthService> = {}): AuthServic
             fullName: "Chủ cửa hàng",
             tenantId: "tenant-1",
             status: "active",
+            titles: ["Chủ cửa hàng"],
+            capabilities: ["users.manage"],
           },
           tenant: {
             id: "tenant-1",
@@ -41,6 +43,8 @@ function createMockAuthService(overrides: Partial<AuthService> = {}): AuthServic
           fullName: "Chủ cửa hàng",
           tenantId: "tenant-1",
           status: "active" as const,
+          titles: ["Chủ cửa hàng"],
+          capabilities: ["users.manage"],
         },
         tenant: {
           id: "tenant-1",

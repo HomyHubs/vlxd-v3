@@ -481,6 +481,86 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SalesOrderErrorResponse"
+  /titles:
+    get:
+      operationId: listTitles
+      summary: List available titles for user assignment
+      responses:
+        "200":
+          description: List of available titles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TitleListResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+  /users:
+    get:
+      operationId: listUsers
+      summary: List tenant users with their assigned titles
+      responses:
+        "200":
+          description: List of tenant users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+        "403":
+          description: Permission denied (requires users.manage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+    post:
+      operationId: createUser
+      summary: Create a new user and assign a title
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserItem"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+        "403":
+          description: Permission denied (requires users.manage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
 components:
   schemas:
     LivenessStatus:
@@ -530,7 +610,7 @@ components:
     AuthUser:
       type: object
       additionalProperties: false
-      required: [id, email, fullName, tenantId, status]
+      required: [id, email, fullName, tenantId, status, titles, capabilities]
       properties:
         id:
           type: string
@@ -544,6 +624,14 @@ components:
         status:
           type: string
           enum: [active, inactive]
+        titles:
+          type: array
+          items:
+            type: string
+        capabilities:
+          type: array
+          items:
+            type: string
     AuthTenant:
       type: object
       additionalProperties: false
@@ -963,4 +1051,70 @@ components:
               INSUFFICIENT_STOCK,
               INVALID_ORDER_LINES,
             ]
+        message: { type: string }
+    TitleItem:
+      type: object
+      additionalProperties: false
+      required: [id, code, name]
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+    TitleListResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TitleItem"
+    UserItem:
+      type: object
+      additionalProperties: false
+      required: [id, email, fullName, status, titles, createdAt]
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        fullName: { type: string }
+        status: { type: string, enum: [active, inactive] }
+        titles:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+    UserListResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserItem"
+    CreateUserRequest:
+      type: object
+      additionalProperties: false
+      required: [email, fullName, password, titleId]
+      properties:
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        password:
+          type: string
+          minLength: 6
+          maxLength: 100
+        titleId:
+          type: string
+    UserErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [UNAUTHORIZED, FORBIDDEN, TITLE_NOT_FOUND, EMAIL_EXISTS, INVALID_INPUT]
         message: { type: string }

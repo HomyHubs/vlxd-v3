@@ -59,6 +59,15 @@ export function AppHeader() {
                 size="medium"
                 data-testid="header-user-name"
               />
+              {session.user.titles && session.user.titles.length > 0 && (
+                <Chip
+                  label={session.user.titles[0]}
+                  variant="filled"
+                  color={session.user.titles[0]?.includes("Chủ") ? "primary" : "secondary"}
+                  size="small"
+                  data-testid="header-user-title"
+                />
+              )}
               <Button
                 variant="outlined"
                 color="inherit"

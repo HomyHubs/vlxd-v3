@@ -11,6 +11,8 @@ export const AuthUserSchema = z.object({
   fullName: z.string(),
   tenantId: z.string(),
   status: z.enum(["active", "inactive"]),
+  titles: z.array(z.string()).default([]),
+  capabilities: z.array(z.string()).default([]),
 });
 
 export const AuthTenantSchema = z.object({

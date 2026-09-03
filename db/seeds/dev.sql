@@ -14,3 +14,14 @@ VALUES (
   'active'
 )
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO users (id, tenant_id, email, full_name, password_hash, status)
+VALUES (
+  'user-dev-sales-001',
+  'tenant-dev-001',
+  'sales@vlxd.local',
+  'Nguyễn Văn Bán',
+  '$argon2id$v=19$m=19456,t=2,p=1$TF/Gq3MDiKu+CAakUXQTzg$nkkaARFQ71qeLTUBWxoTPrpphqZyreNkI4e9rms5BIQ',
+  'active'
+)
+ON CONFLICT (id) DO NOTHING;

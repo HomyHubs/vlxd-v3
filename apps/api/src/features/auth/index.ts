@@ -4,6 +4,7 @@ export {
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
 } from "./routes.js";
+export { createRequireCapability } from "./middleware.js";
 export {
   createAuthService,
   hashSessionToken,
