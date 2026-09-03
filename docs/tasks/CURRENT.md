@@ -1,11 +1,7 @@
 # Task hiện tại
 
-**Slice 3 — Kho & tồn** — đang làm, đã chốt phạm vi và mở nhánh `feature/slice-3` (cập nhật 2026-09-02).
+**Slice 5 — Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions)** — đã hoàn thành 100% trên nhánh `feature/slice-5` (cập nhật 2026-09-03).
 
-- Slice 2 — Sản phẩm đã hoàn tất và squash-merge vào `dev` qua PR #5 tại commit `07f1476`.
-- Cổng gác Slice 2: `pnpm check` PASS cục bộ; GitHub Actions Quality Gates & Verification PASS trên head `51a6a94`.
-- Phạm vi và danh sách task: `docs/specs/slice-3-inventory.md`, `tasks/plan.md`, `tasks/todo.md`.
-- Đã xong implementation: Tasks 3.1–3.3; đang review/merge Slice 3 vào `dev`.
-- Quyết định cần xác nhận: giới hạn kho gói Free; provisional default trong spec là 3.
-
-Implementation status (2026-09-02): Tasks 3.1 and 3.2 complete; Task 3.3 in progress.
+- Slice 5 hoàn tất toàn bộ các Task 5.1 (DB migration & rollback test), 5.2 (OpenAPI 3.1 contract, Fastify API, atomic stock deduction, 35 unit + 9 integration tests), 5.3 (UI Tạo đơn hàng `/orders/new`), và 5.4 (UI Danh sách & Chi tiết `/orders`, `/orders/:id`, i18n, component tests).
+- Cổng gác `pnpm check` và `pnpm contracts:check` đã chạy thành công 100% (Prettier, ESLint, TypeScript typecheck, unit/integration tests, production build).
+- Sẵn sàng commit và mở Pull Request.

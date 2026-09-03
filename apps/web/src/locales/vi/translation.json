@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Quản lý Vật liệu Xây dựng",
-    "slice": "Slice 2 · Sản phẩm: xem và tạo"
+    "slice": "Slice 4 · Nhập kho (Inbound Stock Receipts)"
   },
   "health": {
     "title": "Kiểm tra hệ thống",
@@ -57,6 +57,51 @@
       "WAREHOUSE_CREATE_FAILED": "Không thể tạo kho."
     }
   },
+  "inventory": {
+    "listTitle": "Phiếu nhập kho",
+    "listDescription": "Quản lý và theo dõi các đợt nhập hàng vào kho.",
+    "newReceipt": "Nhập kho mới",
+    "createTitle": "Tạo phiếu nhập kho",
+    "detailTitle": "Chi tiết phiếu nhập kho",
+    "backToList": "Danh sách phiếu",
+    "selectWarehouse": "Chọn kho nhập",
+    "filterWarehouse": "Lọc theo kho",
+    "allWarehouses": "Tất cả các kho",
+    "note": "Ghi chú",
+    "notePlaceholder": "Nhập thông tin ghi chú cho phiếu nhập này (tùy chọn)…",
+    "itemsTitle": "Danh sách mặt hàng nhập",
+    "addLine": "Thêm mặt hàng",
+    "productCol": "Sản phẩm",
+    "quantityCol": "Số lượng",
+    "actionCol": "Thao tác",
+    "removeLine": "Xoá dòng",
+    "cancel": "Huỷ",
+    "saveReceipt": "Lưu phiếu nhập kho",
+    "saving": "Đang lưu…",
+    "receiptNumber": "Mã phiếu",
+    "warehouse": "Kho nhập",
+    "createdAt": "Ngày tạo",
+    "createdBy": "Người tạo",
+    "itemCount": "Số mặt hàng",
+    "totalQuantity": "Tổng số lượng",
+    "status": "Trạng thái",
+    "actions": "Thao tác",
+    "viewDetail": "Chi tiết",
+    "loading": "Đang tải dữ liệu…",
+    "emptyReceipts": "Chưa có phiếu nhập kho nào.",
+    "statuses": {
+      "completed": "Đã hoàn thành"
+    },
+    "errors": {
+      "warehouseRequired": "Vui lòng chọn kho nhập.",
+      "invalidLines": "Vui lòng chọn sản phẩm và nhập số lượng hợp lệ cho tất cả các dòng.",
+      "WAREHOUSE_NOT_FOUND": "Kho không tồn tại hoặc không thuộc quyền quản lý.",
+      "PRODUCT_NOT_FOUND": "Một hoặc nhiều sản phẩm không tồn tại.",
+      "INVALID_RECEIPT_LINES": "Danh sách sản phẩm nhập không hợp lệ.",
+      "createFailed": "Không thể tạo phiếu nhập kho. Vui lòng thử lại.",
+      "loadDetailFailed": "Không thể tải chi tiết phiếu nhập kho."
+    }
+  },
   "auth": {
     "loginTitle": "Đăng nhập hệ thống",
     "loginSubtitle": "Nhập email và mật khẩu để truy cập trang quản lý",
@@ -72,5 +117,55 @@
     "genericError": "Không thể đăng nhập. Vui lòng thử lại sau.",
     "welcome": "Xin chào",
     "tenant": "Cửa hàng"
+  },
+  "orders": {
+    "title": "Bán hàng",
+    "listTitle": "Quản lý đơn bán hàng",
+    "createTitle": "Tạo đơn bán hàng",
+    "createNew": "Tạo đơn hàng",
+    "backToList": "Danh sách",
+    "filterCustomer": "Lọc theo khách hàng",
+    "filterWarehouse": "Lọc theo kho xuất",
+    "orderNumber": "Mã đơn",
+    "customer": "Khách hàng",
+    "warehouse": "Kho xuất hàng",
+    "itemCount": "Số SP",
+    "totalAmount": "Tổng tiền thanh toán:",
+    "totalQuantity": "Tổng số lượng:",
+    "status": "Trạng thái",
+    "createdByName": "Người tạo",
+    "createdAt": "Ngày tạo",
+    "statusConfirmed": "Đã xác nhận",
+    "emptyList": "Chưa có đơn bán hàng nào.",
+    "createFirst": "Tạo đơn hàng đầu tiên",
+    "infoSection": "Thông tin chung",
+    "itemsSection": "Chi tiết sản phẩm bán",
+    "itemsList": "Danh sách sản phẩm xuất bán",
+    "customerInfo": "Thông tin khách hàng",
+    "warehouseInfo": "Kho xuất hàng & Người tạo",
+    "customerCode": "Mã KH:",
+    "phone": "SĐT:",
+    "address": "Địa chỉ:",
+    "note": "Ghi chú:",
+    "product": "Sản phẩm",
+    "sku": "Mã SKU",
+    "unit": "Đơn vị",
+    "quantity": "Số lượng",
+    "unitPrice": "Đơn giá (đ)",
+    "lineTotal": "Thành tiền",
+    "addLine": "Thêm sản phẩm",
+    "confirmCreate": "Xác nhận tạo đơn",
+    "errors": {
+      "selectCustomer": "Vui lòng chọn khách hàng",
+      "selectWarehouse": "Vui lòng chọn kho xuất hàng",
+      "invalidLines": "Vui lòng chọn sản phẩm, số lượng và đơn giá hợp lệ",
+      "insufficientStock": "Tồn kho không đủ để xuất bán sản phẩm đã chọn",
+      "customerNotFound": "Khách hàng không tồn tại",
+      "warehouseNotFound": "Kho xuất không tồn tại",
+      "productNotFound": "Một hoặc nhiều sản phẩm không tồn tại",
+      "createFailed": "Không thể tạo đơn hàng. Vui lòng thử lại.",
+      "loadFailed": "Không thể tải danh sách đơn hàng",
+      "loadDetailFailed": "Không tìm thấy hoặc không thể tải chi tiết đơn hàng"
+    }
   }
 }

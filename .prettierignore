@@ -4,3 +4,4 @@ coverage
 pnpm-lock.yaml
 packages/api-client/src/generated
 *.md
+.codebase-memory

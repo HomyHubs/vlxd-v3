@@ -1,0 +1,397 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { buildApp } from "../../../app.js";
+import { type AuthService, SESSION_COOKIE_NAME } from "../../auth/index.js";
+import type { SalesOrderService } from "../index.js";
+
+const mockSession = {
+  user: {
+    id: "user-1",
+    email: "owner@example.com",
+    fullName: "Chủ cửa hàng",
+    tenantId: "tenant-1",
+    status: "active" as const,
+  },
+  tenant: { id: "tenant-1", name: "Store", code: "store", plan: "free" },
+};
+
+function createMockAuthService(): AuthService {
+  return {
+    login: vi.fn(),
+    logout: vi.fn(),
+    getMe: vi.fn().mockResolvedValue(mockSession),
+  };
+}
+
+describe("sales order routes unit tests", () => {
+  it("returns 401 when unauthenticated", async () => {
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+    } as SalesOrderService;
+
+    const auth = {
+      login: vi.fn(),
+      logout: vi.fn(),
+      getMe: vi.fn().mockResolvedValue(null),
+    };
+
+    const app = await buildApp({
+      authService: auth,
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/sales-orders",
+    });
+
+    expect(response.statusCode).toBe(401);
+    await app.close();
+  });
+
+  it("lists sales orders for the authenticated tenant", async () => {
+    const list = vi.fn().mockResolvedValue({
+      items: [
+        {
+          id: "order-1",
+          orderNumber: "DH-20260903-ABCD",
+          customerId: "cust-1",
+          customerName: "Khách lẻ",
+          warehouseId: "wh-1",
+          warehouseName: "Kho Chính",
+          status: "confirmed",
+          totalAmount: 150000,
+          itemCount: 1,
+          note: null,
+          createdByName: "Chủ cửa hàng",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+    });
+
+    const salesOrderService = {
+      create: vi.fn(),
+      list,
+      getById: vi.fn(),
+    } as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/sales-orders?page=1&pageSize=10",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json<{ items: unknown[]; total: number }>();
+    expect(body.total).toBe(1);
+    expect(list).toHaveBeenCalledWith(
+      "tenant-1",
+      expect.objectContaining({ page: 1, pageSize: 10 }),
+    );
+    await app.close();
+  });
+
+  it("creates a sales order successfully", async () => {
+    const create = vi.fn().mockResolvedValue({
+      success: true,
+      order: {
+        id: "order-1",
+        orderNumber: "DH-20260903-ABCD",
+        customerId: "cust-1",
+        customerCode: "KH-LE",
+        customerName: "Khách lẻ",
+        customerPhone: null,
+        customerAddress: null,
+        warehouseId: "wh-1",
+        warehouseCode: "WH-MAIN",
+        warehouseName: "Kho Chính",
+        status: "confirmed",
+        totalAmount: 200000,
+        note: "Giao gấp",
+        createdByName: "Chủ cửa hàng",
+        createdAt: new Date().toISOString(),
+        lines: [
+          {
+            id: "sol-1",
+            productId: "prod-1",
+            productSku: "XM-HA-TIEN",
+            productName: "Xi măng Hà Tiên",
+            unitName: "Bao",
+            quantity: 2,
+            unitPrice: 100000,
+            lineTotal: 200000,
+          },
+        ],
+      },
+    });
+
+    const salesOrderService = {
+      create,
+      list: vi.fn(),
+      getById: vi.fn(),
+    } as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      payload: {
+        customerId: "cust-1",
+        warehouseId: "wh-1",
+        note: "Giao gấp",
+        lines: [{ productId: "prod-1", quantity: 2, unitPrice: 100000 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    const body = response.json<{ orderNumber: string; totalAmount: number }>();
+    expect(body.orderNumber).toBe("DH-20260903-ABCD");
+    expect(body.totalAmount).toBe(200000);
+    await app.close();
+  });
+
+  it("returns 422 when stock is insufficient", async () => {
+    const create = vi.fn().mockResolvedValue({
+      success: false,
+      code: "INSUFFICIENT_STOCK",
+      message: 'Sản phẩm "Xi măng Hà Tiên" không đủ tồn kho (cần 100, hiện có 20)',
+    });
+
+    const salesOrderService = {
+      create,
+      list: vi.fn(),
+      getById: vi.fn(),
+    } as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      payload: {
+        customerId: "cust-1",
+        warehouseId: "wh-1",
+        lines: [{ productId: "prod-1", quantity: 100, unitPrice: 100000 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(422);
+    const body = response.json<{ code: string; message: string }>();
+    expect(body.code).toBe("INSUFFICIENT_STOCK");
+    await app.close();
+  });
+
+  it("returns 404 when product is not found", async () => {
+    const create = vi.fn().mockResolvedValue({
+      success: false,
+      code: "PRODUCT_NOT_FOUND",
+      message: "Một hoặc nhiều sản phẩm không tồn tại",
+    });
+
+    const salesOrderService = {
+      create,
+      list: vi.fn(),
+      getById: vi.fn(),
+    } as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      payload: {
+        customerId: "cust-1",
+        warehouseId: "wh-1",
+        lines: [{ productId: "prod-unknown", quantity: 1, unitPrice: 50000 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(404);
+    const body = response.json<{ code: string }>();
+    expect(body.code).toBe("PRODUCT_NOT_FOUND");
+    await app.close();
+  });
+
+  it("gets sales order by id successfully", async () => {
+    const getById = vi.fn().mockResolvedValue({
+      id: "order-1",
+      orderNumber: "DH-20260903-ABCD",
+      customerId: "cust-1",
+      customerCode: "KH-LE",
+      customerName: "Khách lẻ",
+      customerPhone: null,
+      customerAddress: null,
+      warehouseId: "wh-1",
+      warehouseCode: "WH-MAIN",
+      warehouseName: "Kho Chính",
+      status: "confirmed",
+      totalAmount: 200000,
+      note: null,
+      createdByName: "Chủ cửa hàng",
+      createdAt: new Date().toISOString(),
+      lines: [
+        {
+          id: "sol-1",
+          productId: "prod-1",
+          productSku: "XM-HA-TIEN",
+          productName: "Xi măng Hà Tiên",
+          unitName: "Bao",
+          quantity: 2,
+          unitPrice: 100000,
+          lineTotal: 200000,
+        },
+      ],
+    });
+
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById,
+    } as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/sales-orders/order-1",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json<{ orderNumber: string }>();
+    expect(body.orderNumber).toBe("DH-20260903-ABCD");
+    await app.close();
+  });
+
+  it("returns 404 when sales order not found", async () => {
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn().mockResolvedValue(null),
+    } as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/sales-orders/order-missing",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+    });
+
+    expect(response.statusCode).toBe(404);
+    const body = response.json<{ code: string }>();
+    expect(body.code).toBe("ORDER_NOT_FOUND");
+    await app.close();
+  });
+
+  it("returns 400 when quantity exceeds maximum allowed bound", async () => {
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+    } as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      payload: {
+        customerId: "cust-1",
+        warehouseId: "wh-1",
+        lines: [{ productId: "prod-1", quantity: 10_000_000, unitPrice: 10000 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: "INVALID_ORDER_LINES" });
+    await app.close();
+  });
+
+  it("returns 400 when unitPrice exceeds maximum allowed bound", async () => {
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+    } as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      payload: {
+        customerId: "cust-1",
+        warehouseId: "wh-1",
+        lines: [{ productId: "prod-1", quantity: 1, unitPrice: 1_000_000_000_000 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    await app.close();
+  });
+});

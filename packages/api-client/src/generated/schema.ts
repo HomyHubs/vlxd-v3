@@ -142,6 +142,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stock-receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List stock receipts for the authenticated tenant */
+        get: operations["listStockReceipts"];
+        put?: never;
+        /** Create an inbound stock receipt and update stock levels */
+        post: operations["createStockReceipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stock-receipts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get details of a single stock receipt */
+        get: operations["getStockReceipt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List customers for the authenticated tenant */
+        get: operations["listCustomers"];
+        put?: never;
+        /** Create a new customer */
+        post: operations["createCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sales-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List sales orders for the authenticated tenant */
+        get: operations["listSalesOrders"];
+        put?: never;
+        /** Create a sales order and deduct inventory */
+        post: operations["createSalesOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sales-orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get details of a single sales order */
+        get: operations["getSalesOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -245,6 +333,152 @@ export interface components {
         WarehouseErrorResponse: {
             /** @enum {string} */
             code: "UNAUTHORIZED" | "WAREHOUSE_LIMIT_REACHED" | "WAREHOUSE_CODE_EXISTS";
+            message: string;
+        };
+        CreateStockReceiptLineInput: {
+            productId: string;
+            quantity: number;
+        };
+        CreateStockReceiptRequest: {
+            warehouseId: string;
+            note?: string;
+            lines: components["schemas"]["CreateStockReceiptLineInput"][];
+        };
+        StockReceiptLine: {
+            id: string;
+            productId: string;
+            productSku: string;
+            productName: string;
+            unitName: string;
+            quantity: number;
+        };
+        StockReceiptListItem: {
+            id: string;
+            receiptNumber: string;
+            warehouseId: string;
+            warehouseCode: string;
+            warehouseName: string;
+            status: string;
+            note?: string | null;
+            createdByName: string;
+            /** Format: date-time */
+            createdAt: string;
+            itemCount: number;
+            totalQuantity: number;
+        };
+        StockReceiptListResponse: {
+            items: components["schemas"]["StockReceiptListItem"][];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        StockReceiptDetailResponse: {
+            id: string;
+            receiptNumber: string;
+            warehouseId: string;
+            warehouseCode: string;
+            warehouseName: string;
+            status: string;
+            note?: string | null;
+            createdByName: string;
+            /** Format: date-time */
+            createdAt: string;
+            totalQuantity: number;
+            lines: components["schemas"]["StockReceiptLine"][];
+        };
+        StockReceiptErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INVALID_RECEIPT_LINES";
+            message: string;
+        };
+        Customer: {
+            id: string;
+            code: string;
+            name: string;
+            phone?: string | null;
+            address?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CreateCustomerRequest: {
+            code: string;
+            name: string;
+            phone?: string;
+            address?: string;
+        };
+        CustomerListResponse: {
+            items: components["schemas"]["Customer"][];
+            total: number;
+        };
+        CustomerErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "CUSTOMER_CODE_EXISTS" | "INVALID_CUSTOMER_DATA";
+            message: string;
+        };
+        CreateSalesOrderLineInput: {
+            productId: string;
+            quantity: number;
+            unitPrice: number;
+        };
+        CreateSalesOrderRequest: {
+            customerId: string;
+            warehouseId: string;
+            note?: string;
+            lines: components["schemas"]["CreateSalesOrderLineInput"][];
+        };
+        SalesOrderLine: {
+            id: string;
+            productId: string;
+            productSku: string;
+            productName: string;
+            unitName: string;
+            quantity: number;
+            unitPrice: number;
+            lineTotal: number;
+        };
+        SalesOrderListItem: {
+            id: string;
+            orderNumber: string;
+            customerId: string;
+            customerName: string;
+            warehouseId: string;
+            warehouseName: string;
+            status: string;
+            totalAmount: number;
+            itemCount: number;
+            note?: string | null;
+            createdByName: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        SalesOrderListResponse: {
+            items: components["schemas"]["SalesOrderListItem"][];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        SalesOrderDetailResponse: {
+            id: string;
+            orderNumber: string;
+            customerId: string;
+            customerCode: string;
+            customerName: string;
+            customerPhone?: string | null;
+            customerAddress?: string | null;
+            warehouseId: string;
+            warehouseCode: string;
+            warehouseName: string;
+            status: string;
+            totalAmount: number;
+            note?: string | null;
+            createdByName: string;
+            /** Format: date-time */
+            createdAt: string;
+            lines: components["schemas"]["SalesOrderLine"][];
+        };
+        SalesOrderErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "ORDER_NOT_FOUND" | "CUSTOMER_NOT_FOUND" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "INVALID_ORDER_LINES";
             message: string;
         };
     };
@@ -607,6 +841,344 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WarehouseErrorResponse"];
+                };
+            };
+        };
+    };
+    listStockReceipts: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                warehouseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated list of stock receipts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+        };
+    };
+    createStockReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStockReceiptRequest"];
+            };
+        };
+        responses: {
+            /** @description Stock receipt created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptDetailResponse"];
+                };
+            };
+            /** @description Invalid request payload or lines */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+            /** @description Warehouse or product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+        };
+    };
+    getStockReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stock receipt details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptDetailResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+            /** @description Stock receipt not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+        };
+    };
+    listCustomers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of customers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerErrorResponse"];
+                };
+            };
+        };
+    };
+    createCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCustomerRequest"];
+            };
+        };
+        responses: {
+            /** @description Customer created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Customer"];
+                };
+            };
+            /** @description Invalid customer data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerErrorResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerErrorResponse"];
+                };
+            };
+            /** @description Customer code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerErrorResponse"];
+                };
+            };
+        };
+    };
+    listSalesOrders: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                customerId?: string;
+                warehouseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated list of sales orders */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
+        };
+    };
+    createSalesOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSalesOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Sales order created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderDetailResponse"];
+                };
+            };
+            /** @description Invalid request payload or lines */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
+            /** @description Customer, warehouse, or product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
+            /** @description Insufficient stock for one or more products */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
+        };
+    };
+    getSalesOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sales order details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderDetailResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
+            /** @description Sales order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
                 };
             };
         };

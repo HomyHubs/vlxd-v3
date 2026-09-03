@@ -422,6 +422,8 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR** theo 
 | ---- | ------------------------------------------ | ------------ | ----------------- | ----- | --- |
 | _…_  | _Thêm / Sửa / Huỷ / Hoãn / Chẻ / Thay thế_ | _…_          | _…_               | _…_   | _…_ |
 | 2026-09-02 | Thêm | Slice 2 | Chốt phạm vi Sản phẩm: xem và tạo, gồm migration `product`/`unit`, API danh sách/tạo, UI `/products` và giới hạn gói Free 80 sản phẩm. | Tiếp tục lộ trình Vertical Slice sau khi Slice 0 và Slice 1 hoàn tất. | Không cần — chưa thay đổi schema/API thực tế trong commit tài liệu này. |
+| 2026-09-02 | Thêm | Slice 4 | Nhập kho (Inbound Stock Receipts): migration `stock_receipts`, `stock_receipt_lines`, `stock_movements`; API `/stock-receipts`; UI `/inventory/receipts/new`, `/inventory/receipts`, `/inventory/receipts/:id`. | Lát cắt nghiệp vụ tiếp theo trong lộ trình Vertical Slice. | Không cần — tương thích schema, tuân thủ contract-first. |
+| 2026-09-03 | Thêm | Slice 5 | Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions): migration `customers`, `sales_orders`, `sales_order_lines`; API `/sales-orders`, `/customers`; UI `/orders/new`, `/orders`, `/orders/:id`; trừ tồn kho qua `stock_movements` và chặn bán vượt tồn (`INSUFFICIENT_STOCK`). | Lát cắt nghiệp vụ mẫu theo lộ trình Vertical Slice. | Không cần — tương thích schema, tuân thủ contract-first. |
 
 ### 17.6 Thứ tự thao tác bắt buộc
 
@@ -450,7 +452,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 3 — Kho & tồn — đã hoàn tất implementation trên `feature/slice-3`; đã chạy cổng gác, đang review/merge vào `dev`. Phạm vi chi tiết và trạng thái bàn giao nằm tại `docs/tasks/CURRENT.md`.
+Slice 5 — Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions) — Đã hoàn thành 100% (Tasks 5.1, 5.2, 5.3, 5.4), commit `0660cd0`, đã mở PR #6 (https://github.com/HomyHubs/vlxd-v3/pull/6).
 
 ### Đã xong
 
@@ -461,22 +463,21 @@ Slice 3 — Kho & tồn — đã hoàn tất implementation trên `feature/slice
 - [x] Fix review findings PR #2 (B001 hash session token với sha256, B002 fail-closed secure cookie flag).
 - [x] PR #2 đã được review bởi Notion AI chat (Agent B): Round 2 verdict `APPROVED_TO_MERGE`, 0 blocker.
 - [x] Squash-merge PR #2 vào `main` (`2d7f4b3`) và xoá nhánh `feature/slice-1` (cục bộ & remote).
-- [x] Review branch ngày 2026-09-02: `ai-docs` là branch duy nhất có thay đổi mới so với `dev`; đã mở PR #4 vào `dev`. `main`, `dev` và branch local `feature/slice-2` cùng commit `55fe961`; không cần PR riêng. `pnpm check` cục bộ PASS (Turbo dùng cache); trạng thái CI trực tiếp tại PR #4. Chi tiết: `docs/ai-workflow/review-logs/branch-review-2026-09-02.md`. Chưa thực hiện merge.
+- [x] Slice 2 — Sản phẩm (PR #5 squash-merge vào `dev` tại `07f1476`).
+- [x] Slice 3 — Kho & tồn (đã hoàn thành trên `dev` tại commit `bed43a8`).
+- [x] Slice 4 — Nhập kho (đã hoàn thành trên `dev` tại commit `7981907`).
+- [x] Task 5.1 — Migration `customers`, `sales_orders`, `sales_order_lines`, DB types và rollback integration test.
+- [x] Task 5.2 — Contract OpenAPI 3.1 & API `POST /sales-orders`, `GET /sales-orders`, `GET /sales-orders/{id}`, `GET /customers`, `POST /customers` (atomic stock deduction, INSUFFICIENT_STOCK check, 35 unit + 9 PostgreSQL integration tests pass).
+- [x] Task 5.3 — UI Tạo đơn hàng mới (`/orders/new`) defaulting Khách lẻ, tính tổng tự động, xử lý lỗi tồn kho.
+- [x] Task 5.4 — UI Danh sách đơn và Chi tiết đơn (`/orders`, `/orders/:id`), i18n vi/en, component tests pass.
 
 ### Đang làm dở
 
-- [x] Task 2.1 — migration thuận nghịch bảng `products`, `units` và seed danh mục đơn vị chuẩn.
-- [x] Task 2.2 — API contract-first `GET /products` (phân trang, tìm kiếm) và `POST /products`.
-- [x] Task 2.3 — trang `/products` dùng Material React Table và Dialog "Thêm sản phẩm" dùng react-hook-form + Zod.
-- [x] Task 2.4 — giới hạn gói Free tối đa 80 sản phẩm, lỗi `PRODUCT_LIMIT_REACHED` và thông báo i18n trên UI.
-- [x] Hoàn tất cổng gác cục bộ (`pnpm check` PASS ngày 2026-09-02).
-- [x] Commit `a59dfbe` và mở PR #5 vào `dev`.
-- [x] Review Agent B vòng 2 và squash-merge PR #5 vào `dev` (`07f1476`).
+(Không có — Slice 5 đã hoàn tất và mở PR #6).
 
 ### Bước tiếp theo
 
-- [x] Chốt phạm vi và danh sách Task 3.1–3.3 cho Slice 3 — Kho & tồn.
-- [ ] Hoàn thành Task 3.1–3.3, review và merge Slice 3.
+- [ ] Đợi review PR #6 từ Agent B (Notion AI) hoặc User.
 
 ---
 

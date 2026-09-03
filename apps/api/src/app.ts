@@ -2,18 +2,24 @@ import fastifyCookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyError, type FastifyInstance } from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 
 import { type AuthService, authRoutes } from "./features/auth/index.js";
 import { createHealthService, type HealthLogger, healthRoutes } from "./features/health/index.js";
 import { productRoutes, type ProductService } from "./features/products/index.js";
 import { type WarehouseService, warehouseRoutes } from "./features/warehouses/index.js";
+import { type StockReceiptService, stockReceiptRoutes } from "./features/stock-receipts/index.js";
+import { type CustomerService, customerRoutes } from "./features/customers/index.js";
+import { type SalesOrderService, salesOrderRoutes } from "./features/sales-orders/index.js";
 
 export interface BuildAppOptions {
   authService?: AuthService | undefined;
   productService?: ProductService | undefined;
   warehouseService?: WarehouseService | undefined;
+  stockReceiptService?: StockReceiptService | undefined;
+  customerService?: CustomerService | undefined;
+  salesOrderService?: SalesOrderService | undefined;
   checkDatabase: (logger?: HealthLogger) => Promise<boolean>;
   logger?: boolean | undefined;
   logLevel?: string | undefined;
@@ -43,6 +49,22 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   server.setValidatorCompiler(validatorCompiler);
   server.setSerializerCompiler(serializerCompiler);
+
+  server.setErrorHandler((error: FastifyError, request, reply) => {
+    if (error.validation) {
+      const code = request.url.startsWith("/sales-orders")
+        ? "INVALID_ORDER_LINES"
+        : request.url.startsWith("/stock-receipts")
+          ? "INVALID_RECEIPT_LINES"
+          : "VALIDATION_ERROR";
+
+      return reply.code(400).send({
+        code,
+        message: error.message,
+      });
+    }
+    return reply.send(error);
+  });
 
   await server.register(fastifyCookie);
   await server.register(helmet);
@@ -77,6 +99,24 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     await server.register(warehouseRoutes, {
       authService: options.authService,
       warehouseService: options.warehouseService,
+    });
+  }
+  if (options.authService && options.stockReceiptService) {
+    await server.register(stockReceiptRoutes, {
+      authService: options.authService,
+      stockReceiptService: options.stockReceiptService,
+    });
+  }
+  if (options.authService && options.customerService) {
+    await server.register(customerRoutes, {
+      authService: options.authService,
+      customerService: options.customerService,
+    });
+  }
+  if (options.authService && options.salesOrderService) {
+    await server.register(salesOrderRoutes, {
+      authService: options.authService,
+      salesOrderService: options.salesOrderService,
     });
   }
 
