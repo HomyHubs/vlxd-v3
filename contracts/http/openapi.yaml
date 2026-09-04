@@ -124,6 +124,8 @@ paths:
       operationId: listProducts
       summary: List products for the authenticated tenant
       parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
         - in: query
           name: page
           schema: { type: integer, minimum: 1, default: 1 }
@@ -146,9 +148,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductErrorResponse"
+        "403":
+          description: Permission denied (requires products.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
     post:
       operationId: createProduct
       summary: Create a product for the authenticated tenant
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
       requestBody:
         required: true
         content:
@@ -174,8 +187,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductErrorResponse"
+        "403":
+          description: Permission denied (requires products.manage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductErrorResponse"
         "409":
-          description: SKU already exists for the tenant
+          description: SKU already exists for the tenant, or authentication context changed
           content:
             application/json:
               schema:
@@ -190,6 +209,9 @@ paths:
     get:
       operationId: listWarehouses
       summary: List warehouses for the authenticated tenant
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
       responses:
         "200":
           description: Warehouse list
@@ -203,9 +225,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WarehouseErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WarehouseErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
     post:
       operationId: createWarehouse
       summary: Create a warehouse for the authenticated tenant
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
       requestBody:
         required: true
         content:
@@ -231,8 +264,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WarehouseErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.manage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WarehouseErrorResponse"
         "409":
-          description: Warehouse code already exists for the tenant
+          description: Warehouse code already exists for the tenant, or authentication context changed
           content:
             application/json:
               schema:
@@ -248,6 +287,8 @@ paths:
       operationId: listStockReceipts
       summary: List stock receipts for the authenticated tenant
       parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
         - in: query
           name: page
           schema: { type: integer, minimum: 1, default: 1 }
@@ -270,9 +311,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StockReceiptErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockReceiptErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
     post:
       operationId: createStockReceipt
       summary: Create an inbound stock receipt and update stock levels
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
       requestBody:
         required: true
         content:
@@ -298,8 +350,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StockReceiptErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.manage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockReceiptErrorResponse"
         "404":
           description: Warehouse or product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockReceiptErrorResponse"
+        "409":
+          description: Overflow ceiling or context mismatch
           content:
             application/json:
               schema:
@@ -313,6 +377,8 @@ paths:
           name: id
           required: true
           schema: { type: string }
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
       responses:
         "200":
           description: Stock receipt details
@@ -326,16 +392,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StockReceiptErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockReceiptErrorResponse"
         "404":
           description: Stock receipt not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/StockReceiptErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
   /customers:
     get:
       operationId: listCustomers
       summary: List customers for the authenticated tenant
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
       responses:
         "200":
           description: List of customers
@@ -349,9 +426,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CustomerErrorResponse"
+        "403":
+          description: Permission denied (requires customers.manage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
     post:
       operationId: createCustomer
       summary: Create a new customer
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
       requestBody:
         required: true
         content:
@@ -377,8 +465,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CustomerErrorResponse"
+        "403":
+          description: Permission denied (requires customers.manage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerErrorResponse"
         "409":
-          description: Customer code already exists
+          description: Customer code already exists, or authentication context changed
           content:
             application/json:
               schema:
@@ -388,6 +482,8 @@ paths:
       operationId: listSalesOrders
       summary: List sales orders for the authenticated tenant
       parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
         - in: query
           name: page
           schema: { type: integer, minimum: 1, default: 1 }
@@ -413,9 +509,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SalesOrderErrorResponse"
+        "403":
+          description: Permission denied (requires sales.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesOrderErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
     post:
       operationId: createSalesOrder
       summary: Create a sales order and deduct inventory
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
       requestBody:
         required: true
         content:
@@ -441,8 +548,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SalesOrderErrorResponse"
+        "403":
+          description: Permission denied (requires sales.create)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesOrderErrorResponse"
         "404":
           description: Customer, warehouse, or product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesOrderErrorResponse"
+        "409":
+          description: Insufficient stock, order limit or authentication context changed
           content:
             application/json:
               schema:
@@ -462,6 +581,8 @@ paths:
           name: id
           required: true
           schema: { type: string }
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
       responses:
         "200":
           description: Sales order details
@@ -475,14 +596,152 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SalesOrderErrorResponse"
+        "403":
+          description: Permission denied (requires sales.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesOrderErrorResponse"
         "404":
           description: Sales order not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SalesOrderErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
+  /titles:
+    get:
+      operationId: listTitles
+      summary: List available titles for user assignment
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
+      responses:
+        "200":
+          description: List of available titles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TitleListResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+        "403":
+          description: Permission denied (requires users.manage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
+  /users:
+    get:
+      operationId: listUsers
+      summary: List tenant users with their assigned titles
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
+      responses:
+        "200":
+          description: List of tenant users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+        "403":
+          description: Permission denied (requires users.manage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
+    post:
+      operationId: createUser
+      summary: Create a new user and assign a title
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserItem"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+        "403":
+          description: Permission denied (requires users.manage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
+        "409":
+          description: Email already exists for this tenant, or authentication context changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserErrorResponse"
 components:
+  parameters:
+    ExpectedTenantIdHeader:
+      name: x-expected-tenant-id
+      in: header
+      required: false
+      description: Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware.
+      schema:
+        type: string
+    ExpectedSessionContextHeader:
+      name: x-session-context
+      in: header
+      required: false
+      description: Precondition header matching tenantId:userId. When supplied, verifies caller session identity.
+      schema:
+        type: string
+  responses:
+    AuthContextChangedResponse:
+      description: Tenant or session identity context mismatch / changed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AuthContextChangedError"
   schemas:
+    AuthContextChangedError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [AUTH_CONTEXT_CHANGED]
+        message: { type: string }
     LivenessStatus:
       type: object
       additionalProperties: false
@@ -530,7 +789,7 @@ components:
     AuthUser:
       type: object
       additionalProperties: false
-      required: [id, email, fullName, tenantId, status]
+      required: [id, email, fullName, tenantId, status, titles, capabilities]
       properties:
         id:
           type: string
@@ -544,6 +803,14 @@ components:
         status:
           type: string
           enum: [active, inactive]
+        titles:
+          type: array
+          items:
+            type: string
+        capabilities:
+          type: array
+          items:
+            type: string
     AuthTenant:
       type: object
       additionalProperties: false
@@ -632,7 +899,16 @@ components:
       properties:
         code:
           type: string
-          enum: [UNAUTHORIZED, PRODUCT_LIMIT_REACHED, PRODUCT_SKU_EXISTS, UNIT_NOT_FOUND]
+          enum:
+            [
+              UNAUTHORIZED,
+              FORBIDDEN,
+              VALIDATION_ERROR,
+              PRODUCT_LIMIT_REACHED,
+              PRODUCT_SKU_EXISTS,
+              UNIT_NOT_FOUND,
+              AUTH_CONTEXT_CHANGED,
+            ]
         message: { type: string }
     Warehouse:
       type: object
@@ -666,7 +942,15 @@ components:
       properties:
         code:
           type: string
-          enum: [UNAUTHORIZED, WAREHOUSE_LIMIT_REACHED, WAREHOUSE_CODE_EXISTS]
+          enum:
+            [
+              UNAUTHORIZED,
+              FORBIDDEN,
+              VALIDATION_ERROR,
+              WAREHOUSE_LIMIT_REACHED,
+              WAREHOUSE_CODE_EXISTS,
+              AUTH_CONTEXT_CHANGED,
+            ]
         message: { type: string }
     CreateStockReceiptLineInput:
       type: object
@@ -778,7 +1062,15 @@ components:
       properties:
         code:
           type: string
-          enum: [UNAUTHORIZED, WAREHOUSE_NOT_FOUND, PRODUCT_NOT_FOUND, INVALID_RECEIPT_LINES]
+          enum:
+            [
+              UNAUTHORIZED,
+              FORBIDDEN,
+              WAREHOUSE_NOT_FOUND,
+              PRODUCT_NOT_FOUND,
+              INVALID_RECEIPT_LINES,
+              AUTH_CONTEXT_CHANGED,
+            ]
         message: { type: string }
     Customer:
       type: object
@@ -825,7 +1117,15 @@ components:
       properties:
         code:
           type: string
-          enum: [UNAUTHORIZED, CUSTOMER_CODE_EXISTS, INVALID_CUSTOMER_DATA]
+          enum:
+            [
+              UNAUTHORIZED,
+              FORBIDDEN,
+              VALIDATION_ERROR,
+              CUSTOMER_CODE_EXISTS,
+              INVALID_CUSTOMER_DATA,
+              AUTH_CONTEXT_CHANGED,
+            ]
         message: { type: string }
     CreateSalesOrderLineInput:
       type: object
@@ -956,11 +1256,88 @@ components:
           enum:
             [
               UNAUTHORIZED,
+              FORBIDDEN,
               ORDER_NOT_FOUND,
               CUSTOMER_NOT_FOUND,
               WAREHOUSE_NOT_FOUND,
               PRODUCT_NOT_FOUND,
               INSUFFICIENT_STOCK,
               INVALID_ORDER_LINES,
+              AUTH_CONTEXT_CHANGED,
+            ]
+        message: { type: string }
+    TitleItem:
+      type: object
+      additionalProperties: false
+      required: [id, code, name]
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+    TitleListResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TitleItem"
+    UserItem:
+      type: object
+      additionalProperties: false
+      required: [id, email, fullName, status, titles, createdAt]
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        fullName: { type: string }
+        status: { type: string, enum: [active, inactive] }
+        titles:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+    UserListResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserItem"
+    CreateUserRequest:
+      type: object
+      additionalProperties: false
+      required: [email, fullName, password, titleId]
+      properties:
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        password:
+          type: string
+          minLength: 6
+          maxLength: 100
+        titleId:
+          type: string
+    UserErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            [
+              UNAUTHORIZED,
+              FORBIDDEN,
+              VALIDATION_ERROR,
+              TITLE_NOT_FOUND,
+              EMAIL_EXISTS,
+              INVALID_INPUT,
+              AUTH_CONTEXT_CHANGED,
             ]
         message: { type: string }

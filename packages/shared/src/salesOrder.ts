@@ -83,12 +83,14 @@ export const SalesOrderDetailResponseSchema = z.object({
 export const SalesOrderErrorResponseSchema = z.object({
   code: z.enum([
     "UNAUTHORIZED",
+    "FORBIDDEN",
     "ORDER_NOT_FOUND",
     "CUSTOMER_NOT_FOUND",
     "WAREHOUSE_NOT_FOUND",
     "PRODUCT_NOT_FOUND",
     "INSUFFICIENT_STOCK",
     "INVALID_ORDER_LINES",
+    "AUTH_CONTEXT_CHANGED",
   ]),
   message: z.string(),
 });

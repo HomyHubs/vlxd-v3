@@ -10,12 +10,14 @@ const session = {
     fullName: "Owner",
     tenantId: "tenant-1",
     status: "active" as const,
+    titles: ["Chủ cửa hàng"],
+    capabilities: ["inventory.manage", "inventory.view"],
   },
   tenant: { id: "tenant-1", name: "Store", code: "store", plan: "free" },
 };
 
-function authService(): AuthService {
-  return { login: vi.fn(), logout: vi.fn(), getMe: vi.fn().mockResolvedValue(session) };
+function authService(customSession = session): AuthService {
+  return { login: vi.fn(), logout: vi.fn(), getMe: vi.fn().mockResolvedValue(customSession) };
 }
 
 describe("warehouse routes", () => {
@@ -34,10 +36,37 @@ describe("warehouse routes", () => {
       method: "GET",
       url: "/warehouses",
       cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(200);
     expect(list).toHaveBeenCalledWith("tenant-1");
+    await app.close();
+  });
+
+  it("returns 403 when user lacks inventory.view capability", async () => {
+    const noCapSession = {
+      ...session,
+      user: { ...session.user, capabilities: [] },
+    };
+    const warehouseService = { list: vi.fn(), create: vi.fn() } as WarehouseService;
+    const app = await buildApp({
+      authService: authService(noCapSession),
+      warehouseService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/warehouses",
+      cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ code: "FORBIDDEN" });
     await app.close();
   });
 
@@ -62,11 +91,39 @@ describe("warehouse routes", () => {
       method: "POST",
       url: "/warehouses",
       cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: { code: "MAIN", name: "Main warehouse" },
     });
 
     expect(response.statusCode).toBe(422);
     expect(response.json()).toMatchObject({ code: "WAREHOUSE_LIMIT_REACHED" });
+    await app.close();
+  });
+
+  it("returns 403 when user lacks inventory.manage capability", async () => {
+    const noManageSession = {
+      ...session,
+      user: { ...session.user, capabilities: ["inventory.view"] },
+    };
+    const warehouseService = { list: vi.fn(), create: vi.fn() } as WarehouseService;
+    const app = await buildApp({
+      authService: authService(noManageSession),
+      warehouseService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/warehouses",
+      cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: { code: "MAIN", name: "Main warehouse" },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ code: "FORBIDDEN" });
     await app.close();
   });
 });

@@ -167,5 +167,28 @@
       "loadFailed": "Failed to load sales orders",
       "loadDetailFailed": "Failed to load sales order details"
     }
+  },
+  "users": {
+    "title": "Employee Management",
+    "navTitle": "User Settings",
+    "addButton": "Add Employee",
+    "fullName": "Full Name",
+    "email": "Email",
+    "roleTitle": "Role / Title",
+    "status": "Status",
+    "createdAt": "Created Date",
+    "statusActive": "Active",
+    "statusInactive": "Disabled",
+    "dialogTitle": "Add New Employee",
+    "password": "Initial Password",
+    "passwordHelper": "Minimum 6 characters",
+    "errorNameRequired": "Please enter full name",
+    "errorEmailRequired": "Please enter email",
+    "errorPasswordLength": "Password must be at least 6 characters",
+    "errorTitleRequired": "Please select a title",
+    "errorEmailExists": "This email is already registered",
+    "errorCreateFailed": "Failed to create employee account",
+    "forbidden": "You do not have permission to access the users page",
+    "errorLoading": "Failed to load users list"
   }
 }

@@ -33,5 +33,8 @@ jobs:
       - name: Build packages and applications
         run: pnpm build
 
+      - name: Validate Docker Compose configuration
+        run: docker compose -f compose.dev.yml config --quiet
+
       - name: Run all quality checks
         run: pnpm check

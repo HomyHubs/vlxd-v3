@@ -44,10 +44,15 @@ describe("products integration", () => {
       resolve(process.cwd(), "../../db/migrations/202609020003_create_inventory_tables.sql"),
       "utf8",
     );
+    const rbacSql = await readFile(
+      resolve(process.cwd(), "../../db/migrations/202609030007_create_rbac_tables.sql"),
+      "utf8",
+    );
     const seedSql = await readFile(resolve(process.cwd(), "../../db/seeds/dev.sql"), "utf8");
     const [authUp] = upAndDown(authSql);
     const [productUp, productDown] = upAndDown(productSql);
     const [inventoryUp, inventoryDown] = upAndDown(inventorySql);
+    const [rbacUp, rbacDown] = upAndDown(rbacSql);
     const pool = createDatabasePool(started.getConnectionUri());
     const database = createDatabase(pool);
 
@@ -68,6 +73,7 @@ describe("products integration", () => {
         'active'
       );
     `);
+    await pool.query(rbacUp);
     const authService = createAuthService({ database });
     const server = await buildApp({
       authService,
@@ -90,6 +96,7 @@ describe("products integration", () => {
         method: "POST",
         url: "/products",
         cookies: { [SESSION_COOKIE_NAME]: cookieA },
+        headers: { "x-expected-tenant-id": "tenant-dev-001" },
         payload: { sku: "XM-001", name: "Xi măng", unitCode: "bao" },
       });
       expect(created.statusCode).toBe(201);
@@ -98,6 +105,7 @@ describe("products integration", () => {
         method: "GET",
         url: "/products?search=XM&page=1&pageSize=10",
         cookies: { [SESSION_COOKIE_NAME]: cookieA },
+        headers: { "x-expected-tenant-id": "tenant-dev-001" },
       });
       expect(listed.statusCode).toBe(200);
       expect(listed.json()).toMatchObject({
@@ -109,6 +117,7 @@ describe("products integration", () => {
         method: "POST",
         url: "/products",
         cookies: { [SESSION_COOKIE_NAME]: cookieA },
+        headers: { "x-expected-tenant-id": "tenant-dev-001" },
         payload: { sku: "XM-002", name: "Xi măng 2", unitCode: "bao" },
       });
       expect(limited.statusCode).toBe(422);
@@ -125,6 +134,7 @@ describe("products integration", () => {
         method: "POST",
         url: "/products",
         cookies: { [SESSION_COOKIE_NAME]: cookieB },
+        headers: { "x-expected-tenant-id": "tenant-dev-002" },
         payload: { sku: "GACH-001", name: "Gach", unitCode: "vien" },
       });
       expect(createdB.statusCode).toBe(201);
@@ -133,9 +143,48 @@ describe("products integration", () => {
         method: "GET",
         url: "/products?page=1&pageSize=10",
         cookies: { [SESSION_COOKIE_NAME]: cookieB },
+        headers: { "x-expected-tenant-id": "tenant-dev-002" },
       });
       expect(listedB.statusCode).toBe(200);
       expect(listedB.json()).toMatchObject({ total: 1, items: [{ sku: "GACH-001" }] });
+
+      // Server-side cross-tab race test:
+      // Client context is Tenant A ("tenant-dev-001"), but server cookie is already Tenant B (cookieB).
+      // Verify that POST /products rejects with 409 AUTH_CONTEXT_CHANGED and NO row is written to Tenant B database!
+      const racePost = await server.inject({
+        method: "POST",
+        url: "/products",
+        cookies: { [SESSION_COOKIE_NAME]: cookieB },
+        headers: {
+          "x-expected-tenant-id": "tenant-dev-001",
+          "x-session-context": "tenant-dev-001:user-dev-owner-001",
+        },
+        payload: { sku: "CROSS-TAB-RACE-SKU", name: "Cross Tab Race Product", unitCode: "bao" },
+      });
+      expect(racePost.statusCode).toBe(409);
+      expect(racePost.json()).toMatchObject({
+        code: "AUTH_CONTEXT_CHANGED",
+      });
+
+      // Verify that NO product was created in database for Tenant B!
+      const raceDbCheck = await pool.query(
+        "SELECT id, tenant_id FROM products WHERE sku = 'CROSS-TAB-RACE-SKU'",
+      );
+      expect(raceDbCheck.rowCount).toBe(0);
+
+      // Verify that GET /products also rejects with 409 AUTH_CONTEXT_CHANGED when context mismatches
+      const raceGet = await server.inject({
+        method: "GET",
+        url: "/products?page=1&pageSize=10",
+        cookies: { [SESSION_COOKIE_NAME]: cookieB },
+        headers: {
+          "x-expected-tenant-id": "tenant-dev-001",
+        },
+      });
+      expect(raceGet.statusCode).toBe(409);
+      expect(raceGet.json()).toMatchObject({
+        code: "AUTH_CONTEXT_CHANGED",
+      });
 
       const tenantReassigned = await pool.query(
         "UPDATE users SET tenant_id = 'tenant-dev-002' WHERE id = 'user-dev-owner-001'",
@@ -146,12 +195,14 @@ describe("products integration", () => {
         method: "GET",
         url: "/products?page=1&pageSize=10",
         cookies: { [SESSION_COOKIE_NAME]: cookieA },
+        headers: { "x-expected-tenant-id": "tenant-dev-001" },
       });
       expect(staleSessionList.statusCode).toBe(401);
       const staleSessionCreate = await server.inject({
         method: "POST",
         url: "/products",
         cookies: { [SESSION_COOKIE_NAME]: cookieA },
+        headers: { "x-expected-tenant-id": "tenant-dev-001" },
         payload: { sku: "SHOULD-FAIL", name: "Should fail", unitCode: "bao" },
       });
       expect(staleSessionCreate.statusCode).toBe(401);
@@ -159,6 +210,7 @@ describe("products integration", () => {
       const productCount = await pool.query<{ count: string }>("SELECT count(*) FROM products");
       expect(productCount.rows[0]?.count).toBe("2");
 
+      await pool.query(rbacDown);
       await pool.query(inventoryDown);
       await pool.query(productDown);
       const tables = await pool.query<{ products: string | null; units: string | null }>(

@@ -38,7 +38,15 @@ export const CreateProductRequestSchema = z.object({
 });
 
 export const ProductErrorResponseSchema = z.object({
-  code: z.enum(["UNAUTHORIZED", "PRODUCT_LIMIT_REACHED", "PRODUCT_SKU_EXISTS", "UNIT_NOT_FOUND"]),
+  code: z.enum([
+    "UNAUTHORIZED",
+    "FORBIDDEN",
+    "VALIDATION_ERROR",
+    "PRODUCT_LIMIT_REACHED",
+    "PRODUCT_SKU_EXISTS",
+    "UNIT_NOT_FOUND",
+    "AUTH_CONTEXT_CHANGED",
+  ]),
   message: z.string(),
 });
 

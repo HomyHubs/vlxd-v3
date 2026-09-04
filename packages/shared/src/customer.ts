@@ -22,7 +22,14 @@ export const CustomerListResponseSchema = z.object({
 });
 
 export const CustomerErrorResponseSchema = z.object({
-  code: z.enum(["UNAUTHORIZED", "CUSTOMER_CODE_EXISTS", "INVALID_CUSTOMER_DATA"]),
+  code: z.enum([
+    "UNAUTHORIZED",
+    "FORBIDDEN",
+    "VALIDATION_ERROR",
+    "CUSTOMER_CODE_EXISTS",
+    "INVALID_CUSTOMER_DATA",
+    "AUTH_CONTEXT_CHANGED",
+  ]),
   message: z.string(),
 });
 

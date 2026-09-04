@@ -21,7 +21,7 @@ import { useTranslation } from "react-i18next";
 import type { CreateProductRequest, Product, UnitCode } from "@vlxd/shared";
 import { CreateProductRequestSchema } from "@vlxd/shared";
 
-import { AppHeader } from "../../auth/index.js";
+import { AppHeader, useHasCapability } from "../../auth/index.js";
 import { useCreateProduct, useProducts } from "../api/useProducts.js";
 import { useWarehouses } from "../../warehouses/index.js";
 
@@ -29,6 +29,7 @@ const UNIT_CODES: UnitCode[] = ["vien", "bao", "tan", "kg", "m3", "cay", "tam", 
 
 export function ProductsPage() {
   const { t } = useTranslation();
+  const canManageProducts = useHasCapability("products.manage");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState<MRT_PaginationState>({ pageIndex: 0, pageSize: 20 });
@@ -71,9 +72,16 @@ export function ProductsPage() {
   });
 
   async function submit(input: CreateProductRequest) {
-    await createProduct.mutateAsync(input);
-    reset();
-    setOpen(false);
+    try {
+      await createProduct.mutateAsync(input);
+      reset();
+      setOpen(false);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "AUTH_CONTEXT_CHANGED") {
+        reset();
+        setOpen(false);
+      }
+    }
   }
 
   const createError = createProduct.error?.message;
@@ -90,9 +98,15 @@ export function ProductsPage() {
               </Typography>
               <Typography color="text.secondary">{t("products.description")}</Typography>
             </Box>
-            <Button variant="contained" onClick={() => setOpen(true)}>
-              {t("products.add")}
-            </Button>
+            {canManageProducts && (
+              <Button
+                variant="contained"
+                onClick={() => setOpen(true)}
+                data-testid="add-product-btn"
+              >
+                {t("products.add")}
+              </Button>
+            )}
           </Stack>
           <TextField
             label={t("products.search")}

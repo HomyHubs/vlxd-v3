@@ -97,3 +97,18 @@ export {
   type SalesOrderListResponse,
   type SalesOrderQuery,
 } from "./salesOrder.js";
+
+export {
+  TitleItemSchema,
+  TitleListResponseSchema,
+  UserItemSchema,
+  UserListResponseSchema,
+  CreateUserRequestSchema,
+  UserErrorResponseSchema,
+  type TitleItem,
+  type TitleListResponse,
+  type UserItem,
+  type UserListResponse,
+  type CreateUserRequest,
+  type UserErrorResponse,
+} from "./user.js";

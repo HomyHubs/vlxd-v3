@@ -167,5 +167,28 @@
       "loadFailed": "Không thể tải danh sách đơn hàng",
       "loadDetailFailed": "Không tìm thấy hoặc không thể tải chi tiết đơn hàng"
     }
+  },
+  "users": {
+    "title": "Quản lý nhân viên",
+    "navTitle": "Cài đặt nhân viên",
+    "addButton": "Thêm nhân viên",
+    "fullName": "Họ và tên",
+    "email": "Email",
+    "roleTitle": "Chức danh",
+    "status": "Trạng thái",
+    "createdAt": "Ngày tạo",
+    "statusActive": "Hoạt động",
+    "statusInactive": "Đã khóa",
+    "dialogTitle": "Thêm nhân viên mới",
+    "password": "Mật khẩu ban đầu",
+    "passwordHelper": "Tối thiểu 6 ký tự",
+    "errorNameRequired": "Vui lòng nhập họ tên",
+    "errorEmailRequired": "Vui lòng nhập email",
+    "errorPasswordLength": "Mật khẩu phải từ 6 ký tự",
+    "errorTitleRequired": "Vui lòng chọn chức danh",
+    "errorEmailExists": "Email này đã được sử dụng trong hệ thống",
+    "errorCreateFailed": "Không thể tạo tài khoản nhân viên",
+    "forbidden": "Bạn không có quyền truy cập trang quản lý người dùng",
+    "errorLoading": "Lỗi khi tải danh sách người dùng"
   }
 }

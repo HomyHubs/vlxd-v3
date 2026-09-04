@@ -1,15 +1,95 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AuthSessionResponse, LoginRequest } from "@vlxd/shared";
 
 import { apiClient } from "../../../lib/apiClient.js";
 
 export const AUTH_QUERY_KEY = ["auth", "me"] as const;
 
+import {
+  getCurrentSessionContext,
+  getCurrentSessionKey,
+  resetTenantTracker as resetSessionContextTracker,
+  setSessionContext,
+} from "./sessionContext.js";
+
+export { getCurrentSessionContext, getCurrentSessionKey };
+
+let authGeneration = 0;
+
+const AUTH_SYNC_KEY = "vlxd_auth_sync";
+let authBroadcastChannel: BroadcastChannel | null = null;
+
+if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+  try {
+    authBroadcastChannel = new BroadcastChannel(AUTH_SYNC_KEY);
+  } catch {
+    authBroadcastChannel = null;
+  }
+}
+
+export function getAuthBroadcastChannel(): BroadcastChannel | null {
+  return authBroadcastChannel;
+}
+
+export function setAuthBroadcastChannel(channel: BroadcastChannel | null) {
+  authBroadcastChannel = channel;
+}
+
+export function bumpAuthGeneration() {
+  authGeneration++;
+}
+
+export function broadcastAuthTransition() {
+  try {
+    authBroadcastChannel?.postMessage({ type: "AUTH_CHANGED", timestamp: Date.now() });
+  } catch {
+    // ignore
+  }
+}
+
+export function clearTenantCache(queryClient: QueryClient) {
+  void queryClient.cancelQueries({
+    predicate: (query) => query.queryKey[0] !== "auth",
+  });
+  queryClient.removeQueries({
+    predicate: (query) => query.queryKey[0] !== "auth",
+  });
+}
+
+export function resetTenantTracker(
+  sessionKey: string | null = null,
+  tenantId: string | null = null,
+) {
+  resetSessionContextTracker(sessionKey, tenantId);
+  authGeneration = 0;
+}
+
+export function handleRemoteAuthTransition(queryClient: QueryClient) {
+  authGeneration++;
+  clearTenantCache(queryClient);
+  void queryClient.cancelQueries({ queryKey: AUTH_QUERY_KEY });
+  // Immediately fail-closed to null so all protected subtrees unmount synchronously
+  setSessionContext(null, null);
+  queryClient.setQueryData(AUTH_QUERY_KEY, null);
+  // Then initiate fresh refetch
+  void queryClient.refetchQueries({ queryKey: AUTH_QUERY_KEY });
+}
+
 export function useCurrentUser() {
-  return useQuery<AuthSessionResponse | null>({
+  const queryClient = useQueryClient();
+
+  const query = useQuery<AuthSessionResponse | null>({
     queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
+      const generationAtStart = authGeneration;
       const { data, error, response } = await apiClient.GET("/auth/me");
+
+      // Discard stale response if a login or logout occurred while this request was in-flight
+      if (generationAtStart !== authGeneration) {
+        return queryClient.getQueryData<AuthSessionResponse | null>(AUTH_QUERY_KEY) ?? null;
+      }
+
       if (response.status === 401 || error) {
         return null;
       }
@@ -18,12 +98,32 @@ export function useCurrentUser() {
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
+
+  useEffect(() => {
+    if (query.isSuccess) {
+      const newTenantId = query.data?.tenant?.id ?? null;
+      const newUserId = query.data?.user?.id ?? null;
+      const newSessionKey = newTenantId && newUserId ? `${newTenantId}:${newUserId}` : null;
+
+      const previousSessionKey = getCurrentSessionKey();
+      if (previousSessionKey !== null && previousSessionKey !== newSessionKey) {
+        clearTenantCache(queryClient);
+      }
+      setSessionContext(newTenantId, newSessionKey);
+    }
+  }, [query.data, query.isSuccess, queryClient]);
+
+  return query;
 }
 
 export function useLogin() {
   const queryClient = useQueryClient();
 
   return useMutation<AuthSessionResponse, Error, LoginRequest>({
+    onMutate: () => {
+      authGeneration++;
+      void queryClient.cancelQueries({ queryKey: AUTH_QUERY_KEY });
+    },
     mutationFn: async (credentials) => {
       const { data, error, response } = await apiClient.POST("/auth/login", {
         body: credentials,
@@ -39,7 +139,12 @@ export function useLogin() {
       return data;
     },
     onSuccess: (data) => {
+      authGeneration++;
+      void queryClient.cancelQueries({ queryKey: AUTH_QUERY_KEY });
+      setSessionContext(data.tenant.id, `${data.tenant.id}:${data.user.id}`);
+      clearTenantCache(queryClient);
       queryClient.setQueryData(AUTH_QUERY_KEY, data);
+      broadcastAuthTransition();
     },
   });
 }
@@ -48,6 +153,10 @@ export function useLogout() {
   const queryClient = useQueryClient();
 
   return useMutation<{ success: boolean }, Error, void>({
+    onMutate: () => {
+      authGeneration++;
+      void queryClient.cancelQueries({ queryKey: AUTH_QUERY_KEY });
+    },
     mutationFn: async () => {
       const { data, error } = await apiClient.POST("/auth/logout");
       if (error || !data) {
@@ -56,7 +165,17 @@ export function useLogout() {
       return data;
     },
     onSuccess: () => {
+      authGeneration++;
+      void queryClient.cancelQueries({ queryKey: AUTH_QUERY_KEY });
+      setSessionContext(null, null);
+      clearTenantCache(queryClient);
       queryClient.setQueryData(AUTH_QUERY_KEY, null);
+      broadcastAuthTransition();
     },
   });
+}
+
+export function useHasCapability(capability: string): boolean {
+  const { data: session } = useCurrentUser();
+  return session?.user.capabilities?.includes(capability) ?? false;
 }

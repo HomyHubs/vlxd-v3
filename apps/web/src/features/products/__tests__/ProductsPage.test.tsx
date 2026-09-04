@@ -13,6 +13,22 @@ vi.mock("../api/useProducts.js", () => ({
   useCreateProduct: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
+vi.mock("../../auth/index.js", () => ({
+  AppHeader: () => <div data-testid="app-header">Header Mock</div>,
+  useCurrentUser: () => ({
+    data: {
+      user: {
+        id: "u1",
+        fullName: "Chủ cửa hàng",
+        capabilities: ["products.manage", "products.view"],
+      },
+      tenant: { id: "t1", name: "Cửa hàng VLXD" },
+    },
+  }),
+  useHasCapability: (cap: string) => ["products.manage", "products.view"].includes(cap),
+  useLogout: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 describe("ProductsPage", () => {
   it("renders the product table and opens the create dialog", async () => {
     render(

@@ -41,6 +41,7 @@ describe("inventory migration and stock level", () => {
     const inventory = splitMigration(
       await readMigration("202609020003_create_inventory_tables.sql"),
     );
+    const rbac = splitMigration(await readMigration("202609030007_create_rbac_tables.sql"));
     const seed = await readFile(resolve(process.cwd(), "../../db/seeds/dev.sql"), "utf8");
     const pool = createDatabasePool(started.getConnectionUri());
     const database = createDatabase(pool);
@@ -51,6 +52,7 @@ describe("inventory migration and stock level", () => {
       await pool.query(products[0]);
       await pool.query(seed);
       await pool.query(inventory[0]);
+      await pool.query(rbac[0]);
 
       await database
         .insertInto("products")
@@ -114,6 +116,7 @@ describe("inventory migration and stock level", () => {
           method: "POST",
           url: "/warehouses",
           cookies: { [SESSION_COOKIE_NAME]: cookie },
+          headers: { "x-expected-tenant-id": "tenant-dev-001" },
           payload: { code, name: code },
         });
         expect(response.statusCode).toBe(201);
@@ -122,12 +125,14 @@ describe("inventory migration and stock level", () => {
         method: "POST",
         url: "/warehouses",
         cookies: { [SESSION_COOKIE_NAME]: cookie },
+        headers: { "x-expected-tenant-id": "tenant-dev-001" },
         payload: { code: "FOURTH", name: "Fourth" },
       });
       expect(limited.statusCode).toBe(422);
       expect(limited.json()).toMatchObject({ code: "WAREHOUSE_LIMIT_REACHED" });
       await server.close();
 
+      await pool.query(rbac[1]);
       await pool.query(inventory[1]);
       const tables = await pool.query<{ warehouses: string | null; stock_levels: string | null }>(
         "select to_regclass('public.warehouses') as warehouses, to_regclass('public.stock_levels') as stock_levels",

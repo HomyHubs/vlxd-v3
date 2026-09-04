@@ -103,4 +103,64 @@ describe("ProtectedRoute", () => {
     expect(await screen.findByTestId("dashboard")).toBeInTheDocument();
     expect(screen.queryByTestId("login-page")).not.toBeInTheDocument();
   });
+
+  it("redirects to / when user lacks requiredCapability", async () => {
+    const fetchMock = vi.fn().mockImplementation((req: Request | string) => {
+      const url = typeof req === "string" ? req : req.url;
+      if (url.includes("/auth/me")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              user: {
+                id: "user-1",
+                email: "sales@vlxd.local",
+                fullName: "Nhân viên",
+                tenantId: "tenant-1",
+                status: "active",
+                titles: ["Nhân viên"],
+                capabilities: ["sales.create"],
+              },
+              tenant: {
+                id: "tenant-1",
+                name: "Cửa hàng VLXD Homy",
+                code: "vlxd-homy",
+                plan: "free",
+              },
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        );
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/settings/users"]}>
+          <Routes>
+            <Route path="/" element={<div data-testid="home-page">Home Page</div>} />
+            <Route element={<ProtectedRoute requiredCapability="users.manage" />}>
+              <Route
+                path="/settings/users"
+                element={<div data-testid="users-settings">Users Settings</div>}
+              />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByTestId("home-page")).toBeInTheDocument();
+    expect(screen.queryByTestId("users-settings")).not.toBeInTheDocument();
+  });
 });

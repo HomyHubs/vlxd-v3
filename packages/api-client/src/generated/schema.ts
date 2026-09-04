@@ -230,10 +230,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/titles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List available titles for user assignment */
+        get: operations["listTitles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List tenant users with their assigned titles */
+        get: operations["listUsers"];
+        put?: never;
+        /** Create a new user and assign a title */
+        post: operations["createUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AuthContextChangedError: {
+            /** @enum {string} */
+            code: "AUTH_CONTEXT_CHANGED";
+            message: string;
+        };
         LivenessStatus: {
             /** @constant */
             status: "ok";
@@ -265,6 +305,8 @@ export interface components {
             tenantId: string;
             /** @enum {string} */
             status: "active" | "inactive";
+            titles: string[];
+            capabilities: string[];
         };
         AuthTenant: {
             id: string;
@@ -312,7 +354,7 @@ export interface components {
         };
         ProductErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "PRODUCT_LIMIT_REACHED" | "PRODUCT_SKU_EXISTS" | "UNIT_NOT_FOUND";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "PRODUCT_LIMIT_REACHED" | "PRODUCT_SKU_EXISTS" | "UNIT_NOT_FOUND" | "AUTH_CONTEXT_CHANGED";
             message: string;
         };
         Warehouse: {
@@ -332,7 +374,7 @@ export interface components {
         };
         WarehouseErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "WAREHOUSE_LIMIT_REACHED" | "WAREHOUSE_CODE_EXISTS";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "WAREHOUSE_LIMIT_REACHED" | "WAREHOUSE_CODE_EXISTS" | "AUTH_CONTEXT_CHANGED";
             message: string;
         };
         CreateStockReceiptLineInput: {
@@ -388,7 +430,7 @@ export interface components {
         };
         StockReceiptErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INVALID_RECEIPT_LINES";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INVALID_RECEIPT_LINES" | "AUTH_CONTEXT_CHANGED";
             message: string;
         };
         Customer: {
@@ -412,7 +454,7 @@ export interface components {
         };
         CustomerErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "CUSTOMER_CODE_EXISTS" | "INVALID_CUSTOMER_DATA";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "CUSTOMER_CODE_EXISTS" | "INVALID_CUSTOMER_DATA" | "AUTH_CONTEXT_CHANGED";
             message: string;
         };
         CreateSalesOrderLineInput: {
@@ -478,12 +520,61 @@ export interface components {
         };
         SalesOrderErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "ORDER_NOT_FOUND" | "CUSTOMER_NOT_FOUND" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "INVALID_ORDER_LINES";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "ORDER_NOT_FOUND" | "CUSTOMER_NOT_FOUND" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "INVALID_ORDER_LINES" | "AUTH_CONTEXT_CHANGED";
+            message: string;
+        };
+        TitleItem: {
+            id: string;
+            code: string;
+            name: string;
+        };
+        TitleListResponse: {
+            items: components["schemas"]["TitleItem"][];
+        };
+        UserItem: {
+            id: string;
+            /** Format: email */
+            email: string;
+            fullName: string;
+            /** @enum {string} */
+            status: "active" | "inactive";
+            titles: string[];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        UserListResponse: {
+            items: components["schemas"]["UserItem"][];
+        };
+        CreateUserRequest: {
+            /** Format: email */
+            email: string;
+            fullName: string;
+            password: string;
+            titleId: string;
+        };
+        UserErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "TITLE_NOT_FOUND" | "EMAIL_EXISTS" | "INVALID_INPUT" | "AUTH_CONTEXT_CHANGED";
             message: string;
         };
     };
-    responses: never;
-    parameters: never;
+    responses: {
+        /** @description Tenant or session identity context mismatch / changed */
+        AuthContextChangedResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AuthContextChangedError"];
+            };
+        };
+    };
+    parameters: {
+        /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+        ExpectedTenantIdHeader: string;
+        /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+        ExpectedSessionContextHeader: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -670,7 +761,12 @@ export interface operations {
                 pageSize?: number;
                 search?: string;
             };
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -694,12 +790,27 @@ export interface operations {
                     "application/json": components["schemas"]["ProductErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires products.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     createProduct: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -736,7 +847,16 @@ export interface operations {
                     "application/json": components["schemas"]["ProductErrorResponse"];
                 };
             };
-            /** @description SKU already exists for the tenant */
+            /** @description Permission denied (requires products.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductErrorResponse"];
+                };
+            };
+            /** @description SKU already exists for the tenant, or authentication context changed */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -759,7 +879,12 @@ export interface operations {
     listWarehouses: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -783,12 +908,27 @@ export interface operations {
                     "application/json": components["schemas"]["WarehouseErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires inventory.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     createWarehouse: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -825,7 +965,16 @@ export interface operations {
                     "application/json": components["schemas"]["WarehouseErrorResponse"];
                 };
             };
-            /** @description Warehouse code already exists for the tenant */
+            /** @description Permission denied (requires inventory.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseErrorResponse"];
+                };
+            };
+            /** @description Warehouse code already exists for the tenant, or authentication context changed */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -852,7 +1001,12 @@ export interface operations {
                 pageSize?: number;
                 warehouseId?: string;
             };
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -876,12 +1030,27 @@ export interface operations {
                     "application/json": components["schemas"]["StockReceiptErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires inventory.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     createStockReceipt: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -918,8 +1087,26 @@ export interface operations {
                     "application/json": components["schemas"]["StockReceiptErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires inventory.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
             /** @description Warehouse or product not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+            /** @description Overflow ceiling or context mismatch */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -932,7 +1119,12 @@ export interface operations {
     getStockReceipt: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path: {
                 id: string;
             };
@@ -958,6 +1150,15 @@ export interface operations {
                     "application/json": components["schemas"]["StockReceiptErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires inventory.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
             /** @description Stock receipt not found */
             404: {
                 headers: {
@@ -967,12 +1168,18 @@ export interface operations {
                     "application/json": components["schemas"]["StockReceiptErrorResponse"];
                 };
             };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     listCustomers: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -996,12 +1203,27 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires customers.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     createCustomer: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1038,7 +1260,16 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerErrorResponse"];
                 };
             };
-            /** @description Customer code already exists */
+            /** @description Permission denied (requires customers.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerErrorResponse"];
+                };
+            };
+            /** @description Customer code already exists, or authentication context changed */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1057,7 +1288,12 @@ export interface operations {
                 customerId?: string;
                 warehouseId?: string;
             };
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1081,12 +1317,27 @@ export interface operations {
                     "application/json": components["schemas"]["SalesOrderErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires sales.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     createSalesOrder: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1123,8 +1374,26 @@ export interface operations {
                     "application/json": components["schemas"]["SalesOrderErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires sales.create) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
             /** @description Customer, warehouse, or product not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
+            /** @description Insufficient stock, order limit or authentication context changed */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1146,7 +1415,12 @@ export interface operations {
     getSalesOrder: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path: {
                 id: string;
             };
@@ -1172,6 +1446,15 @@ export interface operations {
                     "application/json": components["schemas"]["SalesOrderErrorResponse"];
                 };
             };
+            /** @description Permission denied (requires sales.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
             /** @description Sales order not found */
             404: {
                 headers: {
@@ -1179,6 +1462,160 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
+        };
+    };
+    listTitles: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of available titles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TitleListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires users.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of tenant users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires users.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
+        };
+    };
+    createUser: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description User created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserItem"];
+                };
+            };
+            /** @description Invalid request payload */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires users.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
+                };
+            };
+            /** @description Email already exists for this tenant, or authentication context changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserErrorResponse"];
                 };
             };
         };

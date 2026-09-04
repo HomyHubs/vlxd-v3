@@ -31,6 +31,59 @@ export interface AuthServiceDependencies {
   sessionDurationMs?: number;
 }
 
+async function getUserTitlesAndCapabilities(
+  db: Kysely<Database>,
+  userId: string,
+  tenantId: string,
+  logger?: AuthLogger,
+): Promise<{ titles: string[]; capabilities: string[] }> {
+  try {
+    const userTitleRows = await db
+      .selectFrom("user_titles")
+      .innerJoin("titles", "titles.id", "user_titles.title_id")
+      .select(["titles.name as titleName", "titles.id as titleId"])
+      .where("user_titles.user_id", "=", userId)
+      .where("user_titles.tenant_id", "=", tenantId)
+      .where("titles.tenant_id", "=", tenantId)
+      .execute();
+
+    const titles = userTitleRows.map((t) => t.titleName);
+    const titleIds = userTitleRows.map((t) => t.titleId);
+
+    if (titleIds.length === 0) {
+      return { titles: [], capabilities: [] };
+    }
+
+    const capRows = await db
+      .selectFrom("title_role_groups")
+      .innerJoin(
+        "role_group_capabilities",
+        "role_group_capabilities.role_group_id",
+        "title_role_groups.role_group_id",
+      )
+      .select("role_group_capabilities.capability_id as capabilityId")
+      .where("title_role_groups.title_id", "in", titleIds)
+      .execute();
+
+    const capabilities = Array.from(new Set(capRows.map((c) => c.capabilityId)));
+    return { titles, capabilities };
+  } catch (error: unknown) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: string }).code === "42P01"
+    ) {
+      // Table does not exist (e.g. running on older migration slice before RBAC tables)
+      return { titles: [], capabilities: [] };
+    }
+    if (logger?.error) {
+      logger.error({ err: error, userId, tenantId }, "Failed to load user titles and capabilities");
+    }
+    throw error;
+  }
+}
+
 export function createAuthService(dependencies: AuthServiceDependencies): AuthService {
   const sessionDurationMs = dependencies.sessionDurationMs ?? 7 * 24 * 60 * 60 * 1000;
   const db = dependencies.database;
@@ -45,7 +98,13 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
         .where("email", "=", email)
         .executeTakeFirst();
 
-      if (!user) {
+      if (!user || user.status !== "active") {
+        if (logger?.warn) {
+          logger.warn(
+            { reason: "user_not_found_or_inactive" },
+            "login failed: user not found or inactive",
+          );
+        }
         return {
           success: false,
           code: "INVALID_CREDENTIALS",
@@ -53,16 +112,14 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
         };
       }
 
-      if (user.status !== "active") {
-        return {
-          success: false,
-          code: "INVALID_CREDENTIALS",
-          message: "Tài khoản đã bị vô hiệu hoá",
-        };
-      }
-
       const isPasswordValid = await verify(user.password_hash, credentials.password);
       if (!isPasswordValid) {
+        if (logger?.warn) {
+          logger.warn(
+            { userId: user.id, reason: "invalid_password" },
+            "login failed: invalid password",
+          );
+        }
         return {
           success: false,
           code: "INVALID_CREDENTIALS",
@@ -77,15 +134,25 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
         .executeTakeFirst();
 
       if (!tenant) {
-        if (logger) {
-          logger.error({ userId: user.id, tenantId: user.tenant_id }, "Tenant not found for user");
+        if (logger?.error) {
+          logger.error(
+            { userId: user.id, tenantId: user.tenant_id, reason: "tenant_not_found" },
+            "login failed: tenant not found",
+          );
         }
         return {
           success: false,
-          code: "INVALID_CREDENTIALS",
-          message: "Không tìm thấy thông tin cửa hàng",
+          code: "UNAUTHORIZED",
+          message: "Tài khoản không thuộc tổ chức hợp lệ",
         };
       }
+
+      const { titles, capabilities } = await getUserTitlesAndCapabilities(
+        db,
+        user.id,
+        user.tenant_id,
+        logger,
+      );
 
       // Generate opaque cryptographically random session token
       const sessionToken = randomBytes(32).toString("base64url");
@@ -112,6 +179,8 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
             fullName: user.full_name,
             tenantId: user.tenant_id,
             status: user.status,
+            titles,
+            capabilities,
           },
           tenant: {
             id: tenant.id,
@@ -129,7 +198,7 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
       await db.deleteFrom("sessions").where("id", "=", hashedSessionToken).execute();
     },
 
-    async getMe(sessionToken) {
+    async getMe(sessionToken, logger) {
       if (!sessionToken) return null;
       const hashedSessionToken = hashSessionToken(sessionToken);
 
@@ -161,6 +230,13 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
         return null;
       }
 
+      const { titles, capabilities } = await getUserTitlesAndCapabilities(
+        db,
+        session.userId,
+        session.tenantId,
+        logger,
+      );
+
       return {
         user: {
           id: session.userId,
@@ -168,6 +244,8 @@ export function createAuthService(dependencies: AuthServiceDependencies): AuthSe
           fullName: session.userFullName,
           tenantId: session.userTenantId,
           status: session.userStatus,
+          titles,
+          capabilities,
         },
         tenant: {
           id: session.tenantId,

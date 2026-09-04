@@ -5,6 +5,7 @@ import { createWarehouseService } from "./features/warehouses/index.js";
 import { createStockReceiptService } from "./features/stock-receipts/index.js";
 import { createCustomerService } from "./features/customers/index.js";
 import { createSalesOrderService } from "./features/sales-orders/index.js";
+import { createUsersService } from "./features/users/index.js";
 import { checkDatabase, createDatabase, createDatabasePool } from "./platform/database.js";
 import { parseEnvironment } from "./platform/environment.js";
 
@@ -17,6 +18,7 @@ const warehouseService = createWarehouseService({ database });
 const stockReceiptService = createStockReceiptService({ database });
 const customerService = createCustomerService({ database });
 const salesOrderService = createSalesOrderService({ database });
+const usersService = createUsersService(database);
 
 const server = await buildApp({
   authService,
@@ -25,6 +27,7 @@ const server = await buildApp({
   stockReceiptService,
   customerService,
   salesOrderService,
+  usersService,
   checkDatabase: (logger) => checkDatabase(database, logger),
   logLevel: environment.LOG_LEVEL,
   secureCookies: environment.COOKIE_SECURE,

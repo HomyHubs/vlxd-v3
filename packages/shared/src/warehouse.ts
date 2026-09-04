@@ -18,7 +18,14 @@ export const CreateWarehouseRequestSchema = z.object({
 });
 
 export const WarehouseErrorResponseSchema = z.object({
-  code: z.enum(["UNAUTHORIZED", "WAREHOUSE_LIMIT_REACHED", "WAREHOUSE_CODE_EXISTS"]),
+  code: z.enum([
+    "UNAUTHORIZED",
+    "FORBIDDEN",
+    "VALIDATION_ERROR",
+    "WAREHOUSE_LIMIT_REACHED",
+    "WAREHOUSE_CODE_EXISTS",
+    "AUTH_CONTEXT_CHANGED",
+  ]),
   message: z.string(),
 });
 

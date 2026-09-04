@@ -9,7 +9,7 @@ import {
   SalesOrderQuerySchema,
 } from "@vlxd/shared";
 
-import { SESSION_COOKIE_NAME, type AuthService } from "../auth/index.js";
+import { createRequireCapability, type AuthService } from "../auth/index.js";
 import type { SalesOrderService } from "./service.js";
 
 export interface SalesOrderRoutesOptions {
@@ -23,32 +23,24 @@ const IdParamSchema = z.object({
 
 export const salesOrderRoutes: FastifyPluginAsync<SalesOrderRoutesOptions> = (server, options) => {
   const app = server.withTypeProvider<ZodTypeProvider>();
-
-  async function sessionFor(request: {
-    cookies: Record<string, string | undefined>;
-    log: Parameters<AuthService["getMe"]>[1];
-  }) {
-    const token = request.cookies[SESSION_COOKIE_NAME];
-    return token ? options.authService.getMe(token, request.log) : null;
-  }
+  const requireCap = createRequireCapability(options.authService);
 
   app.get(
     "/sales-orders",
     {
+      preHandler: [requireCap("sales.view")],
       schema: {
         querystring: SalesOrderQuerySchema,
         response: {
           200: SalesOrderListResponseSchema,
           401: SalesOrderErrorResponseSchema,
+          403: SalesOrderErrorResponseSchema,
+          409: SalesOrderErrorResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const session = await sessionFor(request);
-      if (!session) {
-        return reply.code(401).send({ code: "UNAUTHORIZED", message: "Not authenticated" });
-      }
-
+      const session = request.session!;
       const result = await options.salesOrderService.list(session.tenant.id, request.query);
       return reply.code(200).send(result);
     },
@@ -57,23 +49,22 @@ export const salesOrderRoutes: FastifyPluginAsync<SalesOrderRoutesOptions> = (se
   app.post(
     "/sales-orders",
     {
+      preHandler: [requireCap("sales.create")],
       schema: {
         body: CreateSalesOrderRequestSchema,
         response: {
           201: SalesOrderDetailResponseSchema,
           400: SalesOrderErrorResponseSchema,
           401: SalesOrderErrorResponseSchema,
+          403: SalesOrderErrorResponseSchema,
           404: SalesOrderErrorResponseSchema,
+          409: SalesOrderErrorResponseSchema,
           422: SalesOrderErrorResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const session = await sessionFor(request);
-      if (!session) {
-        return reply.code(401).send({ code: "UNAUTHORIZED", message: "Not authenticated" });
-      }
-
+      const session = request.session!;
       const result = await options.salesOrderService.create(
         session.tenant.id,
         session.user.id,
@@ -102,21 +93,20 @@ export const salesOrderRoutes: FastifyPluginAsync<SalesOrderRoutesOptions> = (se
   app.get(
     "/sales-orders/:id",
     {
+      preHandler: [requireCap("sales.view")],
       schema: {
         params: IdParamSchema,
         response: {
           200: SalesOrderDetailResponseSchema,
           401: SalesOrderErrorResponseSchema,
+          403: SalesOrderErrorResponseSchema,
           404: SalesOrderErrorResponseSchema,
+          409: SalesOrderErrorResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const session = await sessionFor(request);
-      if (!session) {
-        return reply.code(401).send({ code: "UNAUTHORIZED", message: "Not authenticated" });
-      }
-
+      const session = request.session!;
       const order = await options.salesOrderService.getById(session.tenant.id, request.params.id);
       if (!order) {
         return reply.code(404).send({

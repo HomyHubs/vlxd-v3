@@ -1,7 +1,12 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildApp } from "../../../app.js";
-import { type AuthSessionResponse, SESSION_COOKIE_NAME } from "../index.js";
+import {
+  createRequireCapability,
+  type AuthSessionResponse,
+  createAuthService,
+  SESSION_COOKIE_NAME,
+} from "../index.js";
 import type { AuthService, LoginResult } from "../service.js";
 
 const servers: Array<Awaited<ReturnType<typeof buildApp>>> = [];
@@ -23,6 +28,8 @@ function createMockAuthService(overrides: Partial<AuthService> = {}): AuthServic
             fullName: "Chủ cửa hàng",
             tenantId: "tenant-1",
             status: "active",
+            titles: ["Chủ cửa hàng"],
+            capabilities: ["users.manage"],
           },
           tenant: {
             id: "tenant-1",
@@ -41,6 +48,8 @@ function createMockAuthService(overrides: Partial<AuthService> = {}): AuthServic
           fullName: "Chủ cửa hàng",
           tenantId: "tenant-1",
           status: "active" as const,
+          titles: ["Chủ cửa hàng"],
+          capabilities: ["users.manage"],
         },
         tenant: {
           id: "tenant-1",
@@ -290,5 +299,284 @@ describe("auth routes unit tests", () => {
     const setCookie = response.headers["set-cookie"];
     expect(setCookie).toBeDefined();
     expect(String(setCookie)).toContain(`${SESSION_COOKIE_NAME}=;`);
+  });
+});
+
+describe("createAuthService logging security", () => {
+  it("never logs email or personal data when login fails with non-existent user", async () => {
+    const mockDb = {
+      selectFrom: vi.fn().mockReturnValue({
+        selectAll: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            executeTakeFirst: vi.fn().mockResolvedValue(undefined),
+          }),
+        }),
+      }),
+    };
+
+    const authService = createAuthService({ database: mockDb as never });
+    const warnLogs: Array<{ payload: unknown; msg: string }> = [];
+    const mockLogger = {
+      warn: vi.fn((payload: unknown, msg: string) => {
+        warnLogs.push({ payload, msg });
+      }),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn(),
+      child: vi.fn(),
+      level: "warn",
+      silent: vi.fn(),
+    };
+
+    const result = await authService.login(
+      { email: "secret-user@example.com", password: "Password@123" },
+      mockLogger,
+    );
+
+    expect(result.success).toBe(false);
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    expect(warnLogs[0]?.payload).toEqual({ reason: "user_not_found_or_inactive" });
+    expect(JSON.stringify(warnLogs[0]?.payload)).not.toContain("secret-user@example.com");
+    expect(JSON.stringify(warnLogs[0]?.payload)).not.toContain("email");
+  });
+
+  it("never logs email or password when login fails with invalid password", async () => {
+    const mockDb = {
+      selectFrom: vi.fn().mockReturnValue({
+        selectAll: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            executeTakeFirst: vi.fn().mockResolvedValue({
+              id: "user-uuid-1",
+              email: "existing@example.com",
+              status: "active",
+              password_hash:
+                "$argon2id$v=19$m=19456,t=2,p=1$TF/Gq3MDiKu+CAakUXQTzg$nkkaARFQ71qeLTUBWxoTPrpphqZyreNkI4e9rms5BIQ",
+              tenant_id: "tenant-uuid-1",
+            }),
+          }),
+        }),
+      }),
+    };
+
+    const authService = createAuthService({ database: mockDb as never });
+    const warnLogs: Array<{ payload: unknown; msg: string }> = [];
+    const mockLogger = {
+      warn: vi.fn((payload: unknown, msg: string) => {
+        warnLogs.push({ payload, msg });
+      }),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn(),
+      child: vi.fn(),
+      level: "warn",
+      silent: vi.fn(),
+    };
+
+    const result = await authService.login(
+      { email: "existing@example.com", password: "WrongPassword@123" },
+      mockLogger,
+    );
+
+    expect(result.success).toBe(false);
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    expect(warnLogs[0]?.payload).toEqual({ userId: "user-uuid-1", reason: "invalid_password" });
+    expect(JSON.stringify(warnLogs[0]?.payload)).not.toContain("existing@example.com");
+    expect(JSON.stringify(warnLogs[0]?.payload)).not.toContain("WrongPassword@123");
+    expect(JSON.stringify(warnLogs[0]?.payload)).not.toContain("email");
+  });
+
+  it("never logs email when login fails with missing tenant", async () => {
+    const mockDb = {
+      selectFrom: vi.fn().mockImplementation((table: string) => {
+        if (table === "users") {
+          return {
+            selectAll: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                executeTakeFirst: vi.fn().mockResolvedValue({
+                  id: "user-uuid-1",
+                  email: "existing@example.com",
+                  status: "active",
+                  password_hash:
+                    "$argon2id$v=19$m=19456,t=2,p=1$TF/Gq3MDiKu+CAakUXQTzg$nkkaARFQ71qeLTUBWxoTPrpphqZyreNkI4e9rms5BIQ",
+                  tenant_id: "tenant-uuid-missing",
+                }),
+              }),
+            }),
+          };
+        }
+        return {
+          selectAll: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              executeTakeFirst: vi.fn().mockResolvedValue(undefined),
+            }),
+          }),
+        };
+      }),
+    };
+
+    const authService = createAuthService({ database: mockDb as never });
+    const errorLogs: Array<{ payload: unknown; msg: string }> = [];
+    const mockLogger = {
+      warn: vi.fn(),
+      error: vi.fn((payload: unknown, msg: string) => {
+        errorLogs.push({ payload, msg });
+      }),
+      info: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn(),
+      child: vi.fn(),
+      level: "error",
+      silent: vi.fn(),
+    };
+
+    const result = await authService.login(
+      { email: "existing@example.com", password: "MatKhau@123" },
+      mockLogger,
+    );
+
+    expect(result.success).toBe(false);
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+    expect(errorLogs[0]?.payload).toEqual({
+      userId: "user-uuid-1",
+      tenantId: "tenant-uuid-missing",
+      reason: "tenant_not_found",
+    });
+    expect(JSON.stringify(errorLogs[0]?.payload)).not.toContain("existing@example.com");
+    expect(JSON.stringify(errorLogs[0]?.payload)).not.toContain("email");
+  });
+
+  describe("createRequireCapability middleware unit tests", () => {
+    async function setupTestServer(mockAuthService: AuthService) {
+      const server = await buildApp({
+        authService: mockAuthService,
+        checkDatabase: () => Promise.resolve(true),
+        logger: false,
+      });
+      const requireCap = createRequireCapability(mockAuthService);
+      server.get(
+        "/test-protected",
+        {
+          preHandler: [requireCap("users.manage")],
+        },
+        async (request, reply) => {
+          return reply.code(200).send({ ok: true, session: request.session });
+        },
+      );
+      servers.push(server);
+      return server;
+    }
+
+    it("returns 401 UNAUTHORIZED when no session cookie is present", async () => {
+      const server = await setupTestServer(createMockAuthService());
+      const res = await server.inject({
+        method: "GET",
+        url: "/test-protected",
+      });
+      expect(res.statusCode).toBe(401);
+      expect(res.json()).toMatchObject({ code: "UNAUTHORIZED" });
+    });
+
+    it("returns 401 UNAUTHORIZED when session token is invalid", async () => {
+      const server = await setupTestServer(
+        createMockAuthService({
+          getMe: () => Promise.resolve(null),
+        }),
+      );
+      const res = await server.inject({
+        method: "GET",
+        url: "/test-protected",
+        cookies: { [SESSION_COOKIE_NAME]: "invalid-token" },
+      });
+      expect(res.statusCode).toBe(401);
+      expect(res.json()).toMatchObject({ code: "UNAUTHORIZED" });
+    });
+
+    it("returns 409 AUTH_CONTEXT_CHANGED when x-expected-tenant-id mismatches", async () => {
+      const server = await setupTestServer(createMockAuthService());
+      const res = await server.inject({
+        method: "GET",
+        url: "/test-protected",
+        cookies: { [SESSION_COOKIE_NAME]: "mock-session-token-123" },
+        headers: {
+          "x-expected-tenant-id": "different-tenant-id",
+        },
+      });
+      expect(res.statusCode).toBe(409);
+      expect(res.json()).toMatchObject({
+        code: "AUTH_CONTEXT_CHANGED",
+      });
+    });
+
+    it("returns 409 AUTH_CONTEXT_CHANGED when x-session-context mismatches", async () => {
+      const server = await setupTestServer(createMockAuthService());
+      const res = await server.inject({
+        method: "GET",
+        url: "/test-protected",
+        cookies: { [SESSION_COOKIE_NAME]: "mock-session-token-123" },
+        headers: {
+          "x-session-context": "tenant-1:different-user",
+        },
+      });
+      expect(res.statusCode).toBe(409);
+      expect(res.json()).toMatchObject({
+        code: "AUTH_CONTEXT_CHANGED",
+      });
+    });
+
+    it("returns 403 FORBIDDEN when user lacks the required capability", async () => {
+      const server = await setupTestServer(
+        createMockAuthService({
+          getMe: () =>
+            Promise.resolve({
+              user: {
+                id: "user-1",
+                email: "owner@vlxd.local",
+                fullName: "Chủ cửa hàng",
+                tenantId: "tenant-1",
+                status: "active" as const,
+                titles: ["Nhân viên"],
+                capabilities: ["products.view"], // lacks users.manage
+              },
+              tenant: {
+                id: "tenant-1",
+                name: "Cửa hàng VLXD Homy",
+                code: "vlxd-homy",
+                plan: "free",
+              },
+            }),
+        }),
+      );
+      const res = await server.inject({
+        method: "GET",
+        url: "/test-protected",
+        cookies: { [SESSION_COOKIE_NAME]: "mock-session-token-123" },
+        headers: {
+          "x-expected-tenant-id": "tenant-1",
+          "x-session-context": "tenant-1:user-1",
+        },
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toMatchObject({ code: "FORBIDDEN" });
+    });
+
+    it("passes and returns 200 when capability and context match", async () => {
+      const server = await setupTestServer(createMockAuthService());
+      const res = await server.inject({
+        method: "GET",
+        url: "/test-protected",
+        cookies: { [SESSION_COOKIE_NAME]: "mock-session-token-123" },
+        headers: {
+          "x-expected-tenant-id": "tenant-1",
+          "x-session-context": "tenant-1:user-1",
+        },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({ ok: true });
+    });
   });
 });
