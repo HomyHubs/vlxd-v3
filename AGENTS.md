@@ -426,6 +426,7 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR** theo 
 | 2026-09-03 | Thêm | Slice 5 | Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions): migration `customers`, `sales_orders`, `sales_order_lines`; API `/sales-orders`, `/customers`; UI `/orders/new`, `/orders`, `/orders/:id`; trừ tồn kho qua `stock_movements` và chặn bán vượt tồn (`INSUFFICIENT_STOCK`). | Lát cắt nghiệp vụ mẫu theo lộ trình Vertical Slice. | Không cần — tương thích schema, tuân thủ contract-first. |
 | 2026-09-04 | Thêm | Slice 7 | Thanh toán và công nợ tối giản: migration `payments` (thuận nghịch); API `POST /sales-orders/{id}/payments`, `GET /sales-orders/{id}/payments`, tính `paid_amount`, `remaining_amount`, `payment_status`, chặn thanh toán vượt nợ `AMOUNT_EXCEEDS_REMAINING`; UI trang chi tiết đơn hàng `/orders/:id` hiển thị badge thanh toán, lịch sử thanh toán, dialog ghi nhận thanh toán tiền mặt/chuyển khoản; i18n vi/en. | Lát cắt nghiệp vụ tiếp theo trong lộ trình Vertical Slice. | docs/adr/ADR-0007-sales-order-payments-and-debt-tracking.md |
 | 2026-09-04 | Thêm | Slice 8 | Báo cáo đầu tiên & Quản lý hạn mức gói: API `GET /reports/sales-summary` (theo ngày/tuần/tháng/toàn bộ), `GET /tenants/usage` (hạn mức gói Free 80 sản phẩm, 3 kho); UI `/reports` (thẻ doanh thu, đã thu, công nợ, đơn hàng, bảng top sản phẩm), UI `/settings/plan` (tiến trình quota); i18n vi/en; phân quyền RBAC `sales.view` và `users.manage`. | Hoàn thiện góc nhìn quản trị và theo dõi dung lượng gói. | docs/adr/ADR-0008-sales-reporting-and-plan-usage.md |
+| 2026-09-04 | Thêm | Slice 9 | Chuyển kho nội bộ: migration `stock_transfers`, `stock_transfer_lines`; API `POST /stock-transfers`, `GET /stock-transfers`, `GET /stock-transfers/{id}`; ghi nhận `stock_movements` (`transfer_out` và `transfer_in`), trừ tồn kho xuất, cộng tồn kho nhập nguyên tử; kiểm tra tồn `INSUFFICIENT_STOCK`; UI `/inventory/transfers`, `/inventory/transfers/new`, `/inventory/transfers/:id`; i18n vi/en; phân quyền RBAC `inventory.manage` và `inventory.view`. | Nghiệp vụ luân chuyển hàng hoá giữa các kho/bãi của cùng tenant. | docs/adr/ADR-0009-internal-stock-transfers.md |
 
 ### 17.6 Thứ tự thao tác bắt buộc
 
@@ -454,7 +455,12 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-- Không có. Sẵn sàng cho Slice tiếp theo.
+Slice 9 — Chuyển kho nội bộ (Internal Stock Transfer): Đang triển khai trên nhánh `feature/slice-9`.
+- [ ] Task 9.1: DB migration `202609040009_create_stock_transfer_tables.sql` (bảng `stock_transfers`, `stock_transfer_lines`), DB types và rollback test.
+- [ ] Task 9.2: Contract-first OpenAPI 3.1 & generate `@vlxd/api-client`.
+- [ ] Task 9.3: Backend Fastify Feature Module `stock-transfers` (routes, deterministic locking transaction, movement logging `transfer_out`/`transfer_in`, unit & integration tests).
+- [ ] Task 9.4: Web UI Frontend (`/inventory/transfers`, `/inventory/transfers/new`, `/inventory/transfers/:id`), route guards, i18n vi/en, component tests.
+
 
 ### Đã xong
 

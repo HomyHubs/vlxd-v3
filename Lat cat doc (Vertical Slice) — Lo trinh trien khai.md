@@ -202,10 +202,11 @@ Cách nghiệm thu:
 | 2 — Sản phẩm         | Xong         | Nhánh `dev`             | —                                           |
 | 3 — Kho & tồn        | Xong         | Nhánh `dev`             | —                                           |
 | 4 — Nhập kho         | Xong         | Nhánh `dev`             | —                                           |
-| 5 — Đơn hàng         | Xong         | Nhánh `feature/slice-5` | Chưa thanh toán (Slice 7)                   |
-| 6 — Phân quyền       | Chưa bắt đầu | —                       | —                                           |
-| 7 — Thanh toán       | Chưa bắt đầu | —                       | —                                           |
-| 8 — Báo cáo          | Chưa bắt đầu | —                       | —                                           |
+| 5 — Đơn hàng         | Xong         | Nhánh `dev`             | —                                           |
+| 6 — Phân quyền       | Xong         | Nhánh `dev`             | —                                           |
+| 7 — Thanh toán       | Xong         | Nhánh `dev`             | —                                           |
+| 8 — Báo cáo          | Xong         | Nhánh `dev`             | —                                           |
+| 9 — Chuyển kho nội bộ| Đang làm     | Nhánh `feature/slice-9` | —                                           |
 
 ### Nợ kỹ thuật tích lũy
 
@@ -298,6 +299,7 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR** trong
 | ---------- | ------------------------------- | --------------- | ----------------------------- | ----------------------------------- | --- |
 | 2026-08-27 | Khởi tạo                        | 0–8             | Chốt lộ trình 9 slice ban đầu | Chuyển sang phương pháp lát cắt dọc | —   |
 | 2026-09-02 | Bắt đầu                        | Slice 3         | Chốt phạm vi Kho & tồn hiển thị, gồm migration `warehouse`/`stock_level`, API danh sách/tạo kho và UI `/warehouses` + tồn bằng 0 trên sản phẩm. | Tiếp tục lộ trình sau khi Slice 2 đã merge. | Chưa cần — contract/API chưa implement. |
+| 2026-09-04 | Thêm                            | Slice 9         | Chuyển kho nội bộ: migration `stock_transfers`, `stock_transfer_lines`; API `POST /stock-transfers`, `GET /stock-transfers`, `GET /stock-transfers/{id}`; ghi nhận `stock_movements` (`transfer_out`/`transfer_in`), trừ tồn kho nguồn, cộng tồn kho đích; UI `/inventory/transfers`, `/inventory/transfers/new`, `/inventory/transfers/:id`. | Nghiệp vụ luân chuyển kho bãi cho tenant. | docs/adr/ADR-0009-internal-stock-transfers.md |
 | _…_        | _Thêm / Sửa / Huỷ / Hoãn / Chẻ_ | _…_             | _…_                           | _…_                                 | _…_ |
 
 ### 8.6 Chỉ dẫn cho AI Coding Agent khi phạm vi đổi
