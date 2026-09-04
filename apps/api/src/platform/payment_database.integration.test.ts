@@ -227,19 +227,21 @@ describe("payment database schema migration", () => {
       expect(countFullRows).toHaveLength(1);
 
       // 5c. Concurrent same-tenant/same-key across DIFFERENT orders
-      // Loser must return 409 IDEMPOTENCY_CONFLICT, not transaction-aborted 500
+      // Both orders have active debt; loser on key collision must return 409 IDEMPOTENCY_CONFLICT, not transaction-aborted 500
       await pool.query(`
         INSERT INTO sales_orders (id, tenant_id, order_number, customer_id, warehouse_id, status, total_amount, created_by)
-        VALUES ('order-pay-02', 'tenant-dev-001', 'DH-PAY-002', 'cust-retail-tenant-dev-001', 'wh-pay-01', 'confirmed', 500000, 'user-dev-owner-001');
+        VALUES 
+          ('order-cross-01', 'tenant-dev-001', 'DH-CROSS-001', 'cust-retail-tenant-dev-001', 'wh-pay-01', 'confirmed', 500000, 'user-dev-owner-001'),
+          ('order-cross-02', 'tenant-dev-001', 'DH-CROSS-002', 'cust-retail-tenant-dev-001', 'wh-pay-01', 'confirmed', 500000, 'user-dev-owner-001');
       `);
 
       const [cross1, cross2] = await Promise.all([
-        service.recordPayment("tenant-dev-001", "user-dev-owner-001", "order-pay-02", {
+        service.recordPayment("tenant-dev-001", "user-dev-owner-001", "order-cross-01", {
           amount: 50000,
           paymentMethod: "cash",
           idempotencyKey: "cross-order-key-01",
         }),
-        service.recordPayment("tenant-dev-001", "user-dev-owner-001", "order-pay-01", {
+        service.recordPayment("tenant-dev-001", "user-dev-owner-001", "order-cross-02", {
           amount: 50000,
           paymentMethod: "cash",
           idempotencyKey: "cross-order-key-01",
@@ -253,14 +255,20 @@ describe("payment database schema migration", () => {
       expect(successes).toHaveLength(1);
       expect(conflicts).toHaveLength(1);
 
+      // Clean up cross orders
+      await db
+        .deleteFrom("payments")
+        .where("order_id", "in", ["order-cross-01", "order-cross-02"])
+        .execute();
+      await db
+        .deleteFrom("sales_orders")
+        .where("id", "in", ["order-cross-01", "order-cross-02"])
+        .execute();
+
       // 6. Test foreign key RESTRICT: cannot delete sales_order while payment exists
       await expect(
         db.deleteFrom("sales_orders").where("id", "=", "order-pay-01").execute(),
       ).rejects.toThrow();
-
-      // Clean up order-pay-02 payments and order
-      await db.deleteFrom("payments").where("order_id", "=", "order-pay-02").execute();
-      await db.deleteFrom("sales_orders").where("id", "=", "order-pay-02").execute();
 
       // 7. Test down migration rollback cleanly
       await pool.query(paymentDown);
