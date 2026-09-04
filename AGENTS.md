@@ -452,19 +452,13 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — PR #7: Hoàn thành giải quyết triệt để finding B1, B2 và các đề xuất N1, N2, N5 từ Round 9 của `/gpt-web-review`:
-- B1 (Bảo toàn Content-Type: application/json và body trong API client wrapper):
-  - Dùng middleware `onRequest` của `openapi-fetch` trong `apps/web/src/lib/apiClient.ts` để inject `x-expected-tenant-id` và `x-session-context` trực tiếp lên `request.headers` mà không ghi đè cấu hình transport, bảo đảm `Content-Type: application/json` và body luôn được gửi toàn vẹn tới Fastify.
-  - Thêm regression test transport `apps/web/src/lib/__tests__/apiClient.test.ts` kiểm chứng login POST không context, business POST có context, và custom caller headers.
-- B2 (Chuẩn hoá Precondition protocol vào OpenAPI 3.1 & enforce fail-closed middleware):
-  - Khai báo header parameters tái sử dụng `ExpectedTenantIdHeader` và `ExpectedSessionContextHeader` trong `contracts/http/openapi.yaml` cho toàn bộ các tenant-scoped operations (GET, POST).
-  - Khai báo response 409 `AuthContextChangedResponse` cho toàn bộ tenant-scoped operations trong OpenAPI spec, regenerate client schema type-safe.
-  - Enforce fail-closed trong `createRequireCapability`: bắt buộc phải có `x-expected-tenant-id` và phải khớp với `session.tenant.id` (trả 409 AUTH_CONTEXT_CHANGED khi vắng mặt hoặc sai lệch).
-  - Bổ sung 3 unit tests trong `products.unit.test.ts` khoá chặt hành vi 409 khi thiếu header, sai tenant, hoặc sai session context; cập nhật toàn bộ test suite API gửi header `x-expected-tenant-id`.
-- N1: Loại bỏ ép kiểu giả lập `price` trong `CreateSalesOrderPage.tsx`, cho phép đơn giá `>= 0`.
-- N2 & N6: Thêm cảnh báo runbook và backup requirement trong down migration `202609030007_create_rbac_tables.sql`.
-- N5: Thêm validation `docker compose -f compose.dev.yml config --quiet` vào `.github/workflows/ci.yml`.
-Toàn bộ cổng gác format, lint (0 warnings), typecheck (4/4 packages), unit & web tests (123 tests pass: 69 API unit + 54 web tests), build, contracts lint & schema sync pass 100%. Đang chuẩn bị commit, push và trigger Round 10 review.
+Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — PR #7: Hoàn thành giải quyết triệt để finding B1 và các góp ý từ Round 10 của `/gpt-web-review`:
+- B1 (Đồng bộ contract OpenAPI và runtime middleware cho precondition headers, duy trì tương thích backward):
+  - Khớp ngữ nghĩa `required: false` của `ExpectedTenantIdHeader` và `ExpectedSessionContextHeader` trong `contracts/http/openapi.yaml` với Fastify middleware `createRequireCapability`.
+  - Trong `createRequireCapability`, nếu client truyền `x-expected-tenant-id`, server đối soát nghiêm ngặt và chặn bằng `409 AUTH_CONTEXT_CHANGED` nếu lệch `session.tenant.id`. Khi không truyền (cookie-only clients, curl, third-party clients), request tiếp tục được phục vụ bình thường, bảo đảm quy tắc thay đổi tương thích hai bước (không tạo breaking change đơn phương cho các client hợp lệ theo OpenAPI).
+  - Cập nhật unit test `products.unit.test.ts` kiểm thử cả hai trường hợp: (1) thành công với cookie-only khi thiếu header, (2) trả 409 khi header mismatch với tenant session, (3) trả 409 khi session context mismatch.
+  - Cập nhật mô tả response 409 trong `openapi.yaml` ở các POST operations (`createProduct`, `createWarehouse`, `createCustomer`, `createSalesOrder`, `createUser`) bao hàm cả domain conflict lẫn authentication context changed.
+Toàn bộ cổng gác format, lint (0 warnings), typecheck (4/4 packages), unit & web tests (123 tests pass: 69 API unit + 54 web tests), build, contracts lint & schema sync pass 100%. Đang commit, push và trigger Round 11 review.
 
 ### Đã xong
 

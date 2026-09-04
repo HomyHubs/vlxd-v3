@@ -194,7 +194,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProductErrorResponse"
         "409":
-          description: SKU already exists for the tenant
+          description: SKU already exists for the tenant, or authentication context changed
           content:
             application/json:
               schema:
@@ -271,7 +271,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/WarehouseErrorResponse"
         "409":
-          description: Warehouse code already exists for the tenant
+          description: Warehouse code already exists for the tenant, or authentication context changed
           content:
             application/json:
               schema:
@@ -472,7 +472,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CustomerErrorResponse"
         "409":
-          description: Customer code already exists
+          description: Customer code already exists, or authentication context changed
           content:
             application/json:
               schema:
@@ -561,7 +561,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/SalesOrderErrorResponse"
         "409":
-          description: Insufficient stock, limit or context mismatch
+          description: Insufficient stock, order limit or authentication context changed
           content:
             application/json:
               schema:
@@ -704,7 +704,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserErrorResponse"
         "409":
-          description: Email already exists
+          description: Email already exists for this tenant, or authentication context changed
           content:
             application/json:
               schema:

@@ -32,12 +32,10 @@ export function createRequireCapability(authService: AuthService) {
       const expectedSessionContext = (request.headers["x-session-context"] ??
         request.headers["X-Session-Context"]) as string | undefined;
 
-      if (!expectedTenantId || expectedTenantId !== session.tenant.id) {
+      if (expectedTenantId && expectedTenantId !== session.tenant.id) {
         return reply.code(409).send({
           code: "AUTH_CONTEXT_CHANGED",
-          message: !expectedTenantId
-            ? "Header 'x-expected-tenant-id' là bắt buộc để xác thực ngữ cảnh tenant"
-            : "Ngữ cảnh tenant đã thay đổi trên phiên đăng nhập hiện tại",
+          message: "Ngữ cảnh tenant đã thay đổi trên phiên đăng nhập hiện tại",
         });
       }
 

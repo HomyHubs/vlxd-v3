@@ -48,8 +48,9 @@ describe("product routes", () => {
     await app.close();
   });
 
-  it("returns 409 AUTH_CONTEXT_CHANGED when x-expected-tenant-id is missing", async () => {
-    const productService = { list: vi.fn(), create: vi.fn() } as ProductService;
+  it("allows requests without x-expected-tenant-id for backward compatibility with cookie-only clients", async () => {
+    const list = vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 20, total: 0 });
+    const productService = { list, create: vi.fn() } as ProductService;
     const app = await buildApp({
       authService: authService(),
       productService,
@@ -64,8 +65,8 @@ describe("product routes", () => {
       cookies: { vlxd_session: "token" },
     });
 
-    expect(response.statusCode).toBe(409);
-    expect(response.json()).toMatchObject({ code: "AUTH_CONTEXT_CHANGED" });
+    expect(response.statusCode).toBe(200);
+    expect(list).toHaveBeenCalledWith("tenant-1", { page: 1, pageSize: 20 });
     await app.close();
   });
 

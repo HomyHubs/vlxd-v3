@@ -856,7 +856,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProductErrorResponse"];
                 };
             };
-            /** @description SKU already exists for the tenant */
+            /** @description SKU already exists for the tenant, or authentication context changed */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -974,7 +974,7 @@ export interface operations {
                     "application/json": components["schemas"]["WarehouseErrorResponse"];
                 };
             };
-            /** @description Warehouse code already exists for the tenant */
+            /** @description Warehouse code already exists for the tenant, or authentication context changed */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1269,7 +1269,7 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerErrorResponse"];
                 };
             };
-            /** @description Customer code already exists */
+            /** @description Customer code already exists, or authentication context changed */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1392,7 +1392,7 @@ export interface operations {
                     "application/json": components["schemas"]["SalesOrderErrorResponse"];
                 };
             };
-            /** @description Insufficient stock, limit or context mismatch */
+            /** @description Insufficient stock, order limit or authentication context changed */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1609,7 +1609,7 @@ export interface operations {
                     "application/json": components["schemas"]["UserErrorResponse"];
                 };
             };
-            /** @description Email already exists */
+            /** @description Email already exists for this tenant, or authentication context changed */
             409: {
                 headers: {
                     [name: string]: unknown;
