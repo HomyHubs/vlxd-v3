@@ -75,6 +75,7 @@ export function createReportService(dependencies: ReportServiceDependencies): Re
         orderCount: number;
         totalRevenue: string | number;
         totalPaid: string | number;
+        totalDebt: string | number;
         paidOrderCount: number;
         partialOrderCount: number;
         unpaidOrderCount: number;
@@ -94,9 +95,10 @@ export function createReportService(dependencies: ReportServiceDependencies): Re
           COUNT(*)::int AS "orderCount",
           COALESCE(SUM(total_amount), 0)::bigint AS "totalRevenue",
           COALESCE(SUM(paid_amount), 0)::bigint AS "totalPaid",
-          COUNT(*) FILTER (WHERE paid_amount >= total_amount AND total_amount > 0)::int AS "paidOrderCount",
-          COUNT(*) FILTER (WHERE paid_amount > 0 AND paid_amount < total_amount)::int AS "partialOrderCount",
-          COUNT(*) FILTER (WHERE paid_amount = 0)::int AS "unpaidOrderCount"
+          COALESCE(SUM(GREATEST(0::bigint, total_amount - paid_amount)), 0)::bigint AS "totalDebt",
+          COUNT(*) FILTER (WHERE total_amount = 0 OR paid_amount >= total_amount)::int AS "paidOrderCount",
+          COUNT(*) FILTER (WHERE total_amount > 0 AND paid_amount > 0 AND paid_amount < total_amount)::int AS "partialOrderCount",
+          COUNT(*) FILTER (WHERE total_amount > 0 AND paid_amount = 0)::int AS "unpaidOrderCount"
         FROM order_payments;
       `.execute(db);
 
@@ -104,10 +106,10 @@ export function createReportService(dependencies: ReportServiceDependencies): Re
       const orderCount = Number(summaryRow?.orderCount ?? 0);
       const totalRevenue = Number(summaryRow?.totalRevenue ?? 0);
       const totalPaid = Number(summaryRow?.totalPaid ?? 0);
+      const totalDebt = Number(summaryRow?.totalDebt ?? 0);
       const paidOrderCount = Number(summaryRow?.paidOrderCount ?? 0);
       const partialOrderCount = Number(summaryRow?.partialOrderCount ?? 0);
       const unpaidOrderCount = Number(summaryRow?.unpaidOrderCount ?? 0);
-      const totalDebt = Math.max(0, totalRevenue - totalPaid);
 
       // 2. Pure SQL aggregation for daily timeline points (using Vietnam timezone)
       const timelineResult = await sql<{
@@ -138,7 +140,7 @@ export function createReportService(dependencies: ReportServiceDependencies): Re
         productSku: string;
         productName: string;
         unitName: string;
-        quantitySold: number;
+        quantitySold: string | number;
         totalSales: string | number;
       }>`
         SELECT 
@@ -146,10 +148,10 @@ export function createReportService(dependencies: ReportServiceDependencies): Re
           p.sku AS "productSku",
           p.name AS "productName",
           u.name AS "unitName",
-          COALESCE(SUM(sol.quantity), 0)::int AS "quantitySold",
+          COALESCE(SUM(sol.quantity), 0)::bigint AS "quantitySold",
           COALESCE(SUM(sol.line_total), 0)::bigint AS "totalSales"
         FROM sales_order_lines sol
-        JOIN sales_orders so ON so.id = sol.sales_order_id
+        JOIN sales_orders so ON so.id = sol.order_id
         JOIN products p ON p.id = sol.product_id
         JOIN units u ON u.id = p.unit_id
         WHERE so.tenant_id = ${tenantId}

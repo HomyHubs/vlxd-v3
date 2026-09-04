@@ -108,7 +108,7 @@ export function ReportsPage() {
             <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
               <CircularProgress />
             </Box>
-          ) : (
+          ) : reportsQuery.isError ? null : (
             <>
               {/* Financial KPI Cards */}
               <Grid container spacing={2}>
