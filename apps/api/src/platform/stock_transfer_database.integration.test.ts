@@ -94,7 +94,6 @@ describe("stock transfer database schema migration", () => {
           sku: "XM-001",
           name: "Xi măng Hà Tiên",
           unit_id: "unit-bao",
-          status: "active",
         })
         .execute();
 

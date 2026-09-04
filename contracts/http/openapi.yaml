@@ -1502,6 +1502,7 @@ components:
               PRODUCT_NOT_FOUND,
               INSUFFICIENT_STOCK,
               STOCK_TRANSFER_NOT_FOUND,
+              INVALID_TRANSFER_LINES,
               AUTH_CONTEXT_CHANGED,
             ]
         message: { type: string }

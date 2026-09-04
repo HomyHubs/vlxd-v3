@@ -580,7 +580,7 @@ export interface components {
         };
         StockTransferErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "SAME_WAREHOUSE_NOT_ALLOWED" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "STOCK_TRANSFER_NOT_FOUND" | "AUTH_CONTEXT_CHANGED";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "SAME_WAREHOUSE_NOT_ALLOWED" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "STOCK_TRANSFER_NOT_FOUND" | "INVALID_TRANSFER_LINES" | "AUTH_CONTEXT_CHANGED";
             message: string;
             details?: {
                 [key: string]: unknown;
