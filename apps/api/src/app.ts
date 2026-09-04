@@ -14,12 +14,17 @@ import { type CustomerService, customerRoutes } from "./features/customers/index
 import { type SalesOrderService, salesOrderRoutes } from "./features/sales-orders/index.js";
 import { type UsersService, usersRoutes } from "./features/users/index.js";
 import { type ReportService, reportRoutes } from "./features/reports/index.js";
+import {
+  type StockTransferService,
+  stockTransferRoutes,
+} from "./features/stock-transfers/index.js";
 
 export interface BuildAppOptions {
   authService?: AuthService | undefined;
   productService?: ProductService | undefined;
   warehouseService?: WarehouseService | undefined;
   stockReceiptService?: StockReceiptService | undefined;
+  stockTransferService?: StockTransferService | undefined;
   customerService?: CustomerService | undefined;
   salesOrderService?: SalesOrderService | undefined;
   usersService?: UsersService | undefined;
@@ -110,6 +115,12 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     await server.register(stockReceiptRoutes, {
       authService: options.authService,
       stockReceiptService: options.stockReceiptService,
+    });
+  }
+  if (options.authService && options.stockTransferService) {
+    await server.register(stockTransferRoutes, {
+      authService: options.authService,
+      stockTransferService: options.stockTransferService,
     });
   }
   if (options.authService && options.customerService) {

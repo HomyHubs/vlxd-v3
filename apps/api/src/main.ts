@@ -7,6 +7,7 @@ import { createCustomerService } from "./features/customers/index.js";
 import { createSalesOrderService } from "./features/sales-orders/index.js";
 import { createUsersService } from "./features/users/index.js";
 import { createReportService } from "./features/reports/index.js";
+import { createStockTransferService } from "./features/stock-transfers/index.js";
 import { checkDatabase, createDatabase, createDatabasePool } from "./platform/database.js";
 import { parseEnvironment } from "./platform/environment.js";
 
@@ -17,6 +18,7 @@ const authService = createAuthService({ database });
 const productService = createProductService({ database });
 const warehouseService = createWarehouseService({ database });
 const stockReceiptService = createStockReceiptService({ database });
+const stockTransferService = createStockTransferService({ database });
 const customerService = createCustomerService({ database });
 const salesOrderService = createSalesOrderService({ database });
 const usersService = createUsersService(database);
@@ -27,6 +29,7 @@ const server = await buildApp({
   productService,
   warehouseService,
   stockReceiptService,
+  stockTransferService,
   customerService,
   salesOrderService,
   usersService,

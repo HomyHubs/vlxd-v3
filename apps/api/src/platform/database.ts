@@ -187,6 +187,27 @@ export interface PaymentTable {
   created_at: Generated<Date>;
 }
 
+export interface StockTransferTable {
+  id: string;
+  tenant_id: string;
+  transfer_number: string;
+  source_warehouse_id: string;
+  destination_warehouse_id: string;
+  status: Generated<string>;
+  note: string | null;
+  created_by: string;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface StockTransferLineTable {
+  id: string;
+  transfer_id: string;
+  product_id: string;
+  quantity: number | string;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   app_meta: AppMetaTable;
   tenants: TenantTable;
@@ -209,6 +230,8 @@ export interface Database {
   title_role_groups: TitleRoleGroupTable;
   user_titles: UserTitleTable;
   payments: PaymentTable;
+  stock_transfers: StockTransferTable;
+  stock_transfer_lines: StockTransferLineTable;
 }
 
 export interface DatabaseLogger {
