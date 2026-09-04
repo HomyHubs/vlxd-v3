@@ -44,13 +44,19 @@ export const SalesSummaryResponseSchema = z.object({
 });
 export type SalesSummaryResponse = z.infer<typeof SalesSummaryResponseSchema>;
 
+export const FREE_PRODUCT_LIMIT = 80;
+export const FREE_WAREHOUSE_LIMIT = 3;
+
+export const TenantPlanLimitsSchema = z.object({
+  products: z.number().int().positive().nullable(),
+  warehouses: z.number().int().positive().nullable(),
+});
+export type TenantPlanLimits = z.infer<typeof TenantPlanLimitsSchema>;
+
 export const TenantPlanUsageResponseSchema = z.object({
   plan: z.string(),
   planName: z.string(),
-  limits: z.object({
-    products: z.number().int().positive(),
-    warehouses: z.number().int().positive(),
-  }),
+  limits: TenantPlanLimitsSchema,
   usage: z.object({
     products: z.number().int().nonnegative(),
     warehouses: z.number().int().nonnegative(),
@@ -59,3 +65,41 @@ export const TenantPlanUsageResponseSchema = z.object({
   }),
 });
 export type TenantPlanUsageResponse = z.infer<typeof TenantPlanUsageResponseSchema>;
+
+export interface PlanPolicy {
+  plan: string;
+  planName: string;
+  limits: TenantPlanLimits;
+}
+
+export function getPlanPolicy(plan: string): PlanPolicy {
+  const normalized = plan.toLowerCase().trim();
+  if (normalized === "free") {
+    return {
+      plan: "free",
+      planName: "Gói Miễn phí (Free)",
+      limits: {
+        products: FREE_PRODUCT_LIMIT,
+        warehouses: FREE_WAREHOUSE_LIMIT,
+      },
+    };
+  }
+  if (normalized === "pro") {
+    return {
+      plan: "pro",
+      planName: "Gói Nâng cao (Pro)",
+      limits: {
+        products: null,
+        warehouses: null,
+      },
+    };
+  }
+  return {
+    plan: normalized,
+    planName: `Gói ${plan}`,
+    limits: {
+      products: null,
+      warehouses: null,
+    },
+  };
+}

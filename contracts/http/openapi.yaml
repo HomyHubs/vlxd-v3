@@ -825,6 +825,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SalesSummaryResponse"
+        "400":
+          description: Validation error for query parameters (e.g. invalid period)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportErrorResponse"
         "401":
           description: Authentication required
           content:
@@ -1689,8 +1695,12 @@ components:
           additionalProperties: false
           required: [products, warehouses]
           properties:
-            products: { type: integer, minimum: 1 }
-            warehouses: { type: integer, minimum: 1 }
+            products:
+              type: [integer, "null"]
+              minimum: 1
+            warehouses:
+              type: [integer, "null"]
+              minimum: 1
         usage:
           type: object
           additionalProperties: false

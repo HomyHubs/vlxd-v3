@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import "../../../i18n.js";
-import { PlanUsagePage, ReportsPage } from "../index.js";
+import { PlanUsagePage, ReportsPage, usePlanUsage } from "../index.js";
 
 const mockSalesSummary = {
   period: "month",
@@ -124,5 +124,39 @@ describe("PlanUsagePage", () => {
     expect(screen.getByTestId("plan-warehouse-ratio")).toHaveTextContent("2 / 3 (67%)");
     expect(screen.getByTestId("plan-orders-count")).toHaveTextContent("45");
     expect(screen.getByTestId("plan-users-count")).toHaveTextContent("3");
+  });
+
+  it("renders unlimited resources correctly for Pro plan", () => {
+    vi.mocked(usePlanUsage).mockReturnValueOnce({
+      data: {
+        plan: "pro",
+        planName: "Gói Nâng cao (Pro)",
+        limits: {
+          products: null,
+          warehouses: null,
+        },
+        usage: {
+          products: 150,
+          warehouses: 5,
+          orders: 500,
+          users: 10,
+        },
+      },
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PlanUsagePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("plan-tier-chip")).toHaveTextContent("Gói Nâng cao (Pro)");
+    expect(screen.getByTestId("plan-product-ratio")).toHaveTextContent("150 / Không giới hạn");
+    expect(screen.getByTestId("plan-warehouse-ratio")).toHaveTextContent("5 / Không giới hạn");
+    expect(screen.queryByTestId("plan-usage-product-progress")).not.toBeInTheDocument();
   });
 });

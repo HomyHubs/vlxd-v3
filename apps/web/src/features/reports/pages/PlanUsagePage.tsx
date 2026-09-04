@@ -30,15 +30,18 @@ export function PlanUsagePage() {
 
   const data = usageQuery.data;
   const productUsage = data?.usage.products ?? 0;
-  const productLimit = data?.limits.products ?? 80;
-  const productPercent = Math.min(100, Math.round((productUsage / (productLimit || 1)) * 100));
+  const productLimit = data?.limits.products ?? null;
+  const isProductUnlimited = productLimit === null;
+  const productPercent = isProductUnlimited
+    ? 0
+    : Math.min(100, Math.round((productUsage / (productLimit || 1)) * 100));
 
   const warehouseUsage = data?.usage.warehouses ?? 0;
-  const warehouseLimit = data?.limits.warehouses ?? 3;
-  const warehousePercent = Math.min(
-    100,
-    Math.round((warehouseUsage / (warehouseLimit || 1)) * 100),
-  );
+  const warehouseLimit = data?.limits.warehouses ?? null;
+  const isWarehouseUnlimited = warehouseLimit === null;
+  const warehousePercent = isWarehouseUnlimited
+    ? 0
+    : Math.min(100, Math.round((warehouseUsage / (warehouseLimit || 1)) * 100));
 
   return (
     <>
@@ -102,28 +105,36 @@ export function PlanUsagePage() {
                       <Typography
                         variant="subtitle1"
                         fontWeight={700}
-                        color={productPercent >= 90 ? "error.main" : "text.primary"}
+                        color={
+                          !isProductUnlimited && productPercent >= 90
+                            ? "error.main"
+                            : "text.primary"
+                        }
                         data-testid="plan-product-ratio"
                       >
-                        {productUsage} / {productLimit} ({productPercent}%)
+                        {isProductUnlimited
+                          ? `${productUsage} / ${t("plan.unlimited", "Không giới hạn")}`
+                          : `${productUsage} / ${productLimit} (${productPercent}%)`}
                       </Typography>
                     </Stack>
 
-                    <LinearProgress
-                      variant="determinate"
-                      value={productPercent}
-                      color={
-                        productPercent >= 90
-                          ? "error"
-                          : productPercent >= 70
-                            ? "warning"
-                            : "primary"
-                      }
-                      sx={{ height: 10, borderRadius: 5 }}
-                      data-testid="plan-usage-product-progress"
-                    />
+                    {!isProductUnlimited && (
+                      <LinearProgress
+                        variant="determinate"
+                        value={productPercent}
+                        color={
+                          productPercent >= 90
+                            ? "error"
+                            : productPercent >= 70
+                              ? "warning"
+                              : "primary"
+                        }
+                        sx={{ height: 10, borderRadius: 5 }}
+                        data-testid="plan-usage-product-progress"
+                      />
+                    )}
 
-                    {productPercent >= 100 && (
+                    {!isProductUnlimited && productPercent >= 100 && (
                       <Alert severity="warning" sx={{ mt: 1 }}>
                         {t(
                           "plan.productLimitReached",
@@ -149,28 +160,36 @@ export function PlanUsagePage() {
                       <Typography
                         variant="subtitle1"
                         fontWeight={700}
-                        color={warehousePercent >= 90 ? "error.main" : "text.primary"}
+                        color={
+                          !isWarehouseUnlimited && warehousePercent >= 90
+                            ? "error.main"
+                            : "text.primary"
+                        }
                         data-testid="plan-warehouse-ratio"
                       >
-                        {warehouseUsage} / {warehouseLimit} ({warehousePercent}%)
+                        {isWarehouseUnlimited
+                          ? `${warehouseUsage} / ${t("plan.unlimited", "Không giới hạn")}`
+                          : `${warehouseUsage} / ${warehouseLimit} (${warehousePercent}%)`}
                       </Typography>
                     </Stack>
 
-                    <LinearProgress
-                      variant="determinate"
-                      value={warehousePercent}
-                      color={
-                        warehousePercent >= 90
-                          ? "error"
-                          : warehousePercent >= 70
-                            ? "warning"
-                            : "primary"
-                      }
-                      sx={{ height: 10, borderRadius: 5 }}
-                      data-testid="plan-usage-warehouse-progress"
-                    />
+                    {!isWarehouseUnlimited && (
+                      <LinearProgress
+                        variant="determinate"
+                        value={warehousePercent}
+                        color={
+                          warehousePercent >= 90
+                            ? "error"
+                            : warehousePercent >= 70
+                              ? "warning"
+                              : "primary"
+                        }
+                        sx={{ height: 10, borderRadius: 5 }}
+                        data-testid="plan-usage-warehouse-progress"
+                      />
+                    )}
 
-                    {warehousePercent >= 100 && (
+                    {!isWarehouseUnlimited && warehousePercent >= 100 && (
                       <Alert severity="warning" sx={{ mt: 1 }}>
                         {t(
                           "plan.warehouseLimitReached",

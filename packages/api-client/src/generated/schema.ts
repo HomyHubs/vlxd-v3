@@ -696,8 +696,8 @@ export interface components {
             plan: string;
             planName: string;
             limits: {
-                products: number;
-                warehouses: number;
+                products: number | null;
+                warehouses: number | null;
             };
             usage: {
                 products: number;
@@ -1937,6 +1937,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SalesSummaryResponse"];
+                };
+            };
+            /** @description Validation error for query parameters (e.g. invalid period) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportErrorResponse"];
                 };
             };
             /** @description Authentication required */

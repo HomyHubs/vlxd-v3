@@ -140,6 +140,10 @@ export {
   SalesFinancialSummarySchema,
   SalesSummaryResponseSchema,
   TenantPlanUsageResponseSchema,
+  TenantPlanLimitsSchema,
+  FREE_PRODUCT_LIMIT,
+  FREE_WAREHOUSE_LIMIT,
+  getPlanPolicy,
   type SalesSummaryPeriod,
   type SalesSummaryQuery,
   type TopProductItem,
@@ -147,4 +151,6 @@ export {
   type SalesFinancialSummary,
   type SalesSummaryResponse,
   type TenantPlanUsageResponse,
+  type TenantPlanLimits,
+  type PlanPolicy,
 } from "./report.js";

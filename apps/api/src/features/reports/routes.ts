@@ -34,6 +34,7 @@ export const reportRoutes: FastifyPluginAsync<ReportRoutesOptions> = (server, op
         querystring: SalesSummaryQuerySchema,
         response: {
           200: SalesSummaryResponseSchema,
+          400: ReportErrorResponseSchema,
           401: ReportErrorResponseSchema,
           403: ReportErrorResponseSchema,
           409: ReportErrorResponseSchema,
