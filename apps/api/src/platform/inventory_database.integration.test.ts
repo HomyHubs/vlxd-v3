@@ -116,6 +116,7 @@ describe("inventory migration and stock level", () => {
           method: "POST",
           url: "/warehouses",
           cookies: { [SESSION_COOKIE_NAME]: cookie },
+          headers: { "x-expected-tenant-id": "tenant-dev-001" },
           payload: { code, name: code },
         });
         expect(response.statusCode).toBe(201);
@@ -124,6 +125,7 @@ describe("inventory migration and stock level", () => {
         method: "POST",
         url: "/warehouses",
         cookies: { [SESSION_COOKIE_NAME]: cookie },
+        headers: { "x-expected-tenant-id": "tenant-dev-001" },
         payload: { code: "FOURTH", name: "Fourth" },
       });
       expect(limited.statusCode).toBe(422);

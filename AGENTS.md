@@ -452,15 +452,19 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — PR #7: Hoàn thành giải quyết triệt để finding B1 và đề xuất N2 từ Round 4 của `/gpt-web-review`:
-- B1 (Chống tự huỷ/revert authentication query khi chuyển đổi tenant hoặc hết hạn session):
-  - Sửa `clearTenantCache(queryClient)` thêm predicate `{ predicate: (query) => query.queryKey[0] !== "auth" }` cho cả `cancelQueries()` và `removeQueries()`, bảo đảm tuyệt đối không bao giờ can thiệp hay revert query `["auth", "me"]`.
-  - Tách logic dọn cache nghiệp vụ ra khỏi `queryFn` của `useCurrentUser()` chuyển sang `useEffect` kích hoạt khi identity thay đổi (`newTenantId !== currentTenantId`), giữ `queryFn` là hàm thuần tuý chỉ fetch dữ liệu.
-  - Bổ sung 2 test suite theo luồng production trong `TenantCacheIsolation.test.tsx`:
-    1. Bắt đầu với auth cache của Tenant A, refetch thực sự `AUTH_QUERY_KEY` với dữ liệu Tenant B, xác nhận auth cache lưu trữ thành công Tenant B (không bị revert) và toàn bộ query của Tenant A bị dọn sạch khỏi cache.
-    2. Bắt đầu với auth cache của Tenant A, refetch thực sự `AUTH_QUERY_KEY` nhận 401 Unauthorized, xác nhận auth cache trở về `null`, toàn bộ query nghiệp vụ bị dọn sạch và UI render Unauthenticated.
-- N2 (Đồng bộ bootstrap seed trong docker compose): Thêm service `seed` vào `compose.dev.yml` tự động chạy `psql -f /db/seeds/dev.sql` ngay sau khi `migrate` hoàn tất.
-Toàn bộ cổng gác cục bộ `pnpm check` và `pnpm contracts:check` pass 100% (113 tests [71 api tests + 42 web tests], 0 lint warnings, clean build). Đang chuẩn bị push commit và trigger Round 5 review.
+Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — PR #7: Hoàn thành giải quyết triệt để finding B1, B2 và các đề xuất N1, N2, N5 từ Round 9 của `/gpt-web-review`:
+- B1 (Bảo toàn Content-Type: application/json và body trong API client wrapper):
+  - Dùng middleware `onRequest` của `openapi-fetch` trong `apps/web/src/lib/apiClient.ts` để inject `x-expected-tenant-id` và `x-session-context` trực tiếp lên `request.headers` mà không ghi đè cấu hình transport, bảo đảm `Content-Type: application/json` và body luôn được gửi toàn vẹn tới Fastify.
+  - Thêm regression test transport `apps/web/src/lib/__tests__/apiClient.test.ts` kiểm chứng login POST không context, business POST có context, và custom caller headers.
+- B2 (Chuẩn hoá Precondition protocol vào OpenAPI 3.1 & enforce fail-closed middleware):
+  - Khai báo header parameters tái sử dụng `ExpectedTenantIdHeader` và `ExpectedSessionContextHeader` trong `contracts/http/openapi.yaml` cho toàn bộ các tenant-scoped operations (GET, POST).
+  - Khai báo response 409 `AuthContextChangedResponse` cho toàn bộ tenant-scoped operations trong OpenAPI spec, regenerate client schema type-safe.
+  - Enforce fail-closed trong `createRequireCapability`: bắt buộc phải có `x-expected-tenant-id` và phải khớp với `session.tenant.id` (trả 409 AUTH_CONTEXT_CHANGED khi vắng mặt hoặc sai lệch).
+  - Bổ sung 3 unit tests trong `products.unit.test.ts` khoá chặt hành vi 409 khi thiếu header, sai tenant, hoặc sai session context; cập nhật toàn bộ test suite API gửi header `x-expected-tenant-id`.
+- N1: Loại bỏ ép kiểu giả lập `price` trong `CreateSalesOrderPage.tsx`, cho phép đơn giá `>= 0`.
+- N2 & N6: Thêm cảnh báo runbook và backup requirement trong down migration `202609030007_create_rbac_tables.sql`.
+- N5: Thêm validation `docker compose -f compose.dev.yml config --quiet` vào `.github/workflows/ci.yml`.
+Toàn bộ cổng gác format, lint (0 warnings), typecheck (4/4 packages), unit & web tests (123 tests pass: 69 API unit + 54 web tests), build, contracts lint & schema sync pass 100%. Đang chuẩn bị commit, push và trigger Round 10 review.
 
 ### Đã xong
 

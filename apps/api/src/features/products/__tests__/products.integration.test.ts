@@ -96,6 +96,7 @@ describe("products integration", () => {
         method: "POST",
         url: "/products",
         cookies: { [SESSION_COOKIE_NAME]: cookieA },
+        headers: { "x-expected-tenant-id": "tenant-dev-001" },
         payload: { sku: "XM-001", name: "Xi măng", unitCode: "bao" },
       });
       expect(created.statusCode).toBe(201);
@@ -104,6 +105,7 @@ describe("products integration", () => {
         method: "GET",
         url: "/products?search=XM&page=1&pageSize=10",
         cookies: { [SESSION_COOKIE_NAME]: cookieA },
+        headers: { "x-expected-tenant-id": "tenant-dev-001" },
       });
       expect(listed.statusCode).toBe(200);
       expect(listed.json()).toMatchObject({
@@ -115,6 +117,7 @@ describe("products integration", () => {
         method: "POST",
         url: "/products",
         cookies: { [SESSION_COOKIE_NAME]: cookieA },
+        headers: { "x-expected-tenant-id": "tenant-dev-001" },
         payload: { sku: "XM-002", name: "Xi măng 2", unitCode: "bao" },
       });
       expect(limited.statusCode).toBe(422);
@@ -131,6 +134,7 @@ describe("products integration", () => {
         method: "POST",
         url: "/products",
         cookies: { [SESSION_COOKIE_NAME]: cookieB },
+        headers: { "x-expected-tenant-id": "tenant-dev-002" },
         payload: { sku: "GACH-001", name: "Gach", unitCode: "vien" },
       });
       expect(createdB.statusCode).toBe(201);
@@ -139,6 +143,7 @@ describe("products integration", () => {
         method: "GET",
         url: "/products?page=1&pageSize=10",
         cookies: { [SESSION_COOKIE_NAME]: cookieB },
+        headers: { "x-expected-tenant-id": "tenant-dev-002" },
       });
       expect(listedB.statusCode).toBe(200);
       expect(listedB.json()).toMatchObject({ total: 1, items: [{ sku: "GACH-001" }] });
@@ -190,12 +195,14 @@ describe("products integration", () => {
         method: "GET",
         url: "/products?page=1&pageSize=10",
         cookies: { [SESSION_COOKIE_NAME]: cookieA },
+        headers: { "x-expected-tenant-id": "tenant-dev-001" },
       });
       expect(staleSessionList.statusCode).toBe(401);
       const staleSessionCreate = await server.inject({
         method: "POST",
         url: "/products",
         cookies: { [SESSION_COOKIE_NAME]: cookieA },
+        headers: { "x-expected-tenant-id": "tenant-dev-001" },
         payload: { sku: "SHOULD-FAIL", name: "Should fail", unitCode: "bao" },
       });
       expect(staleSessionCreate.statusCode).toBe(401);

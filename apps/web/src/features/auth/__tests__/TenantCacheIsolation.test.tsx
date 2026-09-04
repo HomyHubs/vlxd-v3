@@ -160,6 +160,8 @@ describe("Cross-tenant cache isolation", () => {
     expect(screen.queryByText("alice@tenant-a.local")).not.toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
 
+    await waitFor(() => expect(resolveTenantBUsers).toBeDefined());
+
     // 4. Resolve tenant-b's delayed response
     resolveTenantBUsers!(
       new Response(JSON.stringify({ items: [tenantBUser] }), {
@@ -722,6 +724,8 @@ describe("Cross-tenant cache isolation", () => {
 
     // 3. Under Tenant B, before delayed response arrives, Tenant A product must NEVER be visible!
     expect(screen.queryByText("Xi măng Hà Tiên (Tenant A)")).not.toBeInTheDocument();
+
+    await waitFor(() => expect(resolveTenantBProducts).toBeDefined());
 
     // 4. Resolve Tenant B products
     resolveTenantBProducts!(
@@ -1467,22 +1471,11 @@ describe("Cross-tenant cache isolation", () => {
         );
       }
       if (url.includes("/products")) {
-        if (init?.headers) {
-          const raw = init.headers;
-          if (
-            typeof raw === "object" &&
-            raw !== null &&
-            "get" in raw &&
-            typeof raw.get === "function"
-          ) {
-            capturedHeaders = {
-              "x-expected-tenant-id": String(raw.get("x-expected-tenant-id") ?? ""),
-              "x-session-context": String(raw.get("x-session-context") ?? ""),
-            };
-          } else {
-            capturedHeaders = raw as Record<string, string>;
-          }
-        }
+        const reqHeaders = req instanceof Request ? req.headers : new Headers(init?.headers);
+        capturedHeaders = {
+          "x-expected-tenant-id": reqHeaders.get("x-expected-tenant-id") ?? "",
+          "x-session-context": reqHeaders.get("x-session-context") ?? "",
+        };
         return Promise.resolve(
           new Response(
             JSON.stringify({

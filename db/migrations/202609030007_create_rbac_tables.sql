@@ -125,6 +125,12 @@ WHERE NOT EXISTS (
 ON CONFLICT (user_id, title_id) DO NOTHING;
 
 -- migrate:down
+-- CAUTION / RUNBOOK: This rollback is destructive to operational RBAC state.
+-- Deactivating non-OWNER users and dropping user_titles / titles prevents privilege escalation,
+-- but a subsequent roll-forward will NOT automatically recover title assignments or re-activate
+-- non-owner accounts. Production rollback requires a pre-rollback database backup and explicit
+-- runbook restoration procedure.
+--
 -- Prevent privilege escalation on rollback:
 -- Deactivate users with non-OWNER titles (e.g. SALES, WAREHOUSE) created under RBAC
 -- so they cannot authenticate and gain unrestricted legacy access if rolled back.

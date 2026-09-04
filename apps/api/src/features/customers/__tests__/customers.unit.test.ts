@@ -82,6 +82,7 @@ describe("customer routes unit tests", () => {
       method: "GET",
       url: "/customers",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(200);
@@ -119,6 +120,7 @@ describe("customer routes unit tests", () => {
       method: "POST",
       url: "/customers",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: {
         code: "KH-VIP",
         name: "Khách VIP",
@@ -155,6 +157,7 @@ describe("customer routes unit tests", () => {
       method: "POST",
       url: "/customers",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: {
         code: "KH-LE",
         name: "Khách lẻ",
@@ -185,6 +188,7 @@ describe("customer routes unit tests", () => {
       method: "GET",
       url: "/customers",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(403);
@@ -210,6 +214,7 @@ describe("customer routes unit tests", () => {
       method: "POST",
       url: "/customers",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: { code: "KH-01", name: "Khách test" },
     });
 

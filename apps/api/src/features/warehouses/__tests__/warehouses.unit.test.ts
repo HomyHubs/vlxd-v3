@@ -36,6 +36,7 @@ describe("warehouse routes", () => {
       method: "GET",
       url: "/warehouses",
       cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(200);
@@ -61,6 +62,7 @@ describe("warehouse routes", () => {
       method: "GET",
       url: "/warehouses",
       cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(403);
@@ -89,6 +91,7 @@ describe("warehouse routes", () => {
       method: "POST",
       url: "/warehouses",
       cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: { code: "MAIN", name: "Main warehouse" },
     });
 
@@ -115,6 +118,7 @@ describe("warehouse routes", () => {
       method: "POST",
       url: "/warehouses",
       cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: { code: "MAIN", name: "Main warehouse" },
     });
 

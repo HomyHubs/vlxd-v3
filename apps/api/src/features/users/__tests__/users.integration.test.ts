@@ -113,11 +113,14 @@ describe("users and rbac integration test", () => {
       );
       const ownerCookies = { [SESSION_COOKIE_NAME]: ownerTokenMatch?.[1] ?? "" };
 
+      const headers = { "x-expected-tenant-id": "tenant-dev-001" };
+
       // 2. Owner lists titles
       const titlesRes = await app.inject({
         method: "GET",
         url: "/titles",
         cookies: ownerCookies,
+        headers,
       });
       expect(titlesRes.statusCode).toBe(200);
       const titlesBody = JSON.parse(titlesRes.body) as TitleListResponse;
@@ -131,6 +134,7 @@ describe("users and rbac integration test", () => {
         method: "POST",
         url: "/users",
         cookies: ownerCookies,
+        headers,
         payload: {
           email: "nv-banhang@vlxd.local",
           fullName: "Trần Thị Bán",
@@ -148,6 +152,7 @@ describe("users and rbac integration test", () => {
         method: "GET",
         url: "/users",
         cookies: ownerCookies,
+        headers,
       });
       expect(listUsersRes.statusCode).toBe(200);
       const listUsersBody = JSON.parse(listUsersRes.body) as UserListResponse;
@@ -208,6 +213,7 @@ describe("users and rbac integration test", () => {
         method: "GET",
         url: "/users",
         cookies: salesCookies,
+        headers,
       });
       expect(forbiddenGetUsers.statusCode).toBe(403);
       expect(JSON.parse(forbiddenGetUsers.body)).toMatchObject({
@@ -219,6 +225,7 @@ describe("users and rbac integration test", () => {
         method: "POST",
         url: "/users",
         cookies: salesCookies,
+        headers,
         payload: {
           email: "another@vlxd.local",
           fullName: "Người khác",
@@ -236,6 +243,7 @@ describe("users and rbac integration test", () => {
         method: "GET",
         url: "/titles",
         cookies: salesCookies,
+        headers,
       });
       expect(forbiddenGetTitles.statusCode).toBe(403);
       expect(JSON.parse(forbiddenGetTitles.body)).toMatchObject({
@@ -247,6 +255,7 @@ describe("users and rbac integration test", () => {
         method: "POST",
         url: "/products",
         cookies: salesCookies,
+        headers,
         payload: {
           name: "Xi măng Hà Tiên",
           sku: "XM-HT-001",
@@ -263,6 +272,7 @@ describe("users and rbac integration test", () => {
         method: "POST",
         url: "/warehouses",
         cookies: salesCookies,
+        headers,
         payload: {
           name: "Kho phụ",
           code: "KHO-PHU",
@@ -279,6 +289,7 @@ describe("users and rbac integration test", () => {
         method: "POST",
         url: "/products",
         cookies: ownerCookies,
+        headers,
         payload: {
           name: "Xi măng Hà Tiên",
           sku: "XM-HT-001",

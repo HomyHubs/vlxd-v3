@@ -96,6 +96,7 @@ describe("stock receipt routes unit tests", () => {
       method: "GET",
       url: "/stock-receipts",
       cookies: { vlxd_session: "valid-token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(200);
@@ -151,6 +152,7 @@ describe("stock receipt routes unit tests", () => {
       method: "POST",
       url: "/stock-receipts",
       cookies: { vlxd_session: "valid-token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: {
         warehouseId: "wh-1",
         note: "Ghi chú",
@@ -196,6 +198,7 @@ describe("stock receipt routes unit tests", () => {
       method: "POST",
       url: "/stock-receipts",
       cookies: { vlxd_session: "valid-token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: {
         warehouseId: "wh-non-existent",
         lines: [{ productId: "prod-1", quantity: 10 }],
@@ -240,6 +243,7 @@ describe("stock receipt routes unit tests", () => {
       method: "GET",
       url: "/stock-receipts/sr-123",
       cookies: { vlxd_session: "valid-token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(200);
@@ -267,6 +271,7 @@ describe("stock receipt routes unit tests", () => {
       method: "POST",
       url: "/stock-receipts",
       cookies: { vlxd_session: "valid-token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: {
         warehouseId: "wh-1",
         lines: [{ productId: "prod-1", quantity: 10_000_000 }],
@@ -300,6 +305,7 @@ describe("stock receipt routes unit tests", () => {
       method: "GET",
       url: "/stock-receipts",
       cookies: { vlxd_session: "valid-token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(403);
@@ -329,6 +335,7 @@ describe("stock receipt routes unit tests", () => {
       method: "POST",
       url: "/stock-receipts",
       cookies: { vlxd_session: "valid-token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: {
         warehouseId: "wh-1",
         lines: [{ productId: "prod-1", quantity: 10 }],
@@ -362,6 +369,7 @@ describe("stock receipt routes unit tests", () => {
       method: "GET",
       url: "/stock-receipts/sr-1",
       cookies: { vlxd_session: "valid-token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(403);

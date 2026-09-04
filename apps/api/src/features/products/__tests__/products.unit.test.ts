@@ -40,10 +40,79 @@ describe("product routes", () => {
       method: "GET",
       url: "/products",
       cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(200);
     expect(list).toHaveBeenCalledWith("tenant-1", { page: 1, pageSize: 20 });
+    await app.close();
+  });
+
+  it("returns 409 AUTH_CONTEXT_CHANGED when x-expected-tenant-id is missing", async () => {
+    const productService = { list: vi.fn(), create: vi.fn() } as ProductService;
+    const app = await buildApp({
+      authService: authService(),
+      productService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/products",
+      cookies: { vlxd_session: "token" },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: "AUTH_CONTEXT_CHANGED" });
+    await app.close();
+  });
+
+  it("returns 409 AUTH_CONTEXT_CHANGED when x-expected-tenant-id mismatches session tenant", async () => {
+    const productService = { list: vi.fn(), create: vi.fn() } as ProductService;
+    const app = await buildApp({
+      authService: authService(),
+      productService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/products",
+      cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-other" },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: "AUTH_CONTEXT_CHANGED" });
+    await app.close();
+  });
+
+  it("returns 409 AUTH_CONTEXT_CHANGED when x-session-context mismatches caller session", async () => {
+    const productService = { list: vi.fn(), create: vi.fn() } as ProductService;
+    const app = await buildApp({
+      authService: authService(),
+      productService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/products",
+      cookies: { vlxd_session: "token" },
+      headers: {
+        "x-expected-tenant-id": "tenant-1",
+        "x-session-context": "tenant-1:wrong-user",
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: "AUTH_CONTEXT_CHANGED" });
     await app.close();
   });
 
@@ -65,6 +134,7 @@ describe("product routes", () => {
       method: "GET",
       url: "/products",
       cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(403);
@@ -91,6 +161,7 @@ describe("product routes", () => {
       method: "POST",
       url: "/products",
       cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: { sku: "XM-001", name: "Xi măng", unitCode: "bao" },
     });
 
@@ -117,6 +188,7 @@ describe("product routes", () => {
       method: "POST",
       url: "/products",
       cookies: { vlxd_session: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: { sku: "XM-001", name: "Xi măng", unitCode: "bao" },
     });
 

@@ -97,6 +97,7 @@ describe("sales order routes unit tests", () => {
       method: "GET",
       url: "/sales-orders?page=1&pageSize=10",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(200);
@@ -161,6 +162,7 @@ describe("sales order routes unit tests", () => {
       method: "POST",
       url: "/sales-orders",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: {
         customerId: "cust-1",
         warehouseId: "wh-1",
@@ -201,6 +203,7 @@ describe("sales order routes unit tests", () => {
       method: "POST",
       url: "/sales-orders",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: {
         customerId: "cust-1",
         warehouseId: "wh-1",
@@ -239,6 +242,7 @@ describe("sales order routes unit tests", () => {
       method: "POST",
       url: "/sales-orders",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: {
         customerId: "cust-1",
         warehouseId: "wh-1",
@@ -301,6 +305,7 @@ describe("sales order routes unit tests", () => {
       method: "GET",
       url: "/sales-orders/order-1",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(200);
@@ -328,6 +333,7 @@ describe("sales order routes unit tests", () => {
       method: "GET",
       url: "/sales-orders/order-missing",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(404);
@@ -355,6 +361,7 @@ describe("sales order routes unit tests", () => {
       method: "POST",
       url: "/sales-orders",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: {
         customerId: "cust-1",
         warehouseId: "wh-1",
@@ -386,6 +393,7 @@ describe("sales order routes unit tests", () => {
       method: "POST",
       url: "/sales-orders",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: {
         customerId: "cust-1",
         warehouseId: "wh-1",
@@ -419,6 +427,7 @@ describe("sales order routes unit tests", () => {
       method: "GET",
       url: "/sales-orders",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(403);
@@ -448,6 +457,7 @@ describe("sales order routes unit tests", () => {
       method: "POST",
       url: "/sales-orders",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
       payload: {
         customerId: "cust-1",
         warehouseId: "wh-1",
@@ -482,6 +492,7 @@ describe("sales order routes unit tests", () => {
       method: "GET",
       url: "/sales-orders/order-1",
       cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
     });
 
     expect(response.statusCode).toBe(403);

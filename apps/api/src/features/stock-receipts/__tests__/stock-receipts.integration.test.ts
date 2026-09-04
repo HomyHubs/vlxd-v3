@@ -133,12 +133,14 @@ describe("stock receipts integration tests (full transaction & stock update)", (
       expect(sessionToken).toBeDefined();
 
       const cookies = { [SESSION_COOKIE_NAME]: sessionToken! };
+      const headers = { "x-expected-tenant-id": "tenant-dev-001" };
 
       // 2. POST /stock-receipts - First inbound shipment: 50 cement, 1000 bricks
       const createRes1 = await app.inject({
         method: "POST",
         url: "/stock-receipts",
         cookies,
+        headers,
         payload: {
           warehouseId: "wh-main-001",
           note: "Đợt nhập hàng số 1",
@@ -187,6 +189,7 @@ describe("stock receipts integration tests (full transaction & stock update)", (
         method: "POST",
         url: "/stock-receipts",
         cookies,
+        headers,
         payload: {
           warehouseId: "wh-main-001",
           note: "Đợt nhập hàng số 2 bổ sung",
@@ -210,6 +213,7 @@ describe("stock receipts integration tests (full transaction & stock update)", (
         method: "GET",
         url: "/stock-receipts",
         cookies,
+        headers,
       });
       expect(listRes.statusCode).toBe(200);
       const listBody = JSON.parse(listRes.body) as StockReceiptListResponse;
@@ -222,6 +226,7 @@ describe("stock receipts integration tests (full transaction & stock update)", (
         method: "GET",
         url: `/stock-receipts/${receipt1.id}`,
         cookies,
+        headers,
       });
       expect(detailRes.statusCode).toBe(200);
       const detailBody = JSON.parse(detailRes.body) as StockReceiptDetailResponse;
@@ -241,6 +246,7 @@ describe("stock receipts integration tests (full transaction & stock update)", (
         method: "POST",
         url: "/stock-receipts",
         cookies,
+        headers,
         payload: {
           warehouseId: "wh-main-001",
           lines: [{ productId: "prod-cement-001", quantity: 50 }],
@@ -289,6 +295,7 @@ describe("stock receipts integration tests (full transaction & stock update)", (
           method: "POST",
           url: "/stock-receipts",
           cookies,
+          headers,
           payload: {
             warehouseId: "wh-new-001",
             lines: [{ productId: "prod-sand-001", quantity: 500 }],
@@ -298,6 +305,7 @@ describe("stock receipts integration tests (full transaction & stock update)", (
           method: "POST",
           url: "/stock-receipts",
           cookies,
+          headers,
           payload: {
             warehouseId: "wh-new-001",
             lines: [{ productId: "prod-sand-001", quantity: 300 }],

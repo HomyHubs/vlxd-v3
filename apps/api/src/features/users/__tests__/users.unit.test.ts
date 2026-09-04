@@ -89,6 +89,7 @@ describe("users routes", () => {
       method: "GET",
       url: "/titles",
       cookies: { vlxd_session: "token-owner" },
+      headers: { "x-expected-tenant-id": "t-001" },
     });
 
     expect(res.statusCode).toBe(200);
@@ -114,6 +115,7 @@ describe("users routes", () => {
       method: "GET",
       url: "/titles",
       cookies: { vlxd_session: "token-sales" },
+      headers: { "x-expected-tenant-id": "t-001" },
     });
 
     expect(res.statusCode).toBe(403);
@@ -137,6 +139,7 @@ describe("users routes", () => {
       method: "GET",
       url: "/users",
       cookies: { vlxd_session: "token-sales" },
+      headers: { "x-expected-tenant-id": "t-001" },
     });
 
     expect(res.statusCode).toBe(403);
@@ -169,6 +172,7 @@ describe("users routes", () => {
       method: "GET",
       url: "/users",
       cookies: { vlxd_session: "token-owner" },
+      headers: { "x-expected-tenant-id": "t-001" },
     });
 
     expect(res.statusCode).toBe(200);
@@ -194,6 +198,7 @@ describe("users routes", () => {
       method: "POST",
       url: "/users",
       cookies: { vlxd_session: "token-sales" },
+      headers: { "x-expected-tenant-id": "t-001" },
       payload: {
         email: "new@vlxd.local",
         fullName: "Nhân viên mới",
@@ -233,6 +238,7 @@ describe("users routes", () => {
       method: "POST",
       url: "/users",
       cookies: { vlxd_session: "token-owner" },
+      headers: { "x-expected-tenant-id": "t-001" },
       payload: {
         email: "new@vlxd.local",
         fullName: "Nhân viên mới",

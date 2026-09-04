@@ -131,12 +131,14 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
       const sessionCookie = loginRes.cookies.find((c) => c.name === SESSION_COOKIE_NAME);
       expect(sessionCookie).toBeDefined();
       const cookies = { [SESSION_COOKIE_NAME]: sessionCookie!.value };
+      const headers = { "x-expected-tenant-id": "tenant-dev-001" };
 
       // 2. Initial stock receipt: Inbound 50 bags of cement
       const receiptRes = await app.inject({
         method: "POST",
         url: "/stock-receipts",
         cookies,
+        headers,
         payload: {
           warehouseId: "wh-main-001",
           note: "Nhập kho ban đầu 50 bao",
@@ -159,6 +161,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
         method: "GET",
         url: "/customers",
         cookies,
+        headers,
       });
       expect(custListRes.statusCode).toBe(200);
       const custList = custListRes.json<CustomerListResponse>();
@@ -171,6 +174,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
         method: "POST",
         url: "/customers",
         cookies,
+        headers,
         payload: {
           code: "KH-THAU-01",
           name: "Anh Hùng Thầu Xây Dựng",
@@ -187,6 +191,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
         method: "POST",
         url: "/sales-orders",
         cookies,
+        headers,
         payload: {
           customerId: newCust.id,
           warehouseId: "wh-main-001",
@@ -213,6 +218,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
         method: "POST",
         url: "/sales-orders",
         cookies,
+        headers,
         payload: {
           customerId: newCust.id,
           warehouseId: "wh-main-001",
@@ -257,6 +263,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
         method: "GET",
         url: "/sales-orders?page=1&pageSize=10",
         cookies,
+        headers,
       });
       expect(listOrdersRes.statusCode).toBe(200);
       const orderList = listOrdersRes.json<SalesOrderListResponse>();
@@ -275,6 +282,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
         method: "GET",
         url: `/sales-orders/${createdOrder.id}`,
         cookies,
+        headers,
       });
       expect(detailRes.statusCode).toBe(200);
       const detail = detailRes.json<SalesOrderDetailResponse>();
@@ -295,12 +303,14 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
           method: "POST",
           url: "/sales-orders",
           cookies,
+          headers,
           payload: concurrentOrderPayload,
         }),
         app.inject({
           method: "POST",
           url: "/sales-orders",
           cookies,
+          headers,
           payload: concurrentOrderPayload,
         }),
       ]);
@@ -329,6 +339,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
           method: "POST",
           url: "/customers",
           cookies,
+          headers,
           payload: {
             code: duplicateCustomerCode,
             name: "Khách hàng đồng thời A",
@@ -338,6 +349,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
           method: "POST",
           url: "/customers",
           cookies,
+          headers,
           payload: {
             code: duplicateCustomerCode,
             name: "Khách hàng đồng thời B",

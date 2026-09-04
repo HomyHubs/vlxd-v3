@@ -269,6 +269,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AuthContextChangedError: {
+            /** @enum {string} */
+            code: "AUTH_CONTEXT_CHANGED";
+            message: string;
+        };
         LivenessStatus: {
             /** @constant */
             status: "ok";
@@ -553,8 +558,23 @@ export interface components {
             message: string;
         };
     };
-    responses: never;
-    parameters: never;
+    responses: {
+        /** @description Tenant or session identity context mismatch / changed */
+        AuthContextChangedResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AuthContextChangedError"];
+            };
+        };
+    };
+    parameters: {
+        /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+        ExpectedTenantIdHeader: string;
+        /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+        ExpectedSessionContextHeader: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -741,7 +761,12 @@ export interface operations {
                 pageSize?: number;
                 search?: string;
             };
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -774,12 +799,18 @@ export interface operations {
                     "application/json": components["schemas"]["ProductErrorResponse"];
                 };
             };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     createProduct: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -848,7 +879,12 @@ export interface operations {
     listWarehouses: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -881,12 +917,18 @@ export interface operations {
                     "application/json": components["schemas"]["WarehouseErrorResponse"];
                 };
             };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     createWarehouse: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -959,7 +1001,12 @@ export interface operations {
                 pageSize?: number;
                 warehouseId?: string;
             };
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -992,12 +1039,18 @@ export interface operations {
                     "application/json": components["schemas"]["StockReceiptErrorResponse"];
                 };
             };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     createStockReceipt: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1052,12 +1105,26 @@ export interface operations {
                     "application/json": components["schemas"]["StockReceiptErrorResponse"];
                 };
             };
+            /** @description Overflow ceiling or context mismatch */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
         };
     };
     getStockReceipt: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path: {
                 id: string;
             };
@@ -1101,12 +1168,18 @@ export interface operations {
                     "application/json": components["schemas"]["StockReceiptErrorResponse"];
                 };
             };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     listCustomers: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1139,12 +1212,18 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerErrorResponse"];
                 };
             };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     createCustomer: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1209,7 +1288,12 @@ export interface operations {
                 customerId?: string;
                 warehouseId?: string;
             };
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1242,12 +1326,18 @@ export interface operations {
                     "application/json": components["schemas"]["SalesOrderErrorResponse"];
                 };
             };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     createSalesOrder: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1302,6 +1392,15 @@ export interface operations {
                     "application/json": components["schemas"]["SalesOrderErrorResponse"];
                 };
             };
+            /** @description Insufficient stock, limit or context mismatch */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderErrorResponse"];
+                };
+            };
             /** @description Insufficient stock for one or more products */
             422: {
                 headers: {
@@ -1316,7 +1415,12 @@ export interface operations {
     getSalesOrder: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path: {
                 id: string;
             };
@@ -1360,12 +1464,18 @@ export interface operations {
                     "application/json": components["schemas"]["SalesOrderErrorResponse"];
                 };
             };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     listTitles: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1398,12 +1508,18 @@ export interface operations {
                     "application/json": components["schemas"]["UserErrorResponse"];
                 };
             };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     listUsers: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1436,12 +1552,18 @@ export interface operations {
                     "application/json": components["schemas"]["UserErrorResponse"];
                 };
             };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
     createUser: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
             path?: never;
             cookie?: never;
         };
