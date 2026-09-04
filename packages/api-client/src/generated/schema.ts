@@ -177,6 +177,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stock-transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List internal stock transfers for the authenticated tenant */
+        get: operations["listStockTransfers"];
+        put?: never;
+        /** Create an internal stock transfer between warehouses */
+        post: operations["createStockTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stock-transfers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get details of a single stock transfer */
+        get: operations["getStockTransfer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/customers": {
         parameters: {
             query?: never;
@@ -484,6 +519,72 @@ export interface components {
             /** @enum {string} */
             code: "UNAUTHORIZED" | "FORBIDDEN" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INVALID_RECEIPT_LINES" | "AUTH_CONTEXT_CHANGED";
             message: string;
+        };
+        CreateStockTransferLineInput: {
+            productId: string;
+            quantity: number;
+        };
+        CreateStockTransferRequest: {
+            sourceWarehouseId: string;
+            destinationWarehouseId: string;
+            note?: string;
+            lines: components["schemas"]["CreateStockTransferLineInput"][];
+        };
+        StockTransferLine: {
+            id: string;
+            productId: string;
+            productSku: string;
+            productName: string;
+            unitName: string;
+            quantity: number;
+        };
+        StockTransferListItem: {
+            id: string;
+            transferNumber: string;
+            sourceWarehouseId: string;
+            sourceWarehouseCode: string;
+            sourceWarehouseName: string;
+            destinationWarehouseId: string;
+            destinationWarehouseCode: string;
+            destinationWarehouseName: string;
+            status: string;
+            note?: string | null;
+            createdByName: string;
+            /** Format: date-time */
+            createdAt: string;
+            itemCount: number;
+            totalQuantity: number;
+        };
+        StockTransferListResponse: {
+            items: components["schemas"]["StockTransferListItem"][];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        StockTransferDetailResponse: {
+            id: string;
+            transferNumber: string;
+            sourceWarehouseId: string;
+            sourceWarehouseCode: string;
+            sourceWarehouseName: string;
+            destinationWarehouseId: string;
+            destinationWarehouseCode: string;
+            destinationWarehouseName: string;
+            status: string;
+            note?: string | null;
+            createdByName: string;
+            /** Format: date-time */
+            createdAt: string;
+            totalQuantity: number;
+            lines: components["schemas"]["StockTransferLine"][];
+        };
+        StockTransferErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "SAME_WAREHOUSE_NOT_ALLOWED" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "STOCK_TRANSFER_NOT_FOUND" | "AUTH_CONTEXT_CHANGED";
+            message: string;
+            details?: {
+                [key: string]: unknown;
+            };
         };
         Customer: {
             id: string;
@@ -1320,6 +1421,193 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StockReceiptErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
+        };
+    };
+    listStockTransfers: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                sourceWarehouseId?: string;
+                destinationWarehouseId?: string;
+            };
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated list of stock transfers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires inventory.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
+        };
+    };
+    createStockTransfer: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStockTransferRequest"];
+            };
+        };
+        responses: {
+            /** @description Stock transfer completed successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferDetailResponse"];
+                };
+            };
+            /** @description Validation error or invalid transfer lines */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferErrorResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires inventory.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferErrorResponse"];
+                };
+            };
+            /** @description Warehouse or product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferErrorResponse"];
+                };
+            };
+            /** @description Authentication context mismatch */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferErrorResponse"];
+                };
+            };
+            /** @description Insufficient stock at source warehouse */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferErrorResponse"];
+                };
+            };
+        };
+    };
+    getStockTransfer: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stock transfer details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferDetailResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires inventory.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferErrorResponse"];
+                };
+            };
+            /** @description Stock transfer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTransferErrorResponse"];
                 };
             };
             409: components["responses"]["AuthContextChangedResponse"];
