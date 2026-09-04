@@ -453,13 +453,24 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 7 — Thanh toán và công nợ tối giản: Đang triển khai trên nhánh `feature/slice-7`.
-- [x] Task 7.1: Migration `payments` thuận nghịch (liên kết `sales_orders`, `customers`, `tenants`, `users`) và integration test database rollback.
-- [x] Task 7.2: Contract OpenAPI 3.1 & API `POST /sales-orders/{id}/payments`, `GET /sales-orders/{id}/payments`, tính `paid_amount`, `remaining_amount`, `payment_status` (`unpaid`, `partial`, `paid`), khoá bi quan `FOR UPDATE` chống race condition thanh toán vượt nợ (`AMOUNT_EXCEEDS_REMAINING`).
-- [x] Task 7.3: UI chi tiết đơn hàng `/orders/:id` hiển thị badge trạng thái thanh toán, tổng đã trả / còn nợ, danh sách thanh toán, nút & modal "Ghi nhận thanh toán", cột trạng thái thanh toán ở danh sách đơn, i18n vi/en, component tests.
-- [ ] Cổng gác kiểm tra chất lượng & Review loop nghiêm ngặt với Agent B (ChatGPT Web) qua Chrome DevTools MCP.
+- Không có (Sẵn sàng cho Slice tiếp theo).
 
 ### Đã xong
+
+- [x] Slice 7 — Thanh toán và công nợ tối giản: PR #8 squash-merge vào `dev` (`460c7e0`).
+  - [x] Task 7.1 — Migration `202609040008_create_payment_tables.sql` (bảng `payments` với ràng buộc `amount > 0`, `payment_method IN ('cash', 'bank_transfer')`, partial unique index `idx_payments_tenant_idempotency` trên `(tenant_id, idempotency_key)`, khoá ngoại tới `tenants` (CASCADE) và `sales_orders`, `customers`, `users` (RESTRICT), rollback integration test).
+  - [x] Task 7.2 — Contract OpenAPI 3.1 & API `POST /sales-orders/{id}/payments`, `GET /sales-orders/{id}/payments`. Bổ sung `paidAmount`, `remainingAmount`, `paymentStatus` (`unpaid`, `partial`, `paid`) vào `SalesOrderListItem` và `SalesOrderDetailResponse`. Enforce RBAC capabilities (`sales.create` cho ghi nhận, `sales.view` cho tra cứu).
+  - [x] Task 7.3 — UI Chi tiết đơn hàng `/orders/:id` (thẻ Tóm tắt thanh toán, badge trạng thái, bảng lịch sử thu tiền, modal "Ghi nhận thanh toán" hỗ trợ nút "Trả hết", chặn nhập ký hiệu khoa học `[eE]`, validate số nguyên an toàn), cột trạng thái thanh toán ở danh sách đơn, i18n vi/en, component tests pass.
+  - [x] Task 7.4 — Idempotency & Transaction Safety:
+    - Bắt buộc `idempotencyKey` cho mọi thao tác ghi nhận thanh toán (`RecordPaymentRequestSchema`, OpenAPI spec).
+    - Khoá bi quan `FOR UPDATE` trên dòng `sales_orders` trong transaction chống race condition thanh toán vượt nợ (`AMOUNT_EXCEEDS_REMAINING`).
+    - Kiểm tra idempotent replay sau lock (tránh 422 `ORDER_ALREADY_PAID` khi thanh toán hết nợ) và `ON CONFLICT DO NOTHING` trên `(tenant_id, idempotency_key)` tránh transaction-aborted 500 khi race cross-order.
+    - So sánh đầy đủ canonical replay payload (gồm `referenceCode` và `note`), trả về 409 `IDEMPOTENCY_CONFLICT` khi key bị tái sử dụng với thông tin khác biệt.
+    - Integration tests trên PostgreSQL container thật cho các kịch bản concurrent payments, same-key retries, cross-order collision, replay mismatch.
+  - [x] Review loop (`/gpt-web-review`): 6 rounds review nghiêm ngặt với Agent B (ChatGPT Web) qua Chrome DevTools Protocol:
+    - Round 1-4: Xử lý concurrent race condition, idempotency replay sau lock FOR UPDATE, `ON CONFLICT DO NOTHING` Kysely partial index, OpenAPI 409 error schema, bắt buộc `idempotencyKey` trên write API.
+    - Round 5: So sánh đầy đủ canonical replay payload (cả `referenceCode` và `note`), chặn ký hiệu khoa học `1e6` trên input số tiền web, đồng bộ ADR-0007 với migration schema.
+    - Round 6: Verdict `APPROVED_TO_MERGE`, 0 blocker. CI GitHub Actions run #91 (33851460504) pass 100%. Squash-merge vào `dev` (`460c7e0`) và xoá nhánh `feature/slice-7`.
 
 - [x] Slice 0 — PR #1 đã squash-merge vào `main` (`9342b62`), review Round 3 verdict `APPROVED_TO_MERGE`, 0 blocker.
 - [x] Task 1.1 — migration thuận nghịch `tenant`, `user`, `session` và dev seed.
