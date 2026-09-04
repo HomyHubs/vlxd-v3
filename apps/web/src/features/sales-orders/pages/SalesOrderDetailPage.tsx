@@ -107,25 +107,30 @@ function RecordPaymentDialog({
     }
 
     try {
+      const idempotencyKey = `pmt_req_${crypto.randomUUID()}`;
       await recordPaymentMutation.mutateAsync({
         amount: parsedAmount,
         paymentMethod,
         referenceCode: referenceCode.trim() || null,
         note: note.trim() || null,
+        idempotencyKey,
       });
       onClose();
     } catch (err: unknown) {
+      const errCode = err instanceof Error ? err.name || err.message : "";
       const msg =
-        err instanceof Error
-          ? err.message === "AMOUNT_EXCEEDS_REMAINING"
-            ? t(
-                "orders.errors.paymentExceedsRemaining",
-                "Số tiền thanh toán vượt quá số nợ còn lại",
-              )
-            : err.message === "ORDER_ALREADY_PAID"
-              ? t("orders.errors.paymentAlreadyPaid", "Đơn hàng đã được thanh toán đủ")
-              : err.message
-          : t("orders.errors.paymentFailed", "Không thể ghi nhận thanh toán. Vui lòng thử lại.");
+        errCode === "AMOUNT_EXCEEDS_REMAINING" ||
+        (err instanceof Error && err.message === "AMOUNT_EXCEEDS_REMAINING")
+          ? t("orders.errors.paymentExceedsRemaining", "Số tiền thanh toán vượt quá số nợ còn lại")
+          : errCode === "ORDER_ALREADY_PAID" ||
+              (err instanceof Error && err.message === "ORDER_ALREADY_PAID")
+            ? t("orders.errors.paymentAlreadyPaid", "Đơn hàng đã được thanh toán đủ")
+            : err instanceof Error
+              ? err.message
+              : t(
+                  "orders.errors.paymentFailed",
+                  "Không thể ghi nhận thanh toán. Vui lòng thử lại.",
+                );
       setErrorMsg(msg);
     }
   };

@@ -1471,8 +1471,13 @@ components:
           $ref: "#/components/schemas/PaymentMethod"
         referenceCode:
           type: [string, "null"]
+          maxLength: 100
         note:
           type: [string, "null"]
+          maxLength: 500
+        idempotencyKey:
+          type: [string, "null"]
+          maxLength: 100
         createdByName: { type: string }
         createdAt: { type: string, format: date-time }
     OrderPaymentSummary:
@@ -1498,8 +1503,13 @@ components:
           $ref: "#/components/schemas/PaymentMethod"
         referenceCode:
           type: [string, "null"]
+          maxLength: 100
         note:
           type: [string, "null"]
+          maxLength: 500
+        idempotencyKey:
+          type: [string, "null"]
+          maxLength: 100
     RecordPaymentResponse:
       type: object
       additionalProperties: false

@@ -15,6 +15,7 @@ export const RecordPaymentRequestSchema = z.object({
   paymentMethod: PaymentMethodSchema,
   referenceCode: z.string().trim().max(100).optional().nullable(),
   note: z.string().trim().max(500).optional().nullable(),
+  idempotencyKey: z.string().trim().max(100).optional().nullable(),
 });
 export type RecordPaymentRequest = z.infer<typeof RecordPaymentRequestSchema>;
 
@@ -26,6 +27,7 @@ export const PaymentItemSchema = z.object({
   paymentMethod: PaymentMethodSchema,
   referenceCode: z.string().nullable().optional(),
   note: z.string().nullable().optional(),
+  idempotencyKey: z.string().nullable().optional(),
   createdByName: z.string(),
   createdAt: z.string().datetime(),
 });

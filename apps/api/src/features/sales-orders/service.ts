@@ -512,6 +512,7 @@ export function createSalesOrderService(
           "payments.payment_method as paymentMethod",
           "payments.reference_code as referenceCode",
           "payments.note as note",
+          "payments.idempotency_key as idempotencyKey",
           "users.full_name as createdByName",
           "payments.created_at as createdAt",
         ])
@@ -563,6 +564,7 @@ export function createSalesOrderService(
           paymentMethod: p.paymentMethod,
           referenceCode: p.referenceCode,
           note: p.note,
+          idempotencyKey: p.idempotencyKey,
           createdByName: p.createdByName,
           createdAt: p.createdAt.toISOString(),
         })),
@@ -576,6 +578,74 @@ export function createSalesOrderService(
           code: "INVALID_PAYMENT_AMOUNT",
           message: "Số tiền thanh toán không hợp lệ",
         };
+      }
+
+      // Check if idempotency key was already recorded (idempotent replay)
+      if (input.idempotencyKey) {
+        const existing = await db
+          .selectFrom("payments")
+          .innerJoin("users", "users.id", "payments.created_by")
+          .select([
+            "payments.id as id",
+            "payments.order_id as orderId",
+            "payments.customer_id as customerId",
+            "payments.amount as amount",
+            "payments.payment_method as paymentMethod",
+            "payments.reference_code as referenceCode",
+            "payments.note as note",
+            "payments.idempotency_key as idempotencyKey",
+            "users.full_name as createdByName",
+            "payments.created_at as createdAt",
+          ])
+          .where("payments.tenant_id", "=", tenantId)
+          .where("payments.idempotency_key", "=", input.idempotencyKey)
+          .executeTakeFirst();
+
+        if (existing) {
+          const order = await db
+            .selectFrom("sales_orders")
+            .select(["total_amount"])
+            .where("id", "=", existing.orderId)
+            .where("tenant_id", "=", tenantId)
+            .executeTakeFirst();
+          const totalAmount = Number(order?.total_amount ?? 0);
+          const paidRow = await db
+            .selectFrom("payments")
+            .select(({ fn }) => [
+              fn.coalesce(fn.sum<number | string>("amount"), sql`0`).as("totalPaid"),
+            ])
+            .where("order_id", "=", existing.orderId)
+            .where("tenant_id", "=", tenantId)
+            .executeTakeFirst();
+          const paidAmount = Number(paidRow?.totalPaid ?? 0);
+          const remainingAmount = Math.max(0, totalAmount - paidAmount);
+          const paymentStatus: "unpaid" | "partial" | "paid" =
+            paidAmount === 0 ? "unpaid" : remainingAmount === 0 ? "paid" : "partial";
+
+          return {
+            success: true,
+            response: {
+              payment: {
+                id: existing.id,
+                orderId: existing.orderId,
+                customerId: existing.customerId,
+                amount: Number(existing.amount),
+                paymentMethod: existing.paymentMethod,
+                referenceCode: existing.referenceCode,
+                note: existing.note,
+                idempotencyKey: existing.idempotencyKey,
+                createdByName: existing.createdByName,
+                createdAt: existing.createdAt.toISOString(),
+              },
+              summary: {
+                totalAmount,
+                paidAmount,
+                remainingAmount,
+                paymentStatus,
+              },
+            },
+          };
+        }
       }
 
       return await db.transaction().execute(async (trx) => {
@@ -644,6 +714,7 @@ export function createSalesOrderService(
             payment_method: input.paymentMethod,
             reference_code: input.referenceCode ?? null,
             note: input.note ?? null,
+            idempotency_key: input.idempotencyKey ?? null,
             created_by: userId,
           })
           .execute();
@@ -668,6 +739,7 @@ export function createSalesOrderService(
           paymentMethod: input.paymentMethod,
           referenceCode: input.referenceCode ?? null,
           note: input.note ?? null,
+          idempotencyKey: input.idempotencyKey ?? null,
           createdByName: user?.full_name ?? "Người dùng",
           createdAt: paymentRow.created_at.toISOString(),
         };
@@ -712,6 +784,7 @@ export function createSalesOrderService(
           "payments.payment_method as paymentMethod",
           "payments.reference_code as referenceCode",
           "payments.note as note",
+          "payments.idempotency_key as idempotencyKey",
           "users.full_name as createdByName",
           "payments.created_at as createdAt",
         ])
@@ -734,6 +807,7 @@ export function createSalesOrderService(
           paymentMethod: p.paymentMethod,
           referenceCode: p.referenceCode,
           note: p.note,
+          idempotencyKey: p.idempotencyKey,
           createdByName: p.createdByName,
           createdAt: p.createdAt.toISOString(),
         })),

@@ -195,6 +195,7 @@ export interface PaymentTable {
   reference_code: string | null;
   note: string | null;
   created_by: string;
+  idempotency_key: string | null;
   created_at: Generated<Date>;
 }
 

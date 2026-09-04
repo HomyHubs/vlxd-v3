@@ -594,6 +594,7 @@ export interface components {
             paymentMethod: components["schemas"]["PaymentMethod"];
             referenceCode?: string | null;
             note?: string | null;
+            idempotencyKey?: string | null;
             createdByName: string;
             /** Format: date-time */
             createdAt: string;
@@ -609,6 +610,7 @@ export interface components {
             paymentMethod: components["schemas"]["PaymentMethod"];
             referenceCode?: string | null;
             note?: string | null;
+            idempotencyKey?: string | null;
         };
         RecordPaymentResponse: {
             payment: components["schemas"]["PaymentItem"];

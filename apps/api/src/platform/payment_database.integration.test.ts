@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
+import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDatabase, createDatabasePool } from "./database.js";
@@ -14,26 +14,22 @@ function upAndDown(sql: string): [string, string] {
 }
 
 describe("payment database schema migration", () => {
-  let container: StartedPostgreSqlContainer | null = null;
+  const container = new PostgreSqlContainer("postgres:18-alpine")
+    .withDatabase("vlxd")
+    .withUsername("vlxd")
+    .withPassword("vlxd_test");
+  let started: Awaited<ReturnType<typeof container.start>> | undefined;
 
   beforeAll(async () => {
-    try {
-      container = await new PostgreSqlContainer("postgres:16-alpine").start();
-    } catch {
-      // Local development without Docker daemon
-      container = null;
-    }
+    started = await container.start();
   }, 60000);
 
   afterAll(async () => {
-    await container?.stop();
+    await started?.stop();
   });
 
-  it("applies payment migration up, validates constraints, and rolls back down cleanly", async (ctx) => {
-    if (!container) {
-      ctx.skip();
-      return;
-    }
+  it("applies payment migration up, validates constraints, and rolls back down cleanly", async () => {
+    if (!started) throw new Error("PostgreSQL container did not start");
 
     const authSql = await readFile(
       resolve(process.cwd(), "../../db/migrations/202609020001_create_auth_tables.sql"),
@@ -73,7 +69,7 @@ describe("payment database schema migration", () => {
     const [rbacUp] = upAndDown(rbacSql);
     const [paymentUp, paymentDown] = upAndDown(paymentSql);
 
-    const pool = createDatabasePool(container.getConnectionUri());
+    const pool = createDatabasePool(started.getConnectionUri());
     const db = createDatabase(pool);
 
     try {
