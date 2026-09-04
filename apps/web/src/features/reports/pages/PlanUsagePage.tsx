@@ -248,9 +248,18 @@ export function PlanUsagePage() {
 
               {/* Upgrade Info Card */}
               {data?.plan === "pro" ? (
-                <Card sx={{ bgcolor: "success.50", borderColor: "success.200" }} variant="outlined" data-testid="plan-pro-card">
+                <Card
+                  sx={{ bgcolor: "success.50", borderColor: "success.200" }}
+                  variant="outlined"
+                  data-testid="plan-pro-card"
+                >
                   <CardContent>
-                    <Typography variant="subtitle1" fontWeight={700} color="success.dark" gutterBottom>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={700}
+                      color="success.dark"
+                      gutterBottom
+                    >
                       {t("plan.proActiveTitle", "Gói Nâng cao (Pro) đang hoạt động")}
                     </Typography>
                     <Typography variant="body2" color="success.dark">
@@ -262,7 +271,11 @@ export function PlanUsagePage() {
                   </CardContent>
                 </Card>
               ) : (
-                <Card sx={{ bgcolor: "info.50", borderColor: "info.200" }} variant="outlined" data-testid="plan-upgrade-card">
+                <Card
+                  sx={{ bgcolor: "info.50", borderColor: "info.200" }}
+                  variant="outlined"
+                  data-testid="plan-upgrade-card"
+                >
                   <CardContent>
                     <Typography variant="subtitle1" fontWeight={700} color="info.dark" gutterBottom>
                       {t("plan.upgradeTitle", "Nâng cấp gói cước Doanh Nghiệp")}
