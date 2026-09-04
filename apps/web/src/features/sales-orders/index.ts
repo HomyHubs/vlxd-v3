@@ -1,6 +1,7 @@
 export {
   SALES_ORDERS_QUERY_KEY,
   useCreateSalesOrder,
+  useRecordPayment,
   useSalesOrder,
   useSalesOrders,
 } from "./api/useSalesOrders.js";

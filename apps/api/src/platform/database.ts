@@ -173,6 +173,31 @@ export interface UserTitleTable {
   tenant_id: string;
 }
 
+export interface InvoiceTable {
+  id: string;
+  tenant_id: string;
+  order_id: string;
+  invoice_number: string;
+  customer_id: string;
+  total_amount: number | string;
+  status: Generated<string>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface PaymentTable {
+  id: string;
+  tenant_id: string;
+  order_id: string;
+  customer_id: string;
+  amount: number | string;
+  payment_method: "cash" | "bank_transfer";
+  reference_code: string | null;
+  note: string | null;
+  created_by: string;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   app_meta: AppMetaTable;
   tenants: TenantTable;
@@ -194,6 +219,8 @@ export interface Database {
   titles: TitleTable;
   title_role_groups: TitleRoleGroupTable;
   user_titles: UserTitleTable;
+  invoices: InvoiceTable;
+  payments: PaymentTable;
 }
 
 export interface DatabaseLogger {

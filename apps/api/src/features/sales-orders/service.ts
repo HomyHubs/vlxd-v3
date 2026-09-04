@@ -4,13 +4,17 @@ import {
   MAX_ORDER_LINE_QUANTITY,
   MAX_ORDER_TOTAL_AMOUNT,
   type CreateSalesOrderRequest,
+  type OrderPaymentsListResponse,
+  type PaymentItem,
+  type RecordPaymentRequest,
+  type RecordPaymentResponse,
   type SalesOrderDetailResponse,
   type SalesOrderLine,
   type SalesOrderListItem,
   type SalesOrderListResponse,
   type SalesOrderQuery,
 } from "@vlxd/shared";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 
 import type { Database } from "../../platform/database.js";
 
@@ -34,6 +38,18 @@ export type CreateSalesOrderResult =
       message: string;
     };
 
+export type RecordPaymentResult =
+  | { success: true; response: RecordPaymentResponse }
+  | {
+      success: false;
+      code:
+        | "ORDER_NOT_FOUND"
+        | "AMOUNT_EXCEEDS_REMAINING"
+        | "ORDER_ALREADY_PAID"
+        | "INVALID_PAYMENT_AMOUNT";
+      message: string;
+    };
+
 export interface SalesOrderService {
   create(
     tenantId: string,
@@ -42,6 +58,13 @@ export interface SalesOrderService {
   ): Promise<CreateSalesOrderResult>;
   list(tenantId: string, query?: SalesOrderQuery): Promise<SalesOrderListResponse>;
   getById(tenantId: string, id: string): Promise<SalesOrderDetailResponse | null>;
+  recordPayment(
+    tenantId: string,
+    userId: string,
+    orderId: string,
+    input: RecordPaymentRequest,
+  ): Promise<RecordPaymentResult>;
+  listPayments(tenantId: string, orderId: string): Promise<OrderPaymentsListResponse | null>;
 }
 
 export interface SalesOrderServiceDependencies {
@@ -288,10 +311,14 @@ export function createSalesOrderService(
                 warehouseName: warehouse.name,
                 status: "confirmed",
                 totalAmount,
+                paidAmount: 0,
+                remainingAmount: totalAmount,
+                paymentStatus: "unpaid",
                 note: input.note ?? null,
                 createdByName,
                 createdAt: now.toISOString(),
                 lines: createdLines,
+                payments: [],
               },
             };
           });
@@ -380,20 +407,44 @@ export function createSalesOrderService(
 
       const statsMap = new Map(lineStats.map((s) => [s.orderId, Number(s.itemCount ?? 0)]));
 
-      const items: SalesOrderListItem[] = rows.map((r) => ({
-        id: r.id,
-        orderNumber: r.orderNumber,
-        customerId: r.customerId,
-        customerName: r.customerName,
-        warehouseId: r.warehouseId,
-        warehouseName: r.warehouseName,
-        status: r.status,
-        totalAmount: Number(r.totalAmount),
-        itemCount: statsMap.get(r.id) ?? 0,
-        note: r.note,
-        createdByName: r.createdByName,
-        createdAt: r.createdAt.toISOString(),
-      }));
+      const paymentStats = await db
+        .selectFrom("payments")
+        .select([
+          "order_id as orderId",
+          ({ fn }) => fn.coalesce(fn.sum<number | string>("amount"), sql`0`).as("totalPaid"),
+        ])
+        .where("order_id", "in", orderIds)
+        .where("tenant_id", "=", tenantId)
+        .groupBy("order_id")
+        .execute();
+
+      const paymentMap = new Map(paymentStats.map((s) => [s.orderId, Number(s.totalPaid ?? 0)]));
+
+      const items: SalesOrderListItem[] = rows.map((r) => {
+        const total = Number(r.totalAmount);
+        const paid = paymentMap.get(r.id) ?? 0;
+        const remaining = Math.max(0, total - paid);
+        const paymentStatus: "unpaid" | "partial" | "paid" =
+          paid === 0 ? "unpaid" : remaining === 0 ? "paid" : "partial";
+
+        return {
+          id: r.id,
+          orderNumber: r.orderNumber,
+          customerId: r.customerId,
+          customerName: r.customerName,
+          warehouseId: r.warehouseId,
+          warehouseName: r.warehouseName,
+          status: r.status,
+          totalAmount: total,
+          paidAmount: paid,
+          remainingAmount: remaining,
+          paymentStatus,
+          itemCount: statsMap.get(r.id) ?? 0,
+          note: r.note,
+          createdByName: r.createdByName,
+          createdAt: r.createdAt.toISOString(),
+        };
+      });
 
       return {
         items,
@@ -450,6 +501,31 @@ export function createSalesOrderService(
         .orderBy("sales_order_lines.created_at", "asc")
         .execute();
 
+      const payments = await db
+        .selectFrom("payments")
+        .innerJoin("users", "users.id", "payments.created_by")
+        .select([
+          "payments.id as id",
+          "payments.order_id as orderId",
+          "payments.customer_id as customerId",
+          "payments.amount as amount",
+          "payments.payment_method as paymentMethod",
+          "payments.reference_code as referenceCode",
+          "payments.note as note",
+          "users.full_name as createdByName",
+          "payments.created_at as createdAt",
+        ])
+        .where("payments.order_id", "=", id)
+        .where("payments.tenant_id", "=", tenantId)
+        .orderBy("payments.created_at", "asc")
+        .execute();
+
+      const totalAmount = Number(order.totalAmount);
+      const paidAmount = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const remainingAmount = Math.max(0, totalAmount - paidAmount);
+      const paymentStatus: "unpaid" | "partial" | "paid" =
+        paidAmount === 0 ? "unpaid" : remainingAmount === 0 ? "paid" : "partial";
+
       return {
         id: order.id,
         orderNumber: order.orderNumber,
@@ -462,7 +538,10 @@ export function createSalesOrderService(
         warehouseCode: order.warehouseCode,
         warehouseName: order.warehouseName,
         status: order.status,
-        totalAmount: Number(order.totalAmount),
+        totalAmount,
+        paidAmount,
+        remainingAmount,
+        paymentStatus,
         note: order.note,
         createdByName: order.createdByName,
         createdAt: order.createdAt.toISOString(),
@@ -476,6 +555,194 @@ export function createSalesOrderService(
           unitPrice: Number(l.unitPrice),
           lineTotal: Number(l.lineTotal),
         })),
+        payments: payments.map((p) => ({
+          id: p.id,
+          orderId: p.orderId,
+          customerId: p.customerId,
+          amount: Number(p.amount),
+          paymentMethod: p.paymentMethod,
+          referenceCode: p.referenceCode,
+          note: p.note,
+          createdByName: p.createdByName,
+          createdAt: p.createdAt.toISOString(),
+        })),
+      };
+    },
+
+    async recordPayment(tenantId, userId, orderId, input) {
+      if (!input.amount || input.amount <= 0 || input.amount > 1_000_000_000_000) {
+        return {
+          success: false,
+          code: "INVALID_PAYMENT_AMOUNT",
+          message: "Số tiền thanh toán không hợp lệ",
+        };
+      }
+
+      return await db.transaction().execute(async (trx) => {
+        // Lock the sales order row to prevent race condition overpayments
+        const order = await trx
+          .selectFrom("sales_orders")
+          .select(["id", "order_number", "customer_id", "total_amount", "status"])
+          .where("id", "=", orderId)
+          .where("tenant_id", "=", tenantId)
+          .forUpdate()
+          .executeTakeFirst();
+
+        if (!order) {
+          return {
+            success: false,
+            code: "ORDER_NOT_FOUND",
+            message: "Đơn hàng không tồn tại hoặc không thuộc quyền quản lý",
+          };
+        }
+
+        const totalAmount = Number(order.total_amount);
+
+        // Calculate current total paid
+        const currentPaidRow = await trx
+          .selectFrom("payments")
+          .select(({ fn }) => [
+            fn.coalesce(fn.sum<number | string>("amount"), sql`0`).as("totalPaid"),
+          ])
+          .where("order_id", "=", orderId)
+          .where("tenant_id", "=", tenantId)
+          .executeTakeFirst();
+
+        const currentPaid = Number(currentPaidRow?.totalPaid ?? 0);
+        const remainingAmount = Math.max(0, totalAmount - currentPaid);
+
+        if (remainingAmount <= 0) {
+          return {
+            success: false,
+            code: "ORDER_ALREADY_PAID",
+            message: "Đơn hàng đã được thanh toán đầy đủ",
+          };
+        }
+
+        if (input.amount > remainingAmount) {
+          return {
+            success: false,
+            code: "AMOUNT_EXCEEDS_REMAINING",
+            message: `Số tiền thanh toán (${input.amount.toLocaleString("vi-VN")} đ) vượt quá số tiền còn nợ (${remainingAmount.toLocaleString("vi-VN")} đ)`,
+          };
+        }
+
+        const paymentId = `pmt_${randomBytes(12).toString("hex")}`;
+        const newPaidAmount = currentPaid + input.amount;
+        const newRemainingAmount = Math.max(0, totalAmount - newPaidAmount);
+        const newStatus: "unpaid" | "partial" | "paid" =
+          newPaidAmount === 0 ? "unpaid" : newRemainingAmount === 0 ? "paid" : "partial";
+
+        await trx
+          .insertInto("payments")
+          .values({
+            id: paymentId,
+            tenant_id: tenantId,
+            order_id: orderId,
+            customer_id: order.customer_id,
+            amount: input.amount,
+            payment_method: input.paymentMethod,
+            reference_code: input.referenceCode ?? null,
+            note: input.note ?? null,
+            created_by: userId,
+          })
+          .execute();
+
+        const user = await trx
+          .selectFrom("users")
+          .select(["full_name"])
+          .where("id", "=", userId)
+          .executeTakeFirst();
+
+        const paymentRow = await trx
+          .selectFrom("payments")
+          .select(["created_at"])
+          .where("id", "=", paymentId)
+          .executeTakeFirstOrThrow();
+
+        const paymentItem: PaymentItem = {
+          id: paymentId,
+          orderId,
+          customerId: order.customer_id,
+          amount: input.amount,
+          paymentMethod: input.paymentMethod,
+          referenceCode: input.referenceCode ?? null,
+          note: input.note ?? null,
+          createdByName: user?.full_name ?? "Người dùng",
+          createdAt: paymentRow.created_at.toISOString(),
+        };
+
+        return {
+          success: true,
+          response: {
+            payment: paymentItem,
+            summary: {
+              totalAmount,
+              paidAmount: newPaidAmount,
+              remainingAmount: newRemainingAmount,
+              paymentStatus: newStatus,
+            },
+          },
+        };
+      });
+    },
+
+    async listPayments(tenantId, orderId) {
+      const order = await db
+        .selectFrom("sales_orders")
+        .select(["id", "total_amount"])
+        .where("id", "=", orderId)
+        .where("tenant_id", "=", tenantId)
+        .executeTakeFirst();
+
+      if (!order) {
+        return null;
+      }
+
+      const totalAmount = Number(order.total_amount);
+
+      const payments = await db
+        .selectFrom("payments")
+        .innerJoin("users", "users.id", "payments.created_by")
+        .select([
+          "payments.id as id",
+          "payments.order_id as orderId",
+          "payments.customer_id as customerId",
+          "payments.amount as amount",
+          "payments.payment_method as paymentMethod",
+          "payments.reference_code as referenceCode",
+          "payments.note as note",
+          "users.full_name as createdByName",
+          "payments.created_at as createdAt",
+        ])
+        .where("payments.order_id", "=", orderId)
+        .where("payments.tenant_id", "=", tenantId)
+        .orderBy("payments.created_at", "asc")
+        .execute();
+
+      const paidAmount = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const remainingAmount = Math.max(0, totalAmount - paidAmount);
+      const paymentStatus: "unpaid" | "partial" | "paid" =
+        paidAmount === 0 ? "unpaid" : remainingAmount === 0 ? "paid" : "partial";
+
+      return {
+        payments: payments.map((p) => ({
+          id: p.id,
+          orderId: p.orderId,
+          customerId: p.customerId,
+          amount: Number(p.amount),
+          paymentMethod: p.paymentMethod,
+          referenceCode: p.referenceCode,
+          note: p.note,
+          createdByName: p.createdByName,
+          createdAt: p.createdAt.toISOString(),
+        })),
+        summary: {
+          totalAmount,
+          paidAmount,
+          remainingAmount,
+          paymentStatus,
+        },
       };
     },
   };

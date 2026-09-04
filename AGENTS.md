@@ -424,6 +424,7 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR** theo 
 | 2026-09-02 | Thêm | Slice 2 | Chốt phạm vi Sản phẩm: xem và tạo, gồm migration `product`/`unit`, API danh sách/tạo, UI `/products` và giới hạn gói Free 80 sản phẩm. | Tiếp tục lộ trình Vertical Slice sau khi Slice 0 và Slice 1 hoàn tất. | Không cần — chưa thay đổi schema/API thực tế trong commit tài liệu này. |
 | 2026-09-02 | Thêm | Slice 4 | Nhập kho (Inbound Stock Receipts): migration `stock_receipts`, `stock_receipt_lines`, `stock_movements`; API `/stock-receipts`; UI `/inventory/receipts/new`, `/inventory/receipts`, `/inventory/receipts/:id`. | Lát cắt nghiệp vụ tiếp theo trong lộ trình Vertical Slice. | Không cần — tương thích schema, tuân thủ contract-first. |
 | 2026-09-03 | Thêm | Slice 5 | Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions): migration `customers`, `sales_orders`, `sales_order_lines`; API `/sales-orders`, `/customers`; UI `/orders/new`, `/orders`, `/orders/:id`; trừ tồn kho qua `stock_movements` và chặn bán vượt tồn (`INSUFFICIENT_STOCK`). | Lát cắt nghiệp vụ mẫu theo lộ trình Vertical Slice. | Không cần — tương thích schema, tuân thủ contract-first. |
+| 2026-09-04 | Thêm | Slice 7 | Thanh toán và công nợ tối giản: migration `payments` (thuận nghịch); API `POST /sales-orders/{id}/payments`, `GET /sales-orders/{id}/payments`, tính `paid_amount`, `remaining_amount`, `payment_status`, chặn thanh toán vượt nợ `AMOUNT_EXCEEDS_REMAINING`; UI trang chi tiết đơn hàng `/orders/:id` hiển thị badge thanh toán, lịch sử thanh toán, dialog ghi nhận thanh toán tiền mặt/chuyển khoản; i18n vi/en. | Lát cắt nghiệp vụ tiếp theo trong lộ trình Vertical Slice. | Không cần — tương thích schema, tuân thủ contract-first. |
 
 ### 17.6 Thứ tự thao tác bắt buộc
 
@@ -452,7 +453,11 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities): ĐÃ HOÀN THÀNH. PR #7 đã được squash-merge vào nhánh `dev` tại commit `9c92602e6031bdae1a4b3e537c369cb9ee7945ee` sau 11 vòng review nghiêm ngặt với Agent B (ChatGPT Web) qua Chrome DevTools (`APPROVED_TO_MERGE`, 0 blocker). Toàn bộ cổng gác CI GitHub Actions và cục bộ xanh 100%.
+Slice 7 — Thanh toán và công nợ tối giản: Đang triển khai trên nhánh `feature/slice-7`.
+- [x] Task 7.1: Migration `payments` thuận nghịch (liên kết `sales_orders`, `customers`, `tenants`, `users`) và integration test database rollback.
+- [x] Task 7.2: Contract OpenAPI 3.1 & API `POST /sales-orders/{id}/payments`, `GET /sales-orders/{id}/payments`, tính `paid_amount`, `remaining_amount`, `payment_status` (`unpaid`, `partial`, `paid`), khoá bi quan `FOR UPDATE` chống race condition thanh toán vượt nợ (`AMOUNT_EXCEEDS_REMAINING`).
+- [x] Task 7.3: UI chi tiết đơn hàng `/orders/:id` hiển thị badge trạng thái thanh toán, tổng đã trả / còn nợ, danh sách thanh toán, nút & modal "Ghi nhận thanh toán", cột trạng thái thanh toán ở danh sách đơn, i18n vi/en, component tests.
+- [ ] Cổng gác kiểm tra chất lượng & Review loop nghiêm ngặt với Agent B (ChatGPT Web) qua Chrome DevTools MCP.
 
 ### Đã xong
 
