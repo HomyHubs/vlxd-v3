@@ -359,6 +359,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
         payload: {
           amount: 800000,
           paymentMethod: "cash",
+          idempotencyKey: "idem-overpay-001",
         },
       });
       expect(overPayRes.statusCode).toBe(422);
@@ -397,6 +398,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
         payload: {
           amount: 50000,
           paymentMethod: "cash",
+          idempotencyKey: "idem-already-paid-001",
         },
       });
       expect(paidOrderRes.statusCode).toBe(422);
@@ -514,14 +516,22 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
           url: `/sales-orders/${payOrderId}/payments`,
           cookies,
           headers,
-          payload: { amount: 150000, paymentMethod: "cash" },
+          payload: {
+            amount: 150000,
+            paymentMethod: "cash",
+            idempotencyKey: "concurrent-pay-a",
+          },
         }),
         app.inject({
           method: "POST",
           url: `/sales-orders/${payOrderId}/payments`,
           cookies,
           headers,
-          payload: { amount: 150000, paymentMethod: "bank_transfer" },
+          payload: {
+            amount: 150000,
+            paymentMethod: "bank_transfer",
+            idempotencyKey: "concurrent-pay-b",
+          },
         }),
       ]);
 
