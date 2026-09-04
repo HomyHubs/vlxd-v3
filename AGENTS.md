@@ -454,13 +454,22 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 8 — Báo cáo đầu tiên & Quản lý hạn mức gói: Đang triển khai trên nhánh `feature/slice-8`.
-- [x] Task 8.1: Shared schema, OpenAPI 3.1 contract cho `GET /reports/sales-summary` và `GET /tenants/usage`, sinh TypeScript client (`@vlxd/api-client`).
-- [x] Task 8.2: Fastify Backend service & routes tổng hợp doanh thu, đã thu, công nợ, top sản phẩm và hạn mức tenant với Kysely, bảo vệ bằng capability `sales.view` và `users.manage`.
-- [x] Task 8.3: Web UI: Trang `/reports` (thẻ KPI tài chính, bảng top sản phẩm, bảng theo ngày), trang `/settings/plan` (tiến trình quota sản phẩm/kho), cập nhật điều hướng và route guards, i18n vi/en.
-- [ ] Task 8.4: Bộ unit & integration test (API + Web), chạy toàn bộ cổng gác CI, mở PR và review đa vòng với ChatGPT Web qua Chrome DevTools MCP.
+- Không có. Sẵn sàng cho Slice tiếp theo.
 
 ### Đã xong
+
+- [x] Slice 8 — Báo cáo đầu tiên & Quản lý hạn mức gói: PR #9 merge vào `dev` (`d616946`).
+  - [x] Task 8.1 — Shared schema, OpenAPI 3.1 contract cho `GET /reports/sales-summary` và `GET /tenants/usage`, sinh TypeScript client (`@vlxd/api-client`).
+  - [x] Task 8.2 — Fastify Backend service & routes tổng hợp doanh thu, đã thu, công nợ, top sản phẩm và hạn mức tenant với Kysely (REPEATABLE READ READ ONLY transaction, pure SQL CTEs, calendar boundaries UTC+7), bảo vệ bằng capability `sales.view` và `users.manage`.
+  - [x] Task 8.3 — Web UI: Trang `/reports` (thẻ KPI tài chính, bảng top sản phẩm, bảng theo ngày, bộ lọc khoảng thời gian ngày/tuần/tháng/toàn bộ), trang `/settings/plan` (tiến trình quota sản phẩm/kho, thẻ nâng cấp có điều kiện theo plan, unlimited plan handling), cập nhật điều hướng và route guards, i18n vi/en.
+  - [x] Task 8.4 — Bộ unit & integration tests (API + Web), Kysely safe bigints, self-contained test fixtures, zero-total order status semantics (`paidOrderCount`).
+  - [x] Review loop (`/gpt-web-review`): 5 rounds review nghiêm ngặt với Agent B (ChatGPT Web) qua Chrome DevTools Protocol:
+    - Round 1: Fix rolling window sang start-of-day/week/month UTC+7, loại bỏ unbounded query bằng pure SQL CTE, chuyển quota policy sang shared package, bổ sung OpenAPI 400 schema.
+    - Round 2: Cô lập test fixtures tránh phụ thuộc hardcoded tenant seed IDs, fix column reference `order_id`, phân loại đơn hàng 0đ thành `paidOrderCount`, cast wide `::bigint`.
+    - Round 3: Chuẩn hoá ngữ nghĩa tiền mặt thu trong kỳ (`period_payments` CTE), ẩn thẻ nâng cấp với Pro plan, khôi phục i18n key `users.errorCreateFailed`.
+    - Round 4: Đóng gói báo cáo vào single `REPEATABLE READ READ ONLY` transaction chống skew/tear, hỗ trợ hiển thị hạn mức linh hoạt cho Enterprise/Custom plan.
+    - Round 5: Verdict `APPROVED_TO_MERGE`, 0 blocker. CI GitHub Actions run #105 pass 100%. Auto-merge vào `dev` theo `merge_mode=auto`.
+
 
 - [x] Slice 7 — Thanh toán và công nợ tối giản: PR #8 squash-merge vào `dev` (`460c7e0`).
   - [x] Task 7.1 — Migration `202609040008_create_payment_tables.sql` (bảng `payments` với ràng buộc `amount > 0`, `payment_method IN ('cash', 'bank_transfer')`, partial unique index `idx_payments_tenant_idempotency` trên `(tenant_id, idempotency_key)`, khoá ngoại tới `tenants` (CASCADE) và `sales_orders`, `customers`, `users` (RESTRICT), rollback integration test).
