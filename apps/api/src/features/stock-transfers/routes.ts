@@ -27,7 +27,7 @@ const IdParamSchema = z.object({
   id: z.string().min(1),
 });
 
-export const stockTransferRoutes: FastifyPluginAsync<StockTransferRoutesOptions> = async (
+export const stockTransferRoutes: FastifyPluginAsync<StockTransferRoutesOptions> = (
   server,
   options,
 ) => {
@@ -129,4 +129,6 @@ export const stockTransferRoutes: FastifyPluginAsync<StockTransferRoutesOptions>
       return reply.code(200).send(transfer);
     },
   );
+
+  return Promise.resolve();
 };

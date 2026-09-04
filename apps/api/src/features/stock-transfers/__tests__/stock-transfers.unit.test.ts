@@ -1,6 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
+import type {
+  StockTransferDetailResponse,
+  StockTransferErrorResponse,
+  StockTransferListResponse,
+} from "@vlxd/shared";
+
+import type { Kysely } from "kysely";
 
 import { buildApp } from "../../../app.js";
+import type { Database } from "../../../platform/database.js";
 import type { AuthService } from "../../auth/index.js";
 import type { StockTransferService } from "../index.js";
 
@@ -137,11 +145,11 @@ describe("stock transfer routes unit tests", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const body = response.json();
+    const body = response.json<StockTransferListResponse>();
     expect(body.items).toHaveLength(1);
-    expect(body.items[0].transferNumber).toBe("TRF-20260904-0001");
-    expect(body.items[0].sourceWarehouseCode).toBe("WH-1");
-    expect(body.items[0].destinationWarehouseCode).toBe("WH-2");
+    expect(body.items[0]?.transferNumber).toBe("TRF-20260904-0001");
+    expect(body.items[0]?.sourceWarehouseCode).toBe("WH-1");
+    expect(body.items[0]?.destinationWarehouseCode).toBe("WH-2");
     await app.close();
   });
 
@@ -255,9 +263,9 @@ describe("stock transfer routes unit tests", () => {
     });
 
     expect(response.statusCode).toBe(422);
-    const body = response.json();
+    const body = response.json<StockTransferErrorResponse>();
     expect(body.code).toBe("INSUFFICIENT_STOCK");
-    expect(body.details.availableQuantity).toBe(20);
+    expect(body.details?.["availableQuantity"]).toBe(20);
     await app.close();
   });
 
@@ -319,7 +327,7 @@ describe("stock transfer routes unit tests", () => {
     });
 
     expect(response.statusCode).toBe(201);
-    const body = response.json();
+    const body = response.json<StockTransferDetailResponse>();
     expect(body.id).toBe("trf-123");
     expect(body.lines).toHaveLength(1);
     expect(body.totalQuantity).toBe(25);
@@ -401,7 +409,7 @@ describe("stock transfer routes unit tests", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const body = response.json();
+    const body = response.json<StockTransferDetailResponse>();
     expect(body.transferNumber).toBe("TRF-20260904-0001");
     expect(body.totalQuantity).toBe(15);
     await app.close();
@@ -411,7 +419,7 @@ describe("stock transfer routes unit tests", () => {
     it("fails when source and destination warehouse are identical", async () => {
       const { createStockTransferService } = await import("../service.js");
       const service = createStockTransferService({
-        database: {} as any,
+        database: {} as unknown as Kysely<Database>,
       });
 
       const result = await service.create("tenant-1", "user-1", {
@@ -429,7 +437,7 @@ describe("stock transfer routes unit tests", () => {
     it("fails when lines is empty", async () => {
       const { createStockTransferService } = await import("../service.js");
       const service = createStockTransferService({
-        database: {} as any,
+        database: {} as unknown as Kysely<Database>,
       });
 
       const result = await service.create("tenant-1", "user-1", {
@@ -445,4 +453,3 @@ describe("stock transfer routes unit tests", () => {
     });
   });
 });
-

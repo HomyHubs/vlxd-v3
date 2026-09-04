@@ -172,4 +172,3 @@ export {
   type StockTransferDetailResponse,
   type StockTransferErrorResponse,
 } from "./stockTransfer.js";
-

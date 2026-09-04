@@ -14,7 +14,10 @@ import { type CustomerService, customerRoutes } from "./features/customers/index
 import { type SalesOrderService, salesOrderRoutes } from "./features/sales-orders/index.js";
 import { type UsersService, usersRoutes } from "./features/users/index.js";
 import { type ReportService, reportRoutes } from "./features/reports/index.js";
-import { type StockTransferService, stockTransferRoutes } from "./features/stock-transfers/index.js";
+import {
+  type StockTransferService,
+  stockTransferRoutes,
+} from "./features/stock-transfers/index.js";
 
 export interface BuildAppOptions {
   authService?: AuthService | undefined;
