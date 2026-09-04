@@ -350,6 +350,44 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
         .execute();
       expect(paymentRows).toHaveLength(1);
 
+      // 10b-1. Reusing same idempotencyKey with different referenceCode returns 409 IDEMPOTENCY_CONFLICT
+      const conflictRefRes = await app.inject({
+        method: "POST",
+        url: `/sales-orders/${createdOrder.id}/payments`,
+        cookies,
+        headers,
+        payload: {
+          amount: 1000000,
+          paymentMethod: "bank_transfer",
+          referenceCode: "UNC-DIFFERENT-REF",
+          note: "Chuyển khoản cọc đợt 1",
+          idempotencyKey: "idem-so-001",
+        },
+      });
+      expect(conflictRefRes.statusCode).toBe(409);
+      expect(conflictRefRes.json()).toMatchObject({
+        code: "IDEMPOTENCY_CONFLICT",
+      });
+
+      // 10b-2. Reusing same idempotencyKey with different note returns 409 IDEMPOTENCY_CONFLICT
+      const conflictNoteRes = await app.inject({
+        method: "POST",
+        url: `/sales-orders/${createdOrder.id}/payments`,
+        cookies,
+        headers,
+        payload: {
+          amount: 1000000,
+          paymentMethod: "bank_transfer",
+          referenceCode: "UNC-20260904-001",
+          note: "Ghi chú đã bị thay đổi",
+          idempotencyKey: "idem-so-001",
+        },
+      });
+      expect(conflictNoteRes.statusCode).toBe(409);
+      expect(conflictNoteRes.json()).toMatchObject({
+        code: "IDEMPOTENCY_CONFLICT",
+      });
+
       // 10c. Reject overpayment: remaining is 700,000 VND, attempting 800,000 VND
       const overPayRes = await app.inject({
         method: "POST",

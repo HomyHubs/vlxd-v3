@@ -226,6 +226,36 @@ describe("payment database schema migration", () => {
         .execute();
       expect(countFullRows).toHaveLength(1);
 
+      // 5b-1. Replaying key with modified note or referenceCode yields IDEMPOTENCY_CONFLICT
+      const modifiedReplay = await service.recordPayment(
+        "tenant-dev-001",
+        "user-dev-owner-001",
+        "order-pay-01",
+        {
+          amount: 200000,
+          paymentMethod: "bank_transfer",
+          note: "Changed note text",
+          idempotencyKey: "concurrent-full-01",
+        },
+      );
+      expect(modifiedReplay.success).toBe(false);
+      if (!modifiedReplay.success) {
+        expect(modifiedReplay.code).toBe("IDEMPOTENCY_CONFLICT");
+      }
+
+      // Exact replay yields original response
+      const exactReplay = await service.recordPayment(
+        "tenant-dev-001",
+        "user-dev-owner-001",
+        "order-pay-01",
+        {
+          amount: 200000,
+          paymentMethod: "bank_transfer",
+          idempotencyKey: "concurrent-full-01",
+        },
+      );
+      expect(exactReplay.success).toBe(true);
+
       // 5c. Concurrent same-tenant/same-key across DIFFERENT orders
       // Both orders have active debt; loser on key collision must return 409 IDEMPOTENCY_CONFLICT, not transaction-aborted 500
       await pool.query(`

@@ -321,4 +321,29 @@ describe("Sales Orders Pages", () => {
     const secondCallKey = mockRecordPayment.mock.calls[1]?.[0]?.idempotencyKey;
     expect(secondCallKey).toBe(firstCallKey);
   });
+
+  it("rejects scientific exponent notation in payment dialog and prevents mutation", async () => {
+    mockRecordPayment.mockClear();
+    renderWithProviders(
+      <MemoryRouter initialEntries={["/orders/order-test-1"]}>
+        <Routes>
+          <Route path="/orders/:id" element={<SalesOrderDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const recordButtons = screen.getAllByText("Ghi nhận thanh toán");
+    fireEvent.click(recordButtons[0]!);
+
+    const amountInput = screen.getByLabelText(/Số tiền/);
+    fireEvent.change(amountInput, { target: { value: "1e6" } });
+
+    const submitBtn = screen.getByText("Xác nhận thu tiền");
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Số tiền thanh toán không hợp lệ")).toBeInTheDocument();
+    });
+    expect(mockRecordPayment).not.toHaveBeenCalled();
+  });
 });

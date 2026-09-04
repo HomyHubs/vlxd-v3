@@ -51,6 +51,32 @@ export type RecordPaymentResult =
       message: string;
     };
 
+function isMatchingReplayPayload(
+  existing: {
+    orderId: string;
+    amount: number | string;
+    paymentMethod: string;
+    referenceCode: string | null;
+    note: string | null;
+  },
+  targetOrderId: string,
+  input: RecordPaymentRequest,
+): boolean {
+  if (existing.orderId !== targetOrderId) return false;
+  if (Number(existing.amount) !== input.amount) return false;
+  if (existing.paymentMethod !== input.paymentMethod) return false;
+
+  const existingRef = (existing.referenceCode ?? "").trim();
+  const inputRef = (input.referenceCode ?? "").trim();
+  if (existingRef !== inputRef) return false;
+
+  const existingNote = (existing.note ?? "").trim();
+  const inputNote = (input.note ?? "").trim();
+  if (existingNote !== inputNote) return false;
+
+  return true;
+}
+
 export interface SalesOrderService {
   create(
     tenantId: string,
@@ -619,16 +645,12 @@ export function createSalesOrderService(
 
         if (existing) {
           // B1: Validate that reused idempotency key belongs to the SAME order and identical payload
-          if (
-            existing.orderId !== orderId ||
-            Number(existing.amount) !== input.amount ||
-            existing.paymentMethod !== input.paymentMethod
-          ) {
+          if (!isMatchingReplayPayload(existing, orderId, input)) {
             return {
               success: false,
               code: "IDEMPOTENCY_CONFLICT",
               message:
-                "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác",
+                "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác với thông tin không khớp",
             };
           }
 
@@ -728,11 +750,7 @@ export function createSalesOrderService(
             .executeTakeFirst();
 
           if (existingInTrx) {
-            if (
-              existingInTrx.orderId !== orderId ||
-              Number(existingInTrx.amount) !== input.amount ||
-              existingInTrx.paymentMethod !== input.paymentMethod
-            ) {
+            if (!isMatchingReplayPayload(existingInTrx, orderId, input)) {
               return {
                 success: false,
                 code: "IDEMPOTENCY_CONFLICT",
@@ -878,11 +896,7 @@ export function createSalesOrderService(
             .executeTakeFirst();
 
           if (conflicting) {
-            if (
-              conflicting.orderId !== orderId ||
-              Number(conflicting.amount) !== input.amount ||
-              conflicting.paymentMethod !== input.paymentMethod
-            ) {
+            if (!isMatchingReplayPayload(conflicting, orderId, input)) {
               return {
                 success: false,
                 code: "IDEMPOTENCY_CONFLICT",

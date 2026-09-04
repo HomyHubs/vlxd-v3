@@ -95,11 +95,19 @@ function RecordPaymentDialog({
     e.preventDefault();
     setErrorMsg(null);
 
-    const parsedAmount = parseInt(amount, 10);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    const rawAmountStr = amount.trim();
+    if (!rawAmountStr || /[eE]/.test(rawAmountStr)) {
       setErrorMsg(t("orders.errors.invalidPaymentAmount", "Số tiền thanh toán không hợp lệ"));
       return;
     }
+
+    const num = Number(rawAmountStr);
+    if (!Number.isFinite(num) || !Number.isSafeInteger(num) || num <= 0) {
+      setErrorMsg(t("orders.errors.invalidPaymentAmount", "Số tiền thanh toán không hợp lệ"));
+      return;
+    }
+
+    const parsedAmount = num;
 
     if (parsedAmount > remainingAmount) {
       setErrorMsg(

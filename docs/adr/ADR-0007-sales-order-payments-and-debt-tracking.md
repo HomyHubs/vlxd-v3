@@ -15,8 +15,8 @@ Slice 7 cần cơ chế ghi nhận thanh toán (tiền mặt / chuyển khoản)
 ## Quyết định
 
 - **Schema dữ liệu:**
-  - Tạo bảng `payments` gắn trực tiếp với `tenants`, `sales_orders`, `customers`, `users` với khoá ngoại `ON DELETE RESTRICT`. Ràng buộc `amount > 0` và `payment_method IN ('cash', 'bank_transfer')`.
-  - Thêm cột `idempotency_key VARCHAR(100)` với partial unique index `idx_payments_tenant_idempotency ON payments(tenant_id, idempotency_key) WHERE idempotency_key IS NOT NULL`.
+  - Tạo bảng `payments` gắn trực tiếp với `tenants` (`ON DELETE CASCADE`), và `sales_orders`, `customers`, `users` với khoá ngoại `ON DELETE RESTRICT`. Ràng buộc `amount > 0` và `payment_method IN ('cash', 'bank_transfer')`.
+  - Thêm cột `idempotency_key text` với partial unique index `idx_payments_tenant_idempotency ON payments(tenant_id, idempotency_key) WHERE idempotency_key IS NOT NULL`.
   - Lát cắt tối giản tập trung duy nhất vào dòng tiền và công nợ; không tạo bảng `invoices` chưa có nhu cầu sử dụng (tuân thủ nguyên tắc YAGNI và Definition of Done).
 - **Quyền hạn (RBAC):**
   - Ghi nhận thanh toán (`POST /sales-orders/{id}/payments`) yêu cầu capability `sales.create`.
