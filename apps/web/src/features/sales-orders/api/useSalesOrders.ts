@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CreateSalesOrderRequest,
+  RecordPaymentRequest,
+  RecordPaymentResponse,
   SalesOrderDetailResponse,
   SalesOrderListResponse,
 } from "@vlxd/shared";
@@ -113,6 +115,67 @@ export function useCreateSalesOrder() {
         queryClient.invalidateQueries({ queryKey: SALES_ORDERS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY }),
       ]);
+    },
+  });
+}
+
+export function useRecordPayment(orderId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<RecordPaymentResponse, Error, RecordPaymentRequest>({
+    mutationFn: async (input) => {
+      const callSessionKey = getCurrentSessionKey();
+      const callContext = getCurrentSessionContext();
+      const headers: Record<string, string> = {};
+      if (callContext) {
+        headers["x-expected-tenant-id"] = callContext.tenantId;
+        headers["x-session-context"] = callContext.sessionKey;
+      }
+
+      const { data, error, response } = await apiClient.POST("/sales-orders/{id}/payments", {
+        params: { path: { id: orderId } },
+        body: {
+          amount: input.amount,
+          paymentMethod: input.paymentMethod,
+          ...(input.referenceCode ? { referenceCode: input.referenceCode } : {}),
+          ...(input.note ? { note: input.note } : {}),
+          idempotencyKey:
+            input.idempotencyKey ||
+            (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+              ? crypto.randomUUID()
+              : `pay-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`),
+        },
+        headers,
+      });
+
+      if (response?.status === 409) {
+        const errCode =
+          error && typeof error === "object" && "code" in error ? String(error.code) : "";
+        if (errCode === "AUTH_CONTEXT_CHANGED") {
+          throw new Error("AUTH_CONTEXT_CHANGED");
+        }
+      }
+
+      if (callSessionKey && getCurrentSessionKey() !== callSessionKey) {
+        throw new Error("AUTH_CONTEXT_CHANGED");
+      }
+
+      if (data) {
+        return data;
+      }
+
+      const code =
+        error && typeof error === "object" && "code" in error
+          ? String(error.code)
+          : "PAYMENT_RECORD_FAILED";
+      const message =
+        error && typeof error === "object" && "message" in error ? String(error.message) : code;
+      const err = new Error(message);
+      err.name = code;
+      throw err;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: SALES_ORDERS_QUERY_KEY });
     },
   });
 }

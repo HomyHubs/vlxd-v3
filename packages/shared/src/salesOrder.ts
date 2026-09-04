@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { PaymentItemSchema } from "./payment.js";
+
 export const MAX_ORDER_LINE_QUANTITY = 1_000_000;
 export const MAX_ORDER_UNIT_PRICE = 100_000_000_000; // 100 billion VND
 export const MAX_ORDER_TOTAL_AMOUNT = 1_000_000_000_000; // 1 trillion VND
@@ -48,6 +50,9 @@ export const SalesOrderListItemSchema = z.object({
   warehouseName: z.string(),
   status: z.string(),
   totalAmount: z.number().int().nonnegative(),
+  paidAmount: z.number().int().nonnegative(),
+  remainingAmount: z.number().int().nonnegative(),
+  paymentStatus: z.enum(["unpaid", "partial", "paid"]),
   itemCount: z.number().int(),
   note: z.string().nullable().optional(),
   createdByName: z.string(),
@@ -74,10 +79,14 @@ export const SalesOrderDetailResponseSchema = z.object({
   warehouseName: z.string(),
   status: z.string(),
   totalAmount: z.number().int().nonnegative(),
+  paidAmount: z.number().int().nonnegative().default(0),
+  remainingAmount: z.number().int().nonnegative().default(0),
+  paymentStatus: z.enum(["unpaid", "partial", "paid"]).default("unpaid"),
   note: z.string().nullable().optional(),
   createdByName: z.string(),
   createdAt: z.string().datetime(),
   lines: z.array(SalesOrderLineSchema),
+  payments: z.array(PaymentItemSchema).optional(),
 });
 
 export const SalesOrderErrorResponseSchema = z.object({

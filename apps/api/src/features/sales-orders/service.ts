@@ -4,13 +4,17 @@ import {
   MAX_ORDER_LINE_QUANTITY,
   MAX_ORDER_TOTAL_AMOUNT,
   type CreateSalesOrderRequest,
+  type OrderPaymentsListResponse,
+  type PaymentItem,
+  type RecordPaymentRequest,
+  type RecordPaymentResponse,
   type SalesOrderDetailResponse,
   type SalesOrderLine,
   type SalesOrderListItem,
   type SalesOrderListResponse,
   type SalesOrderQuery,
 } from "@vlxd/shared";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 
 import type { Database } from "../../platform/database.js";
 
@@ -34,6 +38,45 @@ export type CreateSalesOrderResult =
       message: string;
     };
 
+export type RecordPaymentResult =
+  | { success: true; response: RecordPaymentResponse }
+  | {
+      success: false;
+      code:
+        | "ORDER_NOT_FOUND"
+        | "AMOUNT_EXCEEDS_REMAINING"
+        | "ORDER_ALREADY_PAID"
+        | "INVALID_PAYMENT_AMOUNT"
+        | "IDEMPOTENCY_CONFLICT";
+      message: string;
+    };
+
+function isMatchingReplayPayload(
+  existing: {
+    orderId: string;
+    amount: number | string;
+    paymentMethod: string;
+    referenceCode: string | null;
+    note: string | null;
+  },
+  targetOrderId: string,
+  input: RecordPaymentRequest,
+): boolean {
+  if (existing.orderId !== targetOrderId) return false;
+  if (Number(existing.amount) !== input.amount) return false;
+  if (existing.paymentMethod !== input.paymentMethod) return false;
+
+  const existingRef = (existing.referenceCode ?? "").trim();
+  const inputRef = (input.referenceCode ?? "").trim();
+  if (existingRef !== inputRef) return false;
+
+  const existingNote = (existing.note ?? "").trim();
+  const inputNote = (input.note ?? "").trim();
+  if (existingNote !== inputNote) return false;
+
+  return true;
+}
+
 export interface SalesOrderService {
   create(
     tenantId: string,
@@ -42,6 +85,13 @@ export interface SalesOrderService {
   ): Promise<CreateSalesOrderResult>;
   list(tenantId: string, query?: SalesOrderQuery): Promise<SalesOrderListResponse>;
   getById(tenantId: string, id: string): Promise<SalesOrderDetailResponse | null>;
+  recordPayment(
+    tenantId: string,
+    userId: string,
+    orderId: string,
+    input: RecordPaymentRequest,
+  ): Promise<RecordPaymentResult>;
+  listPayments(tenantId: string, orderId: string): Promise<OrderPaymentsListResponse | null>;
 }
 
 export interface SalesOrderServiceDependencies {
@@ -288,10 +338,14 @@ export function createSalesOrderService(
                 warehouseName: warehouse.name,
                 status: "confirmed",
                 totalAmount,
+                paidAmount: 0,
+                remainingAmount: totalAmount,
+                paymentStatus: totalAmount === 0 ? "paid" : "unpaid",
                 note: input.note ?? null,
                 createdByName,
                 createdAt: now.toISOString(),
                 lines: createdLines,
+                payments: [],
               },
             };
           });
@@ -380,20 +434,44 @@ export function createSalesOrderService(
 
       const statsMap = new Map(lineStats.map((s) => [s.orderId, Number(s.itemCount ?? 0)]));
 
-      const items: SalesOrderListItem[] = rows.map((r) => ({
-        id: r.id,
-        orderNumber: r.orderNumber,
-        customerId: r.customerId,
-        customerName: r.customerName,
-        warehouseId: r.warehouseId,
-        warehouseName: r.warehouseName,
-        status: r.status,
-        totalAmount: Number(r.totalAmount),
-        itemCount: statsMap.get(r.id) ?? 0,
-        note: r.note,
-        createdByName: r.createdByName,
-        createdAt: r.createdAt.toISOString(),
-      }));
+      const paymentStats = await db
+        .selectFrom("payments")
+        .select([
+          "order_id as orderId",
+          ({ fn }) => fn.coalesce(fn.sum<number | string>("amount"), sql`0`).as("totalPaid"),
+        ])
+        .where("order_id", "in", orderIds)
+        .where("tenant_id", "=", tenantId)
+        .groupBy("order_id")
+        .execute();
+
+      const paymentMap = new Map(paymentStats.map((s) => [s.orderId, Number(s.totalPaid ?? 0)]));
+
+      const items: SalesOrderListItem[] = rows.map((r) => {
+        const total = Number(r.totalAmount);
+        const paid = paymentMap.get(r.id) ?? 0;
+        const remaining = Math.max(0, total - paid);
+        const paymentStatus: "unpaid" | "partial" | "paid" =
+          total === 0 ? "paid" : paid === 0 ? "unpaid" : remaining === 0 ? "paid" : "partial";
+
+        return {
+          id: r.id,
+          orderNumber: r.orderNumber,
+          customerId: r.customerId,
+          customerName: r.customerName,
+          warehouseId: r.warehouseId,
+          warehouseName: r.warehouseName,
+          status: r.status,
+          totalAmount: total,
+          paidAmount: paid,
+          remainingAmount: remaining,
+          paymentStatus,
+          itemCount: statsMap.get(r.id) ?? 0,
+          note: r.note,
+          createdByName: r.createdByName,
+          createdAt: r.createdAt.toISOString(),
+        };
+      });
 
       return {
         items,
@@ -450,6 +528,38 @@ export function createSalesOrderService(
         .orderBy("sales_order_lines.created_at", "asc")
         .execute();
 
+      const payments = await db
+        .selectFrom("payments")
+        .innerJoin("users", "users.id", "payments.created_by")
+        .select([
+          "payments.id as id",
+          "payments.order_id as orderId",
+          "payments.customer_id as customerId",
+          "payments.amount as amount",
+          "payments.payment_method as paymentMethod",
+          "payments.reference_code as referenceCode",
+          "payments.note as note",
+          "payments.idempotency_key as idempotencyKey",
+          "users.full_name as createdByName",
+          "payments.created_at as createdAt",
+        ])
+        .where("payments.order_id", "=", id)
+        .where("payments.tenant_id", "=", tenantId)
+        .orderBy("payments.created_at", "asc")
+        .execute();
+
+      const totalAmount = Number(order.totalAmount);
+      const paidAmount = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const remainingAmount = Math.max(0, totalAmount - paidAmount);
+      const paymentStatus: "unpaid" | "partial" | "paid" =
+        totalAmount === 0
+          ? "paid"
+          : paidAmount === 0
+            ? "unpaid"
+            : remainingAmount === 0
+              ? "paid"
+              : "partial";
+
       return {
         id: order.id,
         orderNumber: order.orderNumber,
@@ -462,7 +572,10 @@ export function createSalesOrderService(
         warehouseCode: order.warehouseCode,
         warehouseName: order.warehouseName,
         status: order.status,
-        totalAmount: Number(order.totalAmount),
+        totalAmount,
+        paidAmount,
+        remainingAmount,
+        paymentStatus,
         note: order.note,
         createdByName: order.createdByName,
         createdAt: order.createdAt.toISOString(),
@@ -476,6 +589,479 @@ export function createSalesOrderService(
           unitPrice: Number(l.unitPrice),
           lineTotal: Number(l.lineTotal),
         })),
+        payments: payments.map((p) => ({
+          id: p.id,
+          orderId: p.orderId,
+          customerId: p.customerId,
+          amount: Number(p.amount),
+          paymentMethod: p.paymentMethod,
+          referenceCode: p.referenceCode,
+          note: p.note,
+          idempotencyKey: p.idempotencyKey,
+          createdByName: p.createdByName,
+          createdAt: p.createdAt.toISOString(),
+        })),
+      };
+    },
+
+    async recordPayment(tenantId, userId, orderId, input) {
+      if (!input.amount || input.amount <= 0 || input.amount > 1_000_000_000_000) {
+        return {
+          success: false,
+          code: "INVALID_PAYMENT_AMOUNT",
+          message: "Số tiền thanh toán không hợp lệ",
+        };
+      }
+
+      const normalizedKey = input.idempotencyKey ? input.idempotencyKey.trim() : "";
+      if (!normalizedKey || normalizedKey.length === 0) {
+        return {
+          success: false,
+          code: "INVALID_PAYMENT_AMOUNT",
+          message: "Mã idempotencyKey là bắt buộc và không được để trống",
+        };
+      }
+
+      // Pre-check if idempotency key was already recorded (idempotent replay)
+      if (normalizedKey) {
+        const existing = await db
+          .selectFrom("payments")
+          .innerJoin("users", "users.id", "payments.created_by")
+          .select([
+            "payments.id as id",
+            "payments.order_id as orderId",
+            "payments.customer_id as customerId",
+            "payments.amount as amount",
+            "payments.payment_method as paymentMethod",
+            "payments.reference_code as referenceCode",
+            "payments.note as note",
+            "payments.idempotency_key as idempotencyKey",
+            "users.full_name as createdByName",
+            "payments.created_at as createdAt",
+          ])
+          .where("payments.tenant_id", "=", tenantId)
+          .where("payments.idempotency_key", "=", normalizedKey)
+          .executeTakeFirst();
+
+        if (existing) {
+          // B1: Validate that reused idempotency key belongs to the SAME order and identical payload
+          if (!isMatchingReplayPayload(existing, orderId, input)) {
+            return {
+              success: false,
+              code: "IDEMPOTENCY_CONFLICT",
+              message:
+                "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác với thông tin không khớp",
+            };
+          }
+
+          const order = await db
+            .selectFrom("sales_orders")
+            .select(["total_amount"])
+            .where("id", "=", existing.orderId)
+            .where("tenant_id", "=", tenantId)
+            .executeTakeFirst();
+          const totalAmount = Number(order?.total_amount ?? 0);
+          const paidRow = await db
+            .selectFrom("payments")
+            .select(({ fn }) => [
+              fn.coalesce(fn.sum<number | string>("amount"), sql`0`).as("totalPaid"),
+            ])
+            .where("order_id", "=", existing.orderId)
+            .where("tenant_id", "=", tenantId)
+            .executeTakeFirst();
+          const paidAmount = Number(paidRow?.totalPaid ?? 0);
+          const remainingAmount = Math.max(0, totalAmount - paidAmount);
+          const paymentStatus: "unpaid" | "partial" | "paid" =
+            totalAmount === 0
+              ? "paid"
+              : paidAmount === 0
+                ? "unpaid"
+                : remainingAmount === 0
+                  ? "paid"
+                  : "partial";
+
+          return {
+            success: true,
+            response: {
+              payment: {
+                id: existing.id,
+                orderId: existing.orderId,
+                customerId: existing.customerId,
+                amount: Number(existing.amount),
+                paymentMethod: existing.paymentMethod,
+                referenceCode: existing.referenceCode,
+                note: existing.note,
+                idempotencyKey: existing.idempotencyKey,
+                createdByName: existing.createdByName,
+                createdAt: existing.createdAt.toISOString(),
+              },
+              summary: {
+                totalAmount,
+                paidAmount,
+                remainingAmount,
+                paymentStatus,
+              },
+            },
+          };
+        }
+      }
+
+      return await db.transaction().execute(async (trx) => {
+        // Lock the sales order row to prevent race condition overpayments
+        const order = await trx
+          .selectFrom("sales_orders")
+          .select(["id", "order_number", "customer_id", "total_amount", "status"])
+          .where("id", "=", orderId)
+          .where("tenant_id", "=", tenantId)
+          .forUpdate()
+          .executeTakeFirst();
+
+        if (!order) {
+          return {
+            success: false,
+            code: "ORDER_NOT_FOUND",
+            message: "Đơn hàng không tồn tại hoặc không thuộc quyền quản lý",
+          };
+        }
+
+        const totalAmount = Number(order.total_amount);
+
+        // B1: Check idempotency key AFTER acquiring order lock FOR UPDATE.
+        // If a concurrent request with the same key committed right before this one,
+        // we must return the replayed payment immediately rather than failing with ORDER_ALREADY_PAID or 500.
+        if (normalizedKey) {
+          const existingInTrx = await trx
+            .selectFrom("payments")
+            .innerJoin("users", "users.id", "payments.created_by")
+            .select([
+              "payments.id as id",
+              "payments.order_id as orderId",
+              "payments.customer_id as customerId",
+              "payments.amount as amount",
+              "payments.payment_method as paymentMethod",
+              "payments.reference_code as referenceCode",
+              "payments.note as note",
+              "payments.idempotency_key as idempotencyKey",
+              "users.full_name as createdByName",
+              "payments.created_at as createdAt",
+            ])
+            .where("payments.tenant_id", "=", tenantId)
+            .where("payments.idempotency_key", "=", normalizedKey)
+            .executeTakeFirst();
+
+          if (existingInTrx) {
+            if (!isMatchingReplayPayload(existingInTrx, orderId, input)) {
+              return {
+                success: false,
+                code: "IDEMPOTENCY_CONFLICT",
+                message:
+                  "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác với thông tin không khớp",
+              };
+            }
+
+            const paidRow = await trx
+              .selectFrom("payments")
+              .select(({ fn }) => [
+                fn.coalesce(fn.sum<number | string>("amount"), sql`0`).as("totalPaid"),
+              ])
+              .where("order_id", "=", orderId)
+              .where("tenant_id", "=", tenantId)
+              .executeTakeFirst();
+
+            const paidAmount = Number(paidRow?.totalPaid ?? 0);
+            const remainingAmount = Math.max(0, totalAmount - paidAmount);
+            const paymentStatus: "unpaid" | "partial" | "paid" =
+              totalAmount === 0
+                ? "paid"
+                : paidAmount === 0
+                  ? "unpaid"
+                  : remainingAmount === 0
+                    ? "paid"
+                    : "partial";
+
+            return {
+              success: true,
+              response: {
+                payment: {
+                  id: existingInTrx.id,
+                  orderId: existingInTrx.orderId,
+                  customerId: existingInTrx.customerId,
+                  amount: Number(existingInTrx.amount),
+                  paymentMethod: existingInTrx.paymentMethod,
+                  referenceCode: existingInTrx.referenceCode,
+                  note: existingInTrx.note,
+                  idempotencyKey: existingInTrx.idempotencyKey,
+                  createdByName: existingInTrx.createdByName,
+                  createdAt: existingInTrx.createdAt.toISOString(),
+                },
+                summary: {
+                  totalAmount,
+                  paidAmount,
+                  remainingAmount,
+                  paymentStatus,
+                },
+              },
+            };
+          }
+        }
+
+        // B4: Zero-due orders are already settled/paid and require no payment
+        if (totalAmount === 0) {
+          return {
+            success: false,
+            code: "ORDER_ALREADY_PAID",
+            message: "Đơn hàng có giá trị 0đ đã được hoàn tất, không có công nợ cần thanh toán",
+          };
+        }
+
+        // Calculate current total paid
+        const currentPaidRow = await trx
+          .selectFrom("payments")
+          .select(({ fn }) => [
+            fn.coalesce(fn.sum<number | string>("amount"), sql`0`).as("totalPaid"),
+          ])
+          .where("order_id", "=", orderId)
+          .where("tenant_id", "=", tenantId)
+          .executeTakeFirst();
+
+        const currentPaid = Number(currentPaidRow?.totalPaid ?? 0);
+        const remainingAmount = Math.max(0, totalAmount - currentPaid);
+
+        if (remainingAmount <= 0) {
+          return {
+            success: false,
+            code: "ORDER_ALREADY_PAID",
+            message: "Đơn hàng đã được thanh toán đầy đủ",
+          };
+        }
+
+        if (input.amount > remainingAmount) {
+          return {
+            success: false,
+            code: "AMOUNT_EXCEEDS_REMAINING",
+            message: `Số tiền thanh toán (${input.amount.toLocaleString("vi-VN")} đ) vượt quá số tiền còn nợ (${remainingAmount.toLocaleString("vi-VN")} đ)`,
+          };
+        }
+
+        const paymentId = `pmt_${randomBytes(12).toString("hex")}`;
+        const newPaidAmount = currentPaid + input.amount;
+        const newRemainingAmount = Math.max(0, totalAmount - newPaidAmount);
+        const newStatus: "unpaid" | "partial" | "paid" =
+          newPaidAmount === 0 ? "unpaid" : newRemainingAmount === 0 ? "paid" : "partial";
+
+        const insertResult = await trx
+          .insertInto("payments")
+          .values({
+            id: paymentId,
+            tenant_id: tenantId,
+            order_id: orderId,
+            customer_id: order.customer_id,
+            amount: input.amount,
+            payment_method: input.paymentMethod,
+            reference_code: input.referenceCode ?? null,
+            note: input.note ?? null,
+            idempotency_key: normalizedKey,
+            created_by: userId,
+          })
+          .onConflict((oc) =>
+            oc
+              .columns(["tenant_id", "idempotency_key"])
+              .where("idempotency_key", "is not", null)
+              .doNothing(),
+          )
+          .returning("id")
+          .executeTakeFirst();
+
+        const insertedId = insertResult?.id;
+
+        if (!insertedId) {
+          // Concurrent race condition: another transaction inserted this key
+          const conflicting = await trx
+            .selectFrom("payments")
+            .innerJoin("users", "users.id", "payments.created_by")
+            .select([
+              "payments.id as id",
+              "payments.order_id as orderId",
+              "payments.customer_id as customerId",
+              "payments.amount as amount",
+              "payments.payment_method as paymentMethod",
+              "payments.reference_code as referenceCode",
+              "payments.note as note",
+              "payments.idempotency_key as idempotencyKey",
+              "users.full_name as createdByName",
+              "payments.created_at as createdAt",
+            ])
+            .where("payments.tenant_id", "=", tenantId)
+            .where("payments.idempotency_key", "=", normalizedKey)
+            .executeTakeFirst();
+
+          if (conflicting) {
+            if (!isMatchingReplayPayload(conflicting, orderId, input)) {
+              return {
+                success: false,
+                code: "IDEMPOTENCY_CONFLICT",
+                message:
+                  "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác với thông tin không khớp",
+              };
+            }
+
+            const paidRow = await trx
+              .selectFrom("payments")
+              .select(({ fn }) => [
+                fn.coalesce(fn.sum<number | string>("amount"), sql`0`).as("totalPaid"),
+              ])
+              .where("order_id", "=", orderId)
+              .where("tenant_id", "=", tenantId)
+              .executeTakeFirst();
+
+            const paidAmount = Number(paidRow?.totalPaid ?? 0);
+            const remainingAmountAfter = Math.max(0, totalAmount - paidAmount);
+            const statusAfter: "unpaid" | "partial" | "paid" =
+              totalAmount === 0
+                ? "paid"
+                : paidAmount === 0
+                  ? "unpaid"
+                  : remainingAmountAfter === 0
+                    ? "paid"
+                    : "partial";
+
+            return {
+              success: true,
+              response: {
+                payment: {
+                  id: conflicting.id,
+                  orderId: conflicting.orderId,
+                  customerId: conflicting.customerId,
+                  amount: Number(conflicting.amount),
+                  paymentMethod: conflicting.paymentMethod,
+                  referenceCode: conflicting.referenceCode,
+                  note: conflicting.note,
+                  idempotencyKey: conflicting.idempotencyKey,
+                  createdByName: conflicting.createdByName,
+                  createdAt: conflicting.createdAt.toISOString(),
+                },
+                summary: {
+                  totalAmount,
+                  paidAmount,
+                  remainingAmount: remainingAmountAfter,
+                  paymentStatus: statusAfter,
+                },
+              },
+            };
+          }
+
+          return {
+            success: false,
+            code: "IDEMPOTENCY_CONFLICT",
+            message:
+              "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác",
+          };
+        }
+
+        const user = await trx
+          .selectFrom("users")
+          .select(["full_name"])
+          .where("id", "=", userId)
+          .executeTakeFirst();
+
+        const paymentRow = await trx
+          .selectFrom("payments")
+          .select(["created_at"])
+          .where("id", "=", paymentId)
+          .executeTakeFirstOrThrow();
+
+        const paymentItem: PaymentItem = {
+          id: paymentId,
+          orderId,
+          customerId: order.customer_id,
+          amount: input.amount,
+          paymentMethod: input.paymentMethod,
+          referenceCode: input.referenceCode ?? null,
+          note: input.note ?? null,
+          idempotencyKey: normalizedKey,
+          createdByName: user?.full_name ?? "Người dùng",
+          createdAt: paymentRow.created_at.toISOString(),
+        };
+
+        return {
+          success: true,
+          response: {
+            payment: paymentItem,
+            summary: {
+              totalAmount,
+              paidAmount: newPaidAmount,
+              remainingAmount: newRemainingAmount,
+              paymentStatus: newStatus,
+            },
+          },
+        };
+      });
+    },
+
+    async listPayments(tenantId, orderId) {
+      const order = await db
+        .selectFrom("sales_orders")
+        .select(["id", "total_amount"])
+        .where("id", "=", orderId)
+        .where("tenant_id", "=", tenantId)
+        .executeTakeFirst();
+
+      if (!order) {
+        return null;
+      }
+
+      const totalAmount = Number(order.total_amount);
+
+      const payments = await db
+        .selectFrom("payments")
+        .innerJoin("users", "users.id", "payments.created_by")
+        .select([
+          "payments.id as id",
+          "payments.order_id as orderId",
+          "payments.customer_id as customerId",
+          "payments.amount as amount",
+          "payments.payment_method as paymentMethod",
+          "payments.reference_code as referenceCode",
+          "payments.note as note",
+          "payments.idempotency_key as idempotencyKey",
+          "users.full_name as createdByName",
+          "payments.created_at as createdAt",
+        ])
+        .where("payments.order_id", "=", orderId)
+        .where("payments.tenant_id", "=", tenantId)
+        .orderBy("payments.created_at", "asc")
+        .execute();
+
+      const paidAmount = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const remainingAmount = Math.max(0, totalAmount - paidAmount);
+      const paymentStatus: "unpaid" | "partial" | "paid" =
+        totalAmount === 0
+          ? "paid"
+          : paidAmount === 0
+            ? "unpaid"
+            : remainingAmount === 0
+              ? "paid"
+              : "partial";
+
+      return {
+        payments: payments.map((p) => ({
+          id: p.id,
+          orderId: p.orderId,
+          customerId: p.customerId,
+          amount: Number(p.amount),
+          paymentMethod: p.paymentMethod,
+          referenceCode: p.referenceCode,
+          note: p.note,
+          idempotencyKey: p.idempotencyKey,
+          createdByName: p.createdByName,
+          createdAt: p.createdAt.toISOString(),
+        })),
+        summary: {
+          totalAmount,
+          paidAmount,
+          remainingAmount,
+          paymentStatus,
+        },
       };
     },
   };

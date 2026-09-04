@@ -5,6 +5,8 @@ import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type {
   CustomerListResponse,
+  OrderPaymentsListResponse,
+  RecordPaymentResponse,
   SalesOrderDetailResponse,
   SalesOrderListResponse,
 } from "@vlxd/shared";
@@ -61,6 +63,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
       await readMigration("202609030006_add_stock_levels_ceiling.sql"),
     );
     const rbac = splitMigration(await readMigration("202609030007_create_rbac_tables.sql"));
+    const payments = splitMigration(await readMigration("202609040008_create_payment_tables.sql"));
     const seed = await readFile(resolve(process.cwd(), "../../db/seeds/dev.sql"), "utf8");
 
     const pool = createDatabasePool(started.getConnectionUri());
@@ -76,6 +79,7 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
       await pool.query(salesOrders[0]);
       await pool.query(ceilingMigration[0]);
       await pool.query(rbac[0]);
+      await pool.query(payments[0]);
 
       // Seed warehouse and product
       await database
@@ -289,6 +293,168 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
       expect(detail.id).toBe(createdOrder.id);
       expect(detail.customerCode).toBe("KH-THAU-01");
       expect(detail.lines[0]?.productSku).toBe("XM-001");
+      expect(detail.paidAmount).toBe(0);
+      expect(detail.remainingAmount).toBe(1700000);
+      expect(detail.paymentStatus).toBe("unpaid");
+
+      // 10a. Record partial payment (unpaid -> partial): 1,000,000 / 1,700,000 VND
+      const partialPayRes = await app.inject({
+        method: "POST",
+        url: `/sales-orders/${createdOrder.id}/payments`,
+        cookies,
+        headers,
+        payload: {
+          amount: 1000000,
+          paymentMethod: "bank_transfer",
+          referenceCode: "UNC-20260904-001",
+          note: "Chuyển khoản cọc đợt 1",
+          idempotencyKey: "idem-so-001",
+        },
+      });
+      expect(partialPayRes.statusCode).toBe(201);
+      const partialPay = partialPayRes.json<RecordPaymentResponse>();
+      expect(partialPay.payment.amount).toBe(1000000);
+      expect(partialPay.payment.paymentMethod).toBe("bank_transfer");
+      expect(partialPay.payment.idempotencyKey).toBe("idem-so-001");
+      expect(partialPay.summary).toEqual({
+        totalAmount: 1700000,
+        paidAmount: 1000000,
+        remainingAmount: 700000,
+        paymentStatus: "partial",
+      });
+
+      // 10b. Idempotent replay: Resending exact request with same idempotencyKey returns original payment
+      const replayPayRes = await app.inject({
+        method: "POST",
+        url: `/sales-orders/${createdOrder.id}/payments`,
+        cookies,
+        headers,
+        payload: {
+          amount: 1000000,
+          paymentMethod: "bank_transfer",
+          referenceCode: "UNC-20260904-001",
+          note: "Chuyển khoản cọc đợt 1",
+          idempotencyKey: "idem-so-001",
+        },
+      });
+      expect([200, 201]).toContain(replayPayRes.statusCode);
+      const replayPay = replayPayRes.json<RecordPaymentResponse>();
+      expect(replayPay.payment.id).toBe(partialPay.payment.id);
+      expect(replayPay.summary.paidAmount).toBe(1000000);
+
+      // Verify DB row count: exactly 1 payment exists
+      const paymentRows = await database
+        .selectFrom("payments")
+        .selectAll()
+        .where("order_id", "=", createdOrder.id)
+        .execute();
+      expect(paymentRows).toHaveLength(1);
+
+      // 10b-1. Reusing same idempotencyKey with different referenceCode returns 409 IDEMPOTENCY_CONFLICT
+      const conflictRefRes = await app.inject({
+        method: "POST",
+        url: `/sales-orders/${createdOrder.id}/payments`,
+        cookies,
+        headers,
+        payload: {
+          amount: 1000000,
+          paymentMethod: "bank_transfer",
+          referenceCode: "UNC-DIFFERENT-REF",
+          note: "Chuyển khoản cọc đợt 1",
+          idempotencyKey: "idem-so-001",
+        },
+      });
+      expect(conflictRefRes.statusCode).toBe(409);
+      expect(conflictRefRes.json()).toMatchObject({
+        code: "IDEMPOTENCY_CONFLICT",
+      });
+
+      // 10b-2. Reusing same idempotencyKey with different note returns 409 IDEMPOTENCY_CONFLICT
+      const conflictNoteRes = await app.inject({
+        method: "POST",
+        url: `/sales-orders/${createdOrder.id}/payments`,
+        cookies,
+        headers,
+        payload: {
+          amount: 1000000,
+          paymentMethod: "bank_transfer",
+          referenceCode: "UNC-20260904-001",
+          note: "Ghi chú đã bị thay đổi",
+          idempotencyKey: "idem-so-001",
+        },
+      });
+      expect(conflictNoteRes.statusCode).toBe(409);
+      expect(conflictNoteRes.json()).toMatchObject({
+        code: "IDEMPOTENCY_CONFLICT",
+      });
+
+      // 10c. Reject overpayment: remaining is 700,000 VND, attempting 800,000 VND
+      const overPayRes = await app.inject({
+        method: "POST",
+        url: `/sales-orders/${createdOrder.id}/payments`,
+        cookies,
+        headers,
+        payload: {
+          amount: 800000,
+          paymentMethod: "cash",
+          idempotencyKey: "idem-overpay-001",
+        },
+      });
+      expect(overPayRes.statusCode).toBe(422);
+      expect(overPayRes.json()).toMatchObject({
+        code: "AMOUNT_EXCEEDS_REMAINING",
+      });
+
+      // 10d. Record final payment (partial -> paid): pay remaining 700,000 VND
+      const finalPayRes = await app.inject({
+        method: "POST",
+        url: `/sales-orders/${createdOrder.id}/payments`,
+        cookies,
+        headers,
+        payload: {
+          amount: 700000,
+          paymentMethod: "cash",
+          note: "Thanh toán nốt",
+          idempotencyKey: "idem-so-002",
+        },
+      });
+      expect(finalPayRes.statusCode).toBe(201);
+      const finalPay = finalPayRes.json<RecordPaymentResponse>();
+      expect(finalPay.summary).toEqual({
+        totalAmount: 1700000,
+        paidAmount: 1700000,
+        remainingAmount: 0,
+        paymentStatus: "paid",
+      });
+
+      // 10e. Reject payment on fully paid order
+      const paidOrderRes = await app.inject({
+        method: "POST",
+        url: `/sales-orders/${createdOrder.id}/payments`,
+        cookies,
+        headers,
+        payload: {
+          amount: 50000,
+          paymentMethod: "cash",
+          idempotencyKey: "idem-already-paid-001",
+        },
+      });
+      expect(paidOrderRes.statusCode).toBe(422);
+      expect(paidOrderRes.json()).toMatchObject({
+        code: "ORDER_ALREADY_PAID",
+      });
+
+      // 10f. List payments for order
+      const listPayRes = await app.inject({
+        method: "GET",
+        url: `/sales-orders/${createdOrder.id}/payments`,
+        cookies,
+        headers,
+      });
+      expect(listPayRes.statusCode).toBe(200);
+      const payList = listPayRes.json<OrderPaymentsListResponse>();
+      expect(payList.payments).toHaveLength(2);
+      expect(payList.summary.paymentStatus).toBe("paid");
 
       // 11. Concurrency test: Two competing orders requesting 20 bags when only 30 remain
       const concurrentOrderPayload = {
@@ -365,7 +531,71 @@ describe("sales orders integration tests (full flow, stock deduction & boundary 
         code: "CUSTOMER_CODE_EXISTS",
       });
 
+      // 13. Concurrency test on payments: Two competing payments exceeding remaining debt
+      // Order 2 cement bags at 100,000 VND = 200,000 VND total
+      const concurrentPayOrderRes = await app.inject({
+        method: "POST",
+        url: "/sales-orders",
+        cookies,
+        headers,
+        payload: {
+          customerId: newCust.id,
+          warehouseId: "wh-main-001",
+          lines: [{ productId: "prod-cement-001", quantity: 2, unitPrice: 100000 }],
+        },
+      });
+      expect(concurrentPayOrderRes.statusCode).toBe(201);
+      const payOrderId = concurrentPayOrderRes.json<SalesOrderDetailResponse>().id;
+
+      // Two concurrent payments each for 150,000 VND (total 300,000 VND > 200,000 VND)
+      const [payA, payB] = await Promise.all([
+        app.inject({
+          method: "POST",
+          url: `/sales-orders/${payOrderId}/payments`,
+          cookies,
+          headers,
+          payload: {
+            amount: 150000,
+            paymentMethod: "cash",
+            idempotencyKey: "concurrent-pay-a",
+          },
+        }),
+        app.inject({
+          method: "POST",
+          url: `/sales-orders/${payOrderId}/payments`,
+          cookies,
+          headers,
+          payload: {
+            amount: 150000,
+            paymentMethod: "bank_transfer",
+            idempotencyKey: "concurrent-pay-b",
+          },
+        }),
+      ]);
+
+      const payStatuses = [payA.statusCode, payB.statusCode].sort((a, b) => a - b);
+      expect(payStatuses).toEqual([201, 422]);
+      const failedPay = payA.statusCode === 422 ? payA : payB;
+      expect(failedPay.json()).toMatchObject({
+        code: "AMOUNT_EXCEEDS_REMAINING",
+      });
+
+      // Verify DB total paid is exactly 150,000 VND, never 300,000 VND
+      const totalPaidDb = await database
+        .selectFrom("payments")
+        .select(({ fn }) => [fn.sum<number | string>("amount").as("total")])
+        .where("order_id", "=", payOrderId)
+        .executeTakeFirst();
+      expect(Number(totalPaidDb?.total)).toBe(150000);
+
       await app.close();
+
+      // Verify rollback of payment tables
+      await pool.query(payments[1]);
+      const tableCheck = await pool.query<{ tbl: string | null }>(
+        "SELECT to_regclass('public.payments') as tbl",
+      );
+      expect(tableCheck.rows[0]?.tbl).toBeNull();
     } finally {
       await pool.end();
     }

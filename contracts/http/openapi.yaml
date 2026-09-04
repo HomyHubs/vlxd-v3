@@ -610,6 +610,103 @@ paths:
                 $ref: "#/components/schemas/SalesOrderErrorResponse"
         "409":
           $ref: "#/components/responses/AuthContextChangedResponse"
+  /sales-orders/{id}/payments:
+    post:
+      operationId: recordSalesOrderPayment
+      summary: Record a payment against a sales order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordPaymentRequest"
+      responses:
+        "201":
+          description: Payment recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordPaymentResponse"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentErrorResponse"
+        "403":
+          description: Permission denied (requires sales.create)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentErrorResponse"
+        "404":
+          description: Sales order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentErrorResponse"
+        "409":
+          description: Idempotency conflict or authentication context changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentErrorResponse"
+        "422":
+          description: Payment exceeds remaining amount or order already paid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentErrorResponse"
+    get:
+      operationId: listSalesOrderPayments
+      summary: List payments and payment summary for a sales order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
+      responses:
+        "200":
+          description: Payments and summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderPaymentsListResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentErrorResponse"
+        "403":
+          description: Permission denied (requires sales.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentErrorResponse"
+        "404":
+          description: Sales order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
   /titles:
     get:
       operationId: listTitles
@@ -1174,6 +1271,9 @@ components:
           warehouseName,
           status,
           totalAmount,
+          paidAmount,
+          remainingAmount,
+          paymentStatus,
           itemCount,
           createdByName,
           createdAt,
@@ -1192,6 +1292,10 @@ components:
           type: [string, "null"]
         createdByName: { type: string }
         createdAt: { type: string, format: date-time }
+        paidAmount: { type: integer }
+        remainingAmount: { type: integer }
+        paymentStatus:
+          $ref: "#/components/schemas/PaymentStatus"
     SalesOrderListResponse:
       type: object
       additionalProperties: false
@@ -1219,6 +1323,9 @@ components:
           warehouseName,
           status,
           totalAmount,
+          paidAmount,
+          remainingAmount,
+          paymentStatus,
           createdByName,
           createdAt,
           lines,
@@ -1238,6 +1345,10 @@ components:
         warehouseName: { type: string }
         status: { type: string }
         totalAmount: { type: integer }
+        paidAmount: { type: integer }
+        remainingAmount: { type: integer }
+        paymentStatus:
+          $ref: "#/components/schemas/PaymentStatus"
         note:
           type: [string, "null"]
         createdByName: { type: string }
@@ -1246,6 +1357,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SalesOrderLine"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentItem"
     SalesOrderErrorResponse:
       type: object
       additionalProperties: false
@@ -1339,5 +1454,104 @@ components:
               EMAIL_EXISTS,
               INVALID_INPUT,
               AUTH_CONTEXT_CHANGED,
+            ]
+        message: { type: string }
+    PaymentMethod:
+      type: string
+      enum: [cash, bank_transfer]
+    PaymentStatus:
+      type: string
+      enum: [unpaid, partial, paid]
+    PaymentItem:
+      type: object
+      additionalProperties: false
+      required: [id, orderId, customerId, amount, paymentMethod, createdByName, createdAt]
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        customerId: { type: string }
+        amount: { type: integer }
+        paymentMethod:
+          $ref: "#/components/schemas/PaymentMethod"
+        referenceCode:
+          type: [string, "null"]
+          maxLength: 100
+        note:
+          type: [string, "null"]
+          maxLength: 500
+        idempotencyKey:
+          type: [string, "null"]
+          maxLength: 100
+        createdByName: { type: string }
+        createdAt: { type: string, format: date-time }
+    OrderPaymentSummary:
+      type: object
+      additionalProperties: false
+      required: [totalAmount, paidAmount, remainingAmount, paymentStatus]
+      properties:
+        totalAmount: { type: integer }
+        paidAmount: { type: integer }
+        remainingAmount: { type: integer }
+        paymentStatus:
+          $ref: "#/components/schemas/PaymentStatus"
+    RecordPaymentRequest:
+      type: object
+      additionalProperties: false
+      required: [amount, paymentMethod, idempotencyKey]
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          maximum: 1000000000000
+        paymentMethod:
+          $ref: "#/components/schemas/PaymentMethod"
+        referenceCode:
+          type: [string, "null"]
+          maxLength: 100
+        note:
+          type: [string, "null"]
+          maxLength: 500
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 100
+    RecordPaymentResponse:
+      type: object
+      additionalProperties: false
+      required: [payment, summary]
+      properties:
+        payment:
+          $ref: "#/components/schemas/PaymentItem"
+        summary:
+          $ref: "#/components/schemas/OrderPaymentSummary"
+    OrderPaymentsListResponse:
+      type: object
+      additionalProperties: false
+      required: [payments, summary]
+      properties:
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentItem"
+        summary:
+          $ref: "#/components/schemas/OrderPaymentSummary"
+    PaymentErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            [
+              UNAUTHORIZED,
+              FORBIDDEN,
+              ORDER_NOT_FOUND,
+              AMOUNT_EXCEEDS_REMAINING,
+              ORDER_ALREADY_PAID,
+              INVALID_PAYMENT_AMOUNT,
+              AUTH_CONTEXT_CHANGED,
+              IDEMPOTENCY_CONFLICT,
+              VALIDATION_ERROR,
             ]
         message: { type: string }

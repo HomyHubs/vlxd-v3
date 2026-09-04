@@ -31,7 +31,7 @@ describe("sales order routes unit tests", () => {
       create: vi.fn(),
       list: vi.fn(),
       getById: vi.fn(),
-    } as SalesOrderService;
+    } as unknown as SalesOrderService;
 
     const auth = {
       login: vi.fn(),
@@ -68,6 +68,9 @@ describe("sales order routes unit tests", () => {
           warehouseName: "Kho Chính",
           status: "confirmed",
           totalAmount: 150000,
+          paidAmount: 0,
+          remainingAmount: 150000,
+          paymentStatus: "unpaid",
           itemCount: 1,
           note: null,
           createdByName: "Chủ cửa hàng",
@@ -83,7 +86,7 @@ describe("sales order routes unit tests", () => {
       create: vi.fn(),
       list,
       getById: vi.fn(),
-    } as SalesOrderService;
+    } as unknown as SalesOrderService;
 
     const app = await buildApp({
       authService: createMockAuthService(),
@@ -126,9 +129,13 @@ describe("sales order routes unit tests", () => {
         warehouseName: "Kho Chính",
         status: "confirmed",
         totalAmount: 200000,
+        paidAmount: 0,
+        remainingAmount: 200000,
+        paymentStatus: "unpaid",
         note: "Giao gấp",
         createdByName: "Chủ cửa hàng",
         createdAt: new Date().toISOString(),
+        payments: [],
         lines: [
           {
             id: "sol-1",
@@ -148,7 +155,7 @@ describe("sales order routes unit tests", () => {
       create,
       list: vi.fn(),
       getById: vi.fn(),
-    } as SalesOrderService;
+    } as unknown as SalesOrderService;
 
     const app = await buildApp({
       authService: createMockAuthService(),
@@ -189,7 +196,7 @@ describe("sales order routes unit tests", () => {
       create,
       list: vi.fn(),
       getById: vi.fn(),
-    } as SalesOrderService;
+    } as unknown as SalesOrderService;
 
     const app = await buildApp({
       authService: createMockAuthService(),
@@ -228,7 +235,7 @@ describe("sales order routes unit tests", () => {
       create,
       list: vi.fn(),
       getById: vi.fn(),
-    } as SalesOrderService;
+    } as unknown as SalesOrderService;
 
     const app = await buildApp({
       authService: createMockAuthService(),
@@ -270,9 +277,13 @@ describe("sales order routes unit tests", () => {
       warehouseName: "Kho Chính",
       status: "confirmed",
       totalAmount: 200000,
+      paidAmount: 0,
+      remainingAmount: 200000,
+      paymentStatus: "unpaid",
       note: null,
       createdByName: "Chủ cửa hàng",
       createdAt: new Date().toISOString(),
+      payments: [],
       lines: [
         {
           id: "sol-1",
@@ -291,7 +302,7 @@ describe("sales order routes unit tests", () => {
       create: vi.fn(),
       list: vi.fn(),
       getById,
-    } as SalesOrderService;
+    } as unknown as SalesOrderService;
 
     const app = await buildApp({
       authService: createMockAuthService(),
@@ -319,7 +330,7 @@ describe("sales order routes unit tests", () => {
       create: vi.fn(),
       list: vi.fn(),
       getById: vi.fn().mockResolvedValue(null),
-    } as SalesOrderService;
+    } as unknown as SalesOrderService;
 
     const app = await buildApp({
       authService: createMockAuthService(),
@@ -347,7 +358,7 @@ describe("sales order routes unit tests", () => {
       create: vi.fn(),
       list: vi.fn(),
       getById: vi.fn(),
-    } as SalesOrderService;
+    } as unknown as SalesOrderService;
 
     const app = await buildApp({
       authService: createMockAuthService(),
@@ -379,7 +390,7 @@ describe("sales order routes unit tests", () => {
       create: vi.fn(),
       list: vi.fn(),
       getById: vi.fn(),
-    } as SalesOrderService;
+    } as unknown as SalesOrderService;
 
     const app = await buildApp({
       authService: createMockAuthService(),
@@ -414,7 +425,7 @@ describe("sales order routes unit tests", () => {
       create: vi.fn(),
       list: vi.fn(),
       getById: vi.fn(),
-    } as SalesOrderService;
+    } as unknown as SalesOrderService;
     const app = await buildApp({
       authService: createMockAuthService(noCapSession),
       salesOrderService,
@@ -444,7 +455,7 @@ describe("sales order routes unit tests", () => {
       create: vi.fn(),
       list: vi.fn(),
       getById: vi.fn(),
-    } as SalesOrderService;
+    } as unknown as SalesOrderService;
     const app = await buildApp({
       authService: createMockAuthService(noCapSession),
       salesOrderService,
@@ -479,7 +490,7 @@ describe("sales order routes unit tests", () => {
       create: vi.fn(),
       list: vi.fn(),
       getById: vi.fn(),
-    } as SalesOrderService;
+    } as unknown as SalesOrderService;
     const app = await buildApp({
       authService: createMockAuthService(noCapSession),
       salesOrderService,
@@ -497,6 +508,393 @@ describe("sales order routes unit tests", () => {
 
     expect(response.statusCode).toBe(403);
     expect(response.json()).toMatchObject({ code: "FORBIDDEN" });
+    await app.close();
+  });
+
+  it("POST /sales-orders/:id/payments records payment successfully", async () => {
+    const recordPayment = vi.fn().mockResolvedValue({
+      success: true,
+      response: {
+        payment: {
+          id: "pmt-1",
+          orderId: "order-1",
+          customerId: "cust-1",
+          amount: 50000,
+          paymentMethod: "cash",
+          referenceCode: null,
+          note: "Thanh toán đợt 1",
+          createdByName: "Chủ cửa hàng",
+          createdAt: new Date().toISOString(),
+        },
+        summary: {
+          totalAmount: 100000,
+          paidAmount: 50000,
+          remainingAmount: 50000,
+          paymentStatus: "partial",
+        },
+      },
+    });
+
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment,
+      listPayments: vi.fn(),
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders/order-1/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: {
+        amount: 50000,
+        paymentMethod: "cash",
+        note: "Thanh toán đợt 1",
+        idempotencyKey: "pmt-key-1",
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    const body = response.json<{
+      payment: { id: string };
+      summary: { paidAmount: number; paymentStatus: string };
+    }>();
+    expect(body.payment.id).toBe("pmt-1");
+    expect(body.summary.paidAmount).toBe(50000);
+    expect(body.summary.paymentStatus).toBe("partial");
+    expect(recordPayment).toHaveBeenCalledWith(
+      "tenant-1",
+      "user-1",
+      "order-1",
+      expect.objectContaining({ amount: 50000, paymentMethod: "cash" }),
+    );
+    await app.close();
+  });
+
+  it("POST /sales-orders/:id/payments returns 422 when amount exceeds remaining", async () => {
+    const recordPayment = vi.fn().mockResolvedValue({
+      success: false,
+      code: "AMOUNT_EXCEEDS_REMAINING",
+      message: "Số tiền thanh toán vượt quá số tiền còn nợ",
+    });
+
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment,
+      listPayments: vi.fn(),
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders/order-1/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: {
+        amount: 200000,
+        paymentMethod: "bank_transfer",
+        idempotencyKey: "pmt-key-2",
+      },
+    });
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toMatchObject({
+      code: "AMOUNT_EXCEEDS_REMAINING",
+    });
+    await app.close();
+  });
+
+  it("POST /sales-orders/:id/payments returns 403 when user lacks sales.create", async () => {
+    const readOnlySession = {
+      ...mockSession,
+      user: { ...mockSession.user, capabilities: ["sales.view"] },
+    };
+
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment: vi.fn(),
+      listPayments: vi.fn(),
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(readOnlySession),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders/order-1/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: {
+        amount: 50000,
+        paymentMethod: "cash",
+        idempotencyKey: "pmt-key-3",
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ code: "FORBIDDEN" });
+    await app.close();
+  });
+
+  it("GET /sales-orders/:id/payments returns list of payments and summary", async () => {
+    const listPayments = vi.fn().mockResolvedValue({
+      payments: [
+        {
+          id: "pmt-1",
+          orderId: "order-1",
+          customerId: "cust-1",
+          amount: 50000,
+          paymentMethod: "cash",
+          referenceCode: null,
+          note: null,
+          createdByName: "Chủ cửa hàng",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      summary: {
+        totalAmount: 100000,
+        paidAmount: 50000,
+        remainingAmount: 50000,
+        paymentStatus: "partial",
+      },
+    });
+
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment: vi.fn(),
+      listPayments,
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/sales-orders/order-1/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json<{
+      payments: unknown[];
+      summary: { paidAmount: number };
+    }>();
+    expect(body.payments).toHaveLength(1);
+    expect(body.summary.paidAmount).toBe(50000);
+    expect(listPayments).toHaveBeenCalledWith("tenant-1", "order-1");
+    await app.close();
+  });
+
+  it("GET /sales-orders/:id/payments returns 404 when order not found", async () => {
+    const listPayments = vi.fn().mockResolvedValue(null);
+
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment: vi.fn(),
+      listPayments,
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/sales-orders/non-existent/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ code: "ORDER_NOT_FOUND" });
+    await app.close();
+  });
+
+  it("POST /sales-orders/:id/payments returns 400 when idempotencyKey is empty string", async () => {
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment: vi.fn(),
+      listPayments: vi.fn(),
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders/order-1/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: {
+        amount: 50000,
+        paymentMethod: "cash",
+        idempotencyKey: "",
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: "VALIDATION_ERROR" });
+    await app.close();
+  });
+
+  it("POST /sales-orders/:id/payments returns 409 when idempotency conflict occurs", async () => {
+    const recordPayment = vi.fn().mockResolvedValue({
+      success: false,
+      code: "IDEMPOTENCY_CONFLICT",
+      message:
+        "Mã idempotencyKey đã được sử dụng cho một yêu cầu thanh toán khác với thông tin không khớp",
+    });
+
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment,
+      listPayments: vi.fn(),
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders/order-1/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: {
+        amount: 50000,
+        paymentMethod: "cash",
+        idempotencyKey: "used-key-diff-params",
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: "IDEMPOTENCY_CONFLICT" });
+    await app.close();
+  });
+
+  it("POST /sales-orders/:id/payments returns 422 when order is already paid", async () => {
+    const recordPayment = vi.fn().mockResolvedValue({
+      success: false,
+      code: "ORDER_ALREADY_PAID",
+      message: "Đơn hàng đã được thanh toán đủ hoặc không có công nợ",
+    });
+
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment,
+      listPayments: vi.fn(),
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders/order-1/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: {
+        amount: 50000,
+        paymentMethod: "cash",
+        idempotencyKey: "pmt-key-4",
+      },
+    });
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toMatchObject({ code: "ORDER_ALREADY_PAID" });
+    await app.close();
+  });
+
+  it("POST /sales-orders/:id/payments returns 400 when idempotencyKey is omitted", async () => {
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment: vi.fn(),
+      listPayments: vi.fn(),
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders/order-1/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: {
+        amount: 50000,
+        paymentMethod: "cash",
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: "VALIDATION_ERROR" });
     await app.close();
   });
 });

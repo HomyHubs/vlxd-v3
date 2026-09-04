@@ -112,3 +112,22 @@ export {
   type CreateUserRequest,
   type UserErrorResponse,
 } from "./user.js";
+
+export {
+  PaymentMethodSchema,
+  PaymentStatusSchema,
+  RecordPaymentRequestSchema,
+  PaymentItemSchema,
+  OrderPaymentSummarySchema,
+  RecordPaymentResponseSchema,
+  OrderPaymentsListResponseSchema,
+  PaymentErrorResponseSchema,
+  type PaymentMethod,
+  type PaymentStatus,
+  type RecordPaymentRequest,
+  type PaymentItem,
+  type OrderPaymentSummary,
+  type RecordPaymentResponse,
+  type OrderPaymentsListResponse,
+  type PaymentErrorResponse,
+} from "./payment.js";

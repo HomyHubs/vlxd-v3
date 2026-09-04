@@ -230,6 +230,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sales-orders/{id}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List payments and payment summary for a sales order */
+        get: operations["listSalesOrderPayments"];
+        put?: never;
+        /** Record a payment against a sales order */
+        post: operations["recordSalesOrderPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/titles": {
         parameters: {
             query?: never;
@@ -492,6 +510,9 @@ export interface components {
             createdByName: string;
             /** Format: date-time */
             createdAt: string;
+            paidAmount: number;
+            remainingAmount: number;
+            paymentStatus: components["schemas"]["PaymentStatus"];
         };
         SalesOrderListResponse: {
             items: components["schemas"]["SalesOrderListItem"][];
@@ -512,11 +533,15 @@ export interface components {
             warehouseName: string;
             status: string;
             totalAmount: number;
+            paidAmount: number;
+            remainingAmount: number;
+            paymentStatus: components["schemas"]["PaymentStatus"];
             note?: string | null;
             createdByName: string;
             /** Format: date-time */
             createdAt: string;
             lines: components["schemas"]["SalesOrderLine"][];
+            payments?: components["schemas"]["PaymentItem"][];
         };
         SalesOrderErrorResponse: {
             /** @enum {string} */
@@ -555,6 +580,49 @@ export interface components {
         UserErrorResponse: {
             /** @enum {string} */
             code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "TITLE_NOT_FOUND" | "EMAIL_EXISTS" | "INVALID_INPUT" | "AUTH_CONTEXT_CHANGED";
+            message: string;
+        };
+        /** @enum {string} */
+        PaymentMethod: "cash" | "bank_transfer";
+        /** @enum {string} */
+        PaymentStatus: "unpaid" | "partial" | "paid";
+        PaymentItem: {
+            id: string;
+            orderId: string;
+            customerId: string;
+            amount: number;
+            paymentMethod: components["schemas"]["PaymentMethod"];
+            referenceCode?: string | null;
+            note?: string | null;
+            idempotencyKey?: string | null;
+            createdByName: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        OrderPaymentSummary: {
+            totalAmount: number;
+            paidAmount: number;
+            remainingAmount: number;
+            paymentStatus: components["schemas"]["PaymentStatus"];
+        };
+        RecordPaymentRequest: {
+            amount: number;
+            paymentMethod: components["schemas"]["PaymentMethod"];
+            referenceCode?: string | null;
+            note?: string | null;
+            idempotencyKey: string;
+        };
+        RecordPaymentResponse: {
+            payment: components["schemas"]["PaymentItem"];
+            summary: components["schemas"]["OrderPaymentSummary"];
+        };
+        OrderPaymentsListResponse: {
+            payments: components["schemas"]["PaymentItem"][];
+            summary: components["schemas"]["OrderPaymentSummary"];
+        };
+        PaymentErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "ORDER_NOT_FOUND" | "AMOUNT_EXCEEDS_REMAINING" | "ORDER_ALREADY_PAID" | "INVALID_PAYMENT_AMOUNT" | "AUTH_CONTEXT_CHANGED" | "IDEMPOTENCY_CONFLICT" | "VALIDATION_ERROR";
             message: string;
         };
     };
@@ -1465,6 +1533,146 @@ export interface operations {
                 };
             };
             409: components["responses"]["AuthContextChangedResponse"];
+        };
+    };
+    listSalesOrderPayments: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payments and summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderPaymentsListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires sales.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentErrorResponse"];
+                };
+            };
+            /** @description Sales order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
+        };
+    };
+    recordSalesOrderPayment: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordPaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description Payment recorded successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordPaymentResponse"];
+                };
+            };
+            /** @description Invalid request payload */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentErrorResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires sales.create) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentErrorResponse"];
+                };
+            };
+            /** @description Sales order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentErrorResponse"];
+                };
+            };
+            /** @description Idempotency conflict or authentication context changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentErrorResponse"];
+                };
+            };
+            /** @description Payment exceeds remaining amount or order already paid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentErrorResponse"];
+                };
+            };
         };
     };
     listTitles: {

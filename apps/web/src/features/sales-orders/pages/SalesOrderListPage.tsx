@@ -162,6 +162,7 @@ export function SalesOrderListPage() {
                     <TableCell>{t("orders.warehouse", "Kho xuất")}</TableCell>
                     <TableCell align="center">{t("orders.itemCount", "Số SP")}</TableCell>
                     <TableCell align="right">{t("orders.totalAmount", "Tổng tiền")}</TableCell>
+                    <TableCell>{t("orders.paymentStatus", "Thanh toán")}</TableCell>
                     <TableCell>{t("orders.status", "Trạng thái")}</TableCell>
                     <TableCell>{t("orders.createdByName", "Người tạo")}</TableCell>
                     <TableCell>{t("orders.createdAt", "Ngày tạo")}</TableCell>
@@ -171,7 +172,7 @@ export function SalesOrderListPage() {
                 <TableBody>
                   {ordersQuery.isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
+                      <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
                         <Typography color="text.secondary">
                           {t("common.loading", "Đang tải...")}
                         </Typography>
@@ -179,7 +180,7 @@ export function SalesOrderListPage() {
                     </TableRow>
                   ) : orders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                      <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary" gutterBottom>
                           {t("orders.emptyList", "Chưa có đơn bán hàng nào")}
                         </Typography>
@@ -218,6 +219,33 @@ export function SalesOrderListPage() {
                         <TableCell align="center">{order.itemCount}</TableCell>
                         <TableCell align="right" sx={{ fontWeight: "bold" }}>
                           {formatVnd(order.totalAmount)}
+                        </TableCell>
+                        <TableCell>
+                          <Stack spacing={0.5}>
+                            <Chip
+                              size="small"
+                              label={
+                                order.paymentStatus === "paid"
+                                  ? t("orders.paymentStatusPaid", "Đã thanh toán")
+                                  : order.paymentStatus === "partial"
+                                    ? t("orders.paymentStatusPartial", "Thanh toán một phần")
+                                    : t("orders.paymentStatusUnpaid", "Chưa thanh toán")
+                              }
+                              color={
+                                order.paymentStatus === "paid"
+                                  ? "success"
+                                  : order.paymentStatus === "partial"
+                                    ? "warning"
+                                    : "error"
+                              }
+                              variant={order.paymentStatus === "unpaid" ? "outlined" : "filled"}
+                            />
+                            {order.paidAmount !== undefined && order.paidAmount > 0 && (
+                              <Typography variant="caption" color="text.secondary">
+                                {formatVnd(order.paidAmount)}
+                              </Typography>
+                            )}
+                          </Stack>
                         </TableCell>
                         <TableCell>
                           <Chip

@@ -54,11 +54,12 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   server.setErrorHandler((error: FastifyError, request, reply) => {
     if (error.validation) {
-      const code = request.url.startsWith("/sales-orders")
-        ? "INVALID_ORDER_LINES"
-        : request.url.startsWith("/stock-receipts")
-          ? "INVALID_RECEIPT_LINES"
-          : "VALIDATION_ERROR";
+      const code =
+        request.url.startsWith("/sales-orders") && !request.url.includes("/payments")
+          ? "INVALID_ORDER_LINES"
+          : request.url.startsWith("/stock-receipts")
+            ? "INVALID_RECEIPT_LINES"
+            : "VALIDATION_ERROR";
 
       return reply.code(400).send({
         code,
