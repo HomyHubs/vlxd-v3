@@ -746,4 +746,118 @@ describe("sales order routes unit tests", () => {
     expect(response.json()).toMatchObject({ code: "ORDER_NOT_FOUND" });
     await app.close();
   });
+
+  it("POST /sales-orders/:id/payments returns 400 when idempotencyKey is empty string", async () => {
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment: vi.fn(),
+      listPayments: vi.fn(),
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders/order-1/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: {
+        amount: 50000,
+        paymentMethod: "cash",
+        idempotencyKey: "",
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: "INVALID_PAYMENT_AMOUNT" });
+    await app.close();
+  });
+
+  it("POST /sales-orders/:id/payments returns 409 when idempotency conflict occurs", async () => {
+    const recordPayment = vi.fn().mockResolvedValue({
+      success: false,
+      code: "IDEMPOTENCY_CONFLICT",
+      message:
+        "Mã idempotencyKey đã được sử dụng cho một yêu cầu thanh toán khác với thông tin không khớp",
+    });
+
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment,
+      listPayments: vi.fn(),
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders/order-1/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: {
+        amount: 50000,
+        paymentMethod: "cash",
+        idempotencyKey: "used-key-diff-params",
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: "IDEMPOTENCY_CONFLICT" });
+    await app.close();
+  });
+
+  it("POST /sales-orders/:id/payments returns 422 when order is already paid", async () => {
+    const recordPayment = vi.fn().mockResolvedValue({
+      success: false,
+      code: "ORDER_ALREADY_PAID",
+      message: "Đơn hàng đã được thanh toán đủ hoặc không có công nợ",
+    });
+
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment,
+      listPayments: vi.fn(),
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders/order-1/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: {
+        amount: 50000,
+        paymentMethod: "cash",
+      },
+    });
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toMatchObject({ code: "ORDER_ALREADY_PAID" });
+    await app.close();
+  });
 });

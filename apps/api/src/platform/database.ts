@@ -173,18 +173,6 @@ export interface UserTitleTable {
   tenant_id: string;
 }
 
-export interface InvoiceTable {
-  id: string;
-  tenant_id: string;
-  order_id: string;
-  invoice_number: string;
-  customer_id: string;
-  total_amount: number | string;
-  status: Generated<string>;
-  created_at: Generated<Date>;
-  updated_at: Generated<Date>;
-}
-
 export interface PaymentTable {
   id: string;
   tenant_id: string;
@@ -220,7 +208,6 @@ export interface Database {
   titles: TitleTable;
   title_role_groups: TitleRoleGroupTable;
   user_titles: UserTitleTable;
-  invoices: InvoiceTable;
   payments: PaymentTable;
 }
 

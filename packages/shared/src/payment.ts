@@ -15,7 +15,13 @@ export const RecordPaymentRequestSchema = z.object({
   paymentMethod: PaymentMethodSchema,
   referenceCode: z.string().trim().max(100).optional().nullable(),
   note: z.string().trim().max(500).optional().nullable(),
-  idempotencyKey: z.string().trim().max(100).optional().nullable(),
+  idempotencyKey: z
+    .string()
+    .trim()
+    .min(1, "Mã idempotency key không được để trống")
+    .max(100)
+    .optional()
+    .nullable(),
 });
 export type RecordPaymentRequest = z.infer<typeof RecordPaymentRequestSchema>;
 
@@ -62,6 +68,7 @@ export const PaymentErrorResponseSchema = z.object({
     "ORDER_ALREADY_PAID",
     "INVALID_PAYMENT_AMOUNT",
     "AUTH_CONTEXT_CHANGED",
+    "IDEMPOTENCY_CONFLICT",
   ]),
   message: z.string(),
 });

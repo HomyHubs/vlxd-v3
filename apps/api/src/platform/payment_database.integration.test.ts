@@ -91,30 +91,7 @@ describe("payment database schema migration", () => {
         VALUES ('order-pay-01', 'tenant-dev-001', 'DH-PAY-001', 'cust-retail-tenant-dev-001', 'wh-pay-01', 'confirmed', 500000, 'user-dev-owner-001');
       `);
 
-      // 1. Insert invoice and verify
-      await db
-        .insertInto("invoices")
-        .values({
-          id: "inv-test-01",
-          tenant_id: "tenant-dev-001",
-          order_id: "order-pay-01",
-          invoice_number: "HD-20260904-001",
-          customer_id: "cust-retail-tenant-dev-001",
-          total_amount: 500000,
-          status: "issued",
-        })
-        .execute();
-
-      const insertedInvoice = await db
-        .selectFrom("invoices")
-        .selectAll()
-        .where("id", "=", "inv-test-01")
-        .executeTakeFirst();
-      expect(insertedInvoice).toBeDefined();
-      expect(insertedInvoice?.invoice_number).toBe("HD-20260904-001");
-      expect(Number(insertedInvoice?.total_amount)).toBe(500000);
-
-      // 2. Insert valid payment
+      // 1. Insert valid payment
       await db
         .insertInto("payments")
         .values({
@@ -124,8 +101,9 @@ describe("payment database schema migration", () => {
           customer_id: "cust-retail-tenant-dev-001",
           amount: 200000,
           payment_method: "cash",
-          reference_code: null,
-          note: "Khách trả đợt 1 tiền mặt",
+          reference_code: "REF001",
+          note: "Tiền mặt đợt 1",
+          idempotency_key: "idem-key-01",
           created_by: "user-dev-owner-001",
         })
         .execute();
@@ -136,32 +114,48 @@ describe("payment database schema migration", () => {
         .where("id", "=", "pmt-test-01")
         .executeTakeFirst();
       expect(insertedPayment).toBeDefined();
-      expect(Number(insertedPayment?.amount)).toBe(200000);
       expect(insertedPayment?.payment_method).toBe("cash");
+      expect(Number(insertedPayment?.amount)).toBe(200000);
+      expect(insertedPayment?.idempotency_key).toBe("idem-key-01");
 
-      // 3. Test check constraint: payment amount must be > 0
+      // 2. Test idempotency unique constraint: same tenant + same idempotency_key must fail
       await expect(
         db
           .insertInto("payments")
           .values({
-            id: "pmt-test-invalid-amount",
+            id: "pmt-test-dup",
             tenant_id: "tenant-dev-001",
             order_id: "order-pay-01",
             customer_id: "cust-retail-tenant-dev-001",
-            amount: 0,
-            payment_method: "cash",
-            reference_code: null,
-            note: null,
+            amount: 100000,
+            payment_method: "bank_transfer",
+            idempotency_key: "idem-key-01", // Duplicate key in same tenant
             created_by: "user-dev-owner-001",
           })
           .execute(),
       ).rejects.toThrow();
 
-      // 4. Test check constraint: invalid payment_method rejected
+      // 3. Test check constraint: amount > 0
+      await expect(
+        db
+          .insertInto("payments")
+          .values({
+            id: "pmt-test-02",
+            tenant_id: "tenant-dev-001",
+            order_id: "order-pay-01",
+            customer_id: "cust-retail-tenant-dev-001",
+            amount: 0,
+            payment_method: "cash",
+            created_by: "user-dev-owner-001",
+          })
+          .execute(),
+      ).rejects.toThrow();
+
+      // 4. Test check constraint: payment_method in ('cash', 'bank_transfer')
       await expect(
         pool.query(`
           INSERT INTO payments (id, tenant_id, order_id, customer_id, amount, payment_method, created_by)
-          VALUES ('pmt-bad-method', 'tenant-dev-001', 'order-pay-01', 'cust-retail-tenant-dev-001', 10000, 'credit_card', 'user-dev-owner-001');
+          VALUES ('pmt-test-03', 'tenant-dev-001', 'order-pay-01', 'cust-retail-tenant-dev-001', 100000, 'credit_card', 'user-dev-owner-001');
         `),
       ).rejects.toThrow();
 
@@ -175,7 +169,7 @@ describe("payment database schema migration", () => {
 
       const tablesResult = await pool.query(`
         SELECT table_name FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_name IN ('payments', 'invoices');
+        WHERE table_schema = 'public' AND table_name = 'payments';
       `);
       expect(tablesResult.rows).toHaveLength(0);
     } finally {

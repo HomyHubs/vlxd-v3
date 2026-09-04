@@ -151,11 +151,13 @@ export const salesOrderRoutes: FastifyPluginAsync<SalesOrderRoutesOptions> = (se
       );
 
       if (!result.success) {
-        let statusCode: 400 | 404 | 422 = 400;
+        let statusCode: 400 | 404 | 409 | 422 = 400;
         if (result.code === "AMOUNT_EXCEEDS_REMAINING" || result.code === "ORDER_ALREADY_PAID") {
           statusCode = 422;
         } else if (result.code === "ORDER_NOT_FOUND") {
           statusCode = 404;
+        } else if (result.code === "IDEMPOTENCY_CONFLICT") {
+          statusCode = 409;
         }
 
         return reply.code(statusCode).send({ code: result.code, message: result.message });

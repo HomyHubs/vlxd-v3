@@ -622,7 +622,7 @@ export interface components {
         };
         PaymentErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "FORBIDDEN" | "ORDER_NOT_FOUND" | "AMOUNT_EXCEEDS_REMAINING" | "ORDER_ALREADY_PAID" | "INVALID_PAYMENT_AMOUNT" | "AUTH_CONTEXT_CHANGED";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "ORDER_NOT_FOUND" | "AMOUNT_EXCEEDS_REMAINING" | "ORDER_ALREADY_PAID" | "INVALID_PAYMENT_AMOUNT" | "AUTH_CONTEXT_CHANGED" | "IDEMPOTENCY_CONFLICT";
             message: string;
         };
     };

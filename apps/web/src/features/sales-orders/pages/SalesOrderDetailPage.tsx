@@ -74,6 +74,7 @@ function RecordPaymentDialog({
   const [referenceCode, setReferenceCode] = useState("");
   const [note, setNote] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [idempotencyKey, setIdempotencyKey] = useState<string>("");
 
   useEffect(() => {
     if (open) {
@@ -82,6 +83,7 @@ function RecordPaymentDialog({
       setReferenceCode("");
       setNote("");
       setErrorMsg(null);
+      setIdempotencyKey(`pmt_req_${crypto.randomUUID()}`);
     }
   }, [open, remainingAmount]);
 
@@ -107,7 +109,6 @@ function RecordPaymentDialog({
     }
 
     try {
-      const idempotencyKey = `pmt_req_${crypto.randomUUID()}`;
       await recordPaymentMutation.mutateAsync({
         amount: parsedAmount,
         paymentMethod,

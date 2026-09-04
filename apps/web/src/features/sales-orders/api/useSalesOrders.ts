@@ -139,6 +139,7 @@ export function useRecordPayment(orderId: string) {
           paymentMethod: input.paymentMethod,
           ...(input.referenceCode ? { referenceCode: input.referenceCode } : {}),
           ...(input.note ? { note: input.note } : {}),
+          ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
         },
         headers,
       });

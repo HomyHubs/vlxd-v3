@@ -6,25 +6,35 @@ import { describe, expect, it, vi } from "vitest";
 import "../../../i18n.js";
 import { CreateSalesOrderPage, SalesOrderDetailPage, SalesOrderListPage } from "../index.js";
 
-const mockRecordPayment = vi.fn().mockResolvedValue({
-  payment: {
-    id: "pmt-new",
-    orderId: "order-test-1",
-    customerId: "cust-1",
-    amount: 1000000,
-    paymentMethod: "bank_transfer",
-    referenceCode: "MB-12345",
-    note: "Khách chuyển nốt",
-    createdByName: "Chủ cửa hàng",
-    createdAt: new Date().toISOString(),
-  },
-  summary: {
-    totalAmount: 1700000,
-    paidAmount: 1700000,
-    remainingAmount: 0,
-    paymentStatus: "paid",
-  },
-});
+type MockRecordPaymentArg = {
+  amount: number;
+  paymentMethod: "cash" | "bank_transfer";
+  referenceCode?: string;
+  note?: string;
+  idempotencyKey?: string;
+};
+
+const mockRecordPayment = vi
+  .fn<(data: MockRecordPaymentArg) => Promise<unknown>>()
+  .mockResolvedValue({
+    payment: {
+      id: "pmt-new",
+      orderId: "order-test-1",
+      customerId: "cust-1",
+      amount: 1000000,
+      paymentMethod: "bank_transfer",
+      referenceCode: "MB-12345",
+      note: "Khách chuyển nốt",
+      createdByName: "Chủ cửa hàng",
+      createdAt: new Date().toISOString(),
+    },
+    summary: {
+      totalAmount: 1700000,
+      paidAmount: 1700000,
+      remainingAmount: 0,
+      paymentStatus: "paid",
+    },
+  });
 
 vi.mock("../api/useSalesOrders.js", () => ({
   SALES_ORDERS_QUERY_KEY: ["sales-orders"],
@@ -298,5 +308,17 @@ describe("Sales Orders Pages", () => {
         }),
       );
     });
+
+    const firstCallKey = mockRecordPayment.mock.calls[0]?.[0]?.idempotencyKey;
+    expect(firstCallKey).toBeDefined();
+    expect(firstCallKey).toMatch(/^pmt_req_[0-9a-f-]{36}$/);
+
+    // Click submit again without closing dialog, key must stay stable
+    fireEvent.click(submitBtn);
+    await waitFor(() => {
+      expect(mockRecordPayment).toHaveBeenCalledTimes(2);
+    });
+    const secondCallKey = mockRecordPayment.mock.calls[1]?.[0]?.idempotencyKey;
+    expect(secondCallKey).toBe(firstCallKey);
   });
 });
