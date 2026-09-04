@@ -452,13 +452,7 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities) — PR #7: Hoàn thành giải quyết triệt để finding B1 và các góp ý từ Round 10 của `/gpt-web-review`:
-- B1 (Đồng bộ contract OpenAPI và runtime middleware cho precondition headers, duy trì tương thích backward):
-  - Khớp ngữ nghĩa `required: false` của `ExpectedTenantIdHeader` và `ExpectedSessionContextHeader` trong `contracts/http/openapi.yaml` với Fastify middleware `createRequireCapability`.
-  - Trong `createRequireCapability`, nếu client truyền `x-expected-tenant-id`, server đối soát nghiêm ngặt và chặn bằng `409 AUTH_CONTEXT_CHANGED` nếu lệch `session.tenant.id`. Khi không truyền (cookie-only clients, curl, third-party clients), request tiếp tục được phục vụ bình thường, bảo đảm quy tắc thay đổi tương thích hai bước (không tạo breaking change đơn phương cho các client hợp lệ theo OpenAPI).
-  - Cập nhật unit test `products.unit.test.ts` kiểm thử cả hai trường hợp: (1) thành công với cookie-only khi thiếu header, (2) trả 409 khi header mismatch với tenant session, (3) trả 409 khi session context mismatch.
-  - Cập nhật mô tả response 409 trong `openapi.yaml` ở các POST operations (`createProduct`, `createWarehouse`, `createCustomer`, `createSalesOrder`, `createUser`) bao hàm cả domain conflict lẫn authentication context changed.
-Toàn bộ cổng gác format, lint (0 warnings), typecheck (4/4 packages), unit & web tests (123 tests pass: 69 API unit + 54 web tests), build, contracts lint & schema sync pass 100%. Đang commit, push và trigger Round 11 review.
+Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities): ĐÃ HOÀN THÀNH. PR #7 đã được squash-merge vào nhánh `dev` tại commit `9c92602e6031bdae1a4b3e537c369cb9ee7945ee` sau 11 vòng review nghiêm ngặt với Agent B (ChatGPT Web) qua Chrome DevTools (`APPROVED_TO_MERGE`, 0 blocker). Toàn bộ cổng gác CI GitHub Actions và cục bộ xanh 100%.
 
 ### Đã xong
 
@@ -478,26 +472,24 @@ Toàn bộ cổng gác format, lint (0 warnings), typecheck (4/4 packages), unit
   - [x] Task 5.3 — UI Tạo đơn hàng mới (`/orders/new`) defaulting Khách lẻ, tính tổng tự động, xử lý lỗi tồn kho.
   - [x] Task 5.4 — UI Danh sách đơn và Chi tiết đơn (`/orders`, `/orders/:id`), i18n vi/en, component tests pass.
   - [x] Review loop (`/gpt-web-review`): 6 rounds review nghiêm ngặt với ChatGPT Web qua Chrome DevTools MCP, giải quyết triệt để race conditions, safe integer overflow bounds, cumulative stock level ceiling với PostgreSQL check constraint `stock_levels_quantity_ceiling`, và test concurrency missing-row. 100% CI pass.
-- [x] Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities):
+- [x] Slice 6 — Phân quyền hiển thị được (RBAC & Capabilities): PR #7 squash-merge vào `dev` (`9c92602`).
   - [x] Task 6.1 — Migration `202609030007_create_rbac_tables.sql` (bảng `capabilities`, `role_groups`, `role_group_capabilities`, `titles`, `title_role_groups`, `user_titles`, seed quyền và chức danh mặc định, rollback integration test).
   - [x] Task 6.2 — OpenAPI 3.1 spec, Fastify `/titles`, `/users` (GET, POST), middleware `createRequireCapability`, argon2id password hashing, email uniqueness check.
   - [x] Task 6.3 — Hook `useHasCapability`, UI `/settings/users`, dialog tạo tài khoản nhân viên, điều kiện hoá menu điều hướng và ProtectedRoute theo `users.manage`, badge chức danh trên header, i18n vi/en, component tests pass.
   - [x] Task 6.4 — RBAC enforcement trên toàn bộ business routes (`products.*`, `warehouses.*`, `stock-receipts.*`, `customers.*`, `sales-orders.*`, `users.*`) với 403 FORBIDDEN khi thiếu capability, cập nhật OpenAPI 3.1 và error schema enums.
-  - [x] Fix Round 1 Findings — Loại bỏ email/PII khỏi auth service error logging, thêm test suite kiểm tra bảo mật log.
-  - [x] Fix Round 2 Findings — Enforce capability-based route guards & dashboard links across all business surfaces, hide mutation buttons when lacking manage/create capability, decouple migration backfill from test email, resolve capabilities before session insert, add Role-Matrix UI suite for OWNER, SALES, WAREHOUSE.
-  - [x] Fix Round 3 Findings — Enforce cross-tenant cache isolation, align authoritative capabilities in dev seed and UI tests, guard empty-state sales order CTA, add delayed-response cache isolation test and read-only sales tests.
-  - [x] Fix Round 4 Findings — Sửa `cancelQueries` predicate loại trừ auth query, chuyển tenant cache clearing sang `useEffect` của `useCurrentUser`, thêm 2 test suite production-path cho Tenant B và 401, thêm `seed` service vào `compose.dev.yml`.
-  - [x] Fix Round 5 Findings — Ngăn chặn race condition `/auth/me` đè kết quả login/logout qua generational tracking (`authGeneration`) và huỷ query retryer (`cancelQueries`), tenant-scope toàn bộ query key nghiệp vụ (`products`, `warehouses`, `stock-receipts`, `sales-orders`, `customers`) và disable khi chưa xác định tenant, đồng bộ đăng nhập/đăng xuất đa tab qua `BroadcastChannel`, theo dõi chuyển đổi session theo `tenantId:userId`, thêm atomic flag `-v ON_ERROR_STOP=1 --single-transaction` cho seed container, bổ sung 3 test suite kiểm tra triệt để race conditions và ProductsPage business surface isolation.
-  - [x] Cổng gác tất định: `pnpm check` (format, lint 0 warnings, typecheck 4/4 packages, 116 tests pass [71 api tests + 45 web tests], production build, contracts lint & drift check) pass 100%.
+  - [x] Review loop (`/gpt-web-review`): 11 rounds review với Agent B (ChatGPT Web):
+    - Round 1-5: Log sanitization (xóa email khỏi auth logs), RBAC UI suite, route guards & mutation buttons, cross-tenant cache isolation & delayed-response tests, BroadcastChannel cross-tab sync & session generational tracking, atomic database seed.
+    - Round 6-8: Mutating query rejection across identity change, fail-closed navigation, router async completion.
+    - Round 9-10: Server-side precondition header validation (`x-expected-tenant-id`, `x-session-context`), `onRequest` header preservation in `apiClient.ts`, OpenAPI precondition schema & 409 `AUTH_CONTEXT_CHANGED` synchronization, backward compatibility for cookie-only clients.
+    - Round 11: Verdict `APPROVED_TO_MERGE`, 0 blocker. CI GitHub Actions run #73 pass 100%. Squash-merge vào `dev` và xoá nhánh `feature/slice-6`.
 
 ### Đang làm dở
 
-- [ ] Push commit Round 4 fix lên PR #7 (`feature/slice-6`) và thực hiện Round 5 review loop `/gpt-web-review`.
+- Không có.
 
 ### Bước tiếp theo
 
-- [ ] Đạt verdict `APPROVED_TO_MERGE` từ Agent B, auto-merge PR #7 vào nhánh `dev`.
-- [ ] Chuyển sang Slice tiếp theo.
+- [ ] Lên kế hoạch và triển khai Slice tiếp theo.
 
 ---
 
