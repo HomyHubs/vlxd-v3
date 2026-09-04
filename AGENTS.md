@@ -425,6 +425,7 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR** theo 
 | 2026-09-02 | Thêm | Slice 4 | Nhập kho (Inbound Stock Receipts): migration `stock_receipts`, `stock_receipt_lines`, `stock_movements`; API `/stock-receipts`; UI `/inventory/receipts/new`, `/inventory/receipts`, `/inventory/receipts/:id`. | Lát cắt nghiệp vụ tiếp theo trong lộ trình Vertical Slice. | Không cần — tương thích schema, tuân thủ contract-first. |
 | 2026-09-03 | Thêm | Slice 5 | Bán hàng: đơn hàng đầu tiên (Sales Orders & Stock Deductions): migration `customers`, `sales_orders`, `sales_order_lines`; API `/sales-orders`, `/customers`; UI `/orders/new`, `/orders`, `/orders/:id`; trừ tồn kho qua `stock_movements` và chặn bán vượt tồn (`INSUFFICIENT_STOCK`). | Lát cắt nghiệp vụ mẫu theo lộ trình Vertical Slice. | Không cần — tương thích schema, tuân thủ contract-first. |
 | 2026-09-04 | Thêm | Slice 7 | Thanh toán và công nợ tối giản: migration `payments` (thuận nghịch); API `POST /sales-orders/{id}/payments`, `GET /sales-orders/{id}/payments`, tính `paid_amount`, `remaining_amount`, `payment_status`, chặn thanh toán vượt nợ `AMOUNT_EXCEEDS_REMAINING`; UI trang chi tiết đơn hàng `/orders/:id` hiển thị badge thanh toán, lịch sử thanh toán, dialog ghi nhận thanh toán tiền mặt/chuyển khoản; i18n vi/en. | Lát cắt nghiệp vụ tiếp theo trong lộ trình Vertical Slice. | docs/adr/ADR-0007-sales-order-payments-and-debt-tracking.md |
+| 2026-09-04 | Thêm | Slice 8 | Báo cáo đầu tiên & Quản lý hạn mức gói: API `GET /reports/sales-summary` (theo ngày/tuần/tháng/toàn bộ), `GET /tenants/usage` (hạn mức gói Free 80 sản phẩm, 3 kho); UI `/reports` (thẻ doanh thu, đã thu, công nợ, đơn hàng, bảng top sản phẩm), UI `/settings/plan` (tiến trình quota); i18n vi/en; phân quyền RBAC `sales.view` và `users.manage`. | Hoàn thiện góc nhìn quản trị và theo dõi dung lượng gói. | docs/adr/ADR-0008-sales-reporting-and-plan-usage.md |
 
 ### 17.6 Thứ tự thao tác bắt buộc
 
@@ -453,7 +454,11 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-- Không có (Sẵn sàng cho Slice tiếp theo).
+Slice 8 — Báo cáo đầu tiên & Quản lý hạn mức gói: Đang triển khai trên nhánh `feature/slice-8`.
+- [x] Task 8.1: Shared schema, OpenAPI 3.1 contract cho `GET /reports/sales-summary` và `GET /tenants/usage`, sinh TypeScript client (`@vlxd/api-client`).
+- [x] Task 8.2: Fastify Backend service & routes tổng hợp doanh thu, đã thu, công nợ, top sản phẩm và hạn mức tenant với Kysely, bảo vệ bằng capability `sales.view` và `users.manage`.
+- [x] Task 8.3: Web UI: Trang `/reports` (thẻ KPI tài chính, bảng top sản phẩm, bảng theo ngày), trang `/settings/plan` (tiến trình quota sản phẩm/kho), cập nhật điều hướng và route guards, i18n vi/en.
+- [ ] Task 8.4: Bộ unit & integration test (API + Web), chạy toàn bộ cổng gác CI, mở PR và review đa vòng với ChatGPT Web qua Chrome DevTools MCP.
 
 ### Đã xong
 

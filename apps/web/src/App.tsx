@@ -24,6 +24,7 @@ import {
 import { ProductsPage } from "./features/products/index.js";
 import { WarehousesPage } from "./features/warehouses/index.js";
 import { UsersPage } from "./features/users/index.js";
+import { PlanUsagePage, ReportsPage } from "./features/reports/index.js";
 
 function DashboardLayout() {
   const { t } = useTranslation();
@@ -88,6 +89,17 @@ function DashboardLayout() {
                 {t("orders.title", "Bán hàng")}
               </Button>
             )}
+            {canViewSales && (
+              <Button
+                component={RouterLink}
+                to="/reports"
+                variant="outlined"
+                color="info"
+                data-testid="nav-reports-btn"
+              >
+                {t("reports.navTitle", "Báo cáo doanh số")}
+              </Button>
+            )}
             {canManageUsers && (
               <Button
                 component={RouterLink}
@@ -97,6 +109,17 @@ function DashboardLayout() {
                 data-testid="nav-settings-users-btn"
               >
                 {t("users.navTitle", "Cài đặt nhân viên")}
+              </Button>
+            )}
+            {canManageUsers && (
+              <Button
+                component={RouterLink}
+                to="/settings/plan"
+                variant="outlined"
+                color="success"
+                data-testid="nav-settings-plan-btn"
+              >
+                {t("plan.navTitle", "Gói cước & Hạn mức")}
               </Button>
             )}
           </Stack>
@@ -129,12 +152,14 @@ export function App() {
             <Route element={<ProtectedRoute requiredCapability="sales.view" />}>
               <Route path="/orders" element={<SalesOrderListPage />} />
               <Route path="/orders/:id" element={<SalesOrderDetailPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
             </Route>
             <Route element={<ProtectedRoute requiredCapability="sales.create" />}>
               <Route path="/orders/new" element={<CreateSalesOrderPage />} />
             </Route>
             <Route element={<ProtectedRoute requiredCapability="users.manage" />}>
               <Route path="/settings/users" element={<UsersPage />} />
+              <Route path="/settings/plan" element={<PlanUsagePage />} />
             </Route>
           </Route>
           <Route path="*" element={<LoginPage />} />
