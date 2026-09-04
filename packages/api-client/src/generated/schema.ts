@@ -283,6 +283,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reports/sales-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get sales and revenue summary with top products and timeline */
+        get: operations["getSalesSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tenants/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get current tenant plan limits and resource consumption */
+        get: operations["getTenantPlanUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -623,6 +657,58 @@ export interface components {
         PaymentErrorResponse: {
             /** @enum {string} */
             code: "UNAUTHORIZED" | "FORBIDDEN" | "ORDER_NOT_FOUND" | "AMOUNT_EXCEEDS_REMAINING" | "ORDER_ALREADY_PAID" | "INVALID_PAYMENT_AMOUNT" | "AUTH_CONTEXT_CHANGED" | "IDEMPOTENCY_CONFLICT" | "VALIDATION_ERROR";
+            message: string;
+        };
+        /**
+         * @default month
+         * @enum {string}
+         */
+        SalesSummaryPeriod: "day" | "week" | "month" | "all";
+        TopProductItem: {
+            productId: string;
+            productSku: string;
+            productName: string;
+            unitName: string;
+            quantitySold: number;
+            totalSales: number;
+        };
+        SalesChartPoint: {
+            date: string;
+            revenue: number;
+            orderCount: number;
+        };
+        SalesFinancialSummary: {
+            totalRevenue: number;
+            totalPaid: number;
+            totalDebt: number;
+            orderCount: number;
+            paidOrderCount: number;
+            partialOrderCount: number;
+            unpaidOrderCount: number;
+        };
+        SalesSummaryResponse: {
+            period: components["schemas"]["SalesSummaryPeriod"];
+            summary: components["schemas"]["SalesFinancialSummary"];
+            chartData: components["schemas"]["SalesChartPoint"][];
+            topProducts: components["schemas"]["TopProductItem"][];
+        };
+        TenantPlanUsageResponse: {
+            plan: string;
+            planName: string;
+            limits: {
+                products: number | null;
+                warehouses: number | null;
+            };
+            usage: {
+                products: number;
+                warehouses: number;
+                orders: number;
+                users: number;
+            };
+        };
+        ReportErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "AUTH_CONTEXT_CHANGED" | "VALIDATION_ERROR";
             message: string;
         };
     };
@@ -1826,6 +1912,105 @@ export interface operations {
                     "application/json": components["schemas"]["UserErrorResponse"];
                 };
             };
+        };
+    };
+    getSalesSummary: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["SalesSummaryPeriod"];
+            };
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sales summary and metrics */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesSummaryResponse"];
+                };
+            };
+            /** @description Validation error for query parameters (e.g. invalid period) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportErrorResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires sales.view) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
+        };
+    };
+    getTenantPlanUsage: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */
+                "x-expected-tenant-id"?: components["parameters"]["ExpectedTenantIdHeader"];
+                /** @description Precondition header matching tenantId:userId. When supplied, verifies caller session identity. */
+                "x-session-context"?: components["parameters"]["ExpectedSessionContextHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant plan usage and quotas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantPlanUsageResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportErrorResponse"];
+                };
+            };
+            /** @description Permission denied (requires users.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportErrorResponse"];
+                };
+            };
+            409: components["responses"]["AuthContextChangedResponse"];
         };
     };
 }

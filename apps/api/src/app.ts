@@ -13,6 +13,7 @@ import { type StockReceiptService, stockReceiptRoutes } from "./features/stock-r
 import { type CustomerService, customerRoutes } from "./features/customers/index.js";
 import { type SalesOrderService, salesOrderRoutes } from "./features/sales-orders/index.js";
 import { type UsersService, usersRoutes } from "./features/users/index.js";
+import { type ReportService, reportRoutes } from "./features/reports/index.js";
 
 export interface BuildAppOptions {
   authService?: AuthService | undefined;
@@ -22,6 +23,7 @@ export interface BuildAppOptions {
   customerService?: CustomerService | undefined;
   salesOrderService?: SalesOrderService | undefined;
   usersService?: UsersService | undefined;
+  reportService?: ReportService | undefined;
   checkDatabase: (logger?: HealthLogger) => Promise<boolean>;
   logger?: boolean | undefined;
   logLevel?: string | undefined;
@@ -126,6 +128,12 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     await server.register(usersRoutes, {
       authService: options.authService,
       usersService: options.usersService,
+    });
+  }
+  if (options.authService && options.reportService) {
+    await server.register(reportRoutes, {
+      authService: options.authService,
+      reportService: options.reportService,
     });
   }
 

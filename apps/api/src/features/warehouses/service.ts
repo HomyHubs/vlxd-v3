@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import type { CreateWarehouseRequest, Warehouse, WarehouseListResponse } from "@vlxd/shared";
+import {
+  getPlanPolicy,
+  type CreateWarehouseRequest,
+  type Warehouse,
+  type WarehouseListResponse,
+} from "@vlxd/shared";
 import { sql, type Kysely } from "kysely";
 
 import type { Database } from "../../platform/database.js";
@@ -35,7 +40,6 @@ export function createWarehouseService(
   dependencies: WarehouseServiceDependencies,
 ): WarehouseService {
   const db = dependencies.database;
-  const freePlanLimit = dependencies.freePlanLimit ?? 3;
 
   return {
     async list(tenantId) {
@@ -59,17 +63,20 @@ export function createWarehouseService(
       return db.transaction().execute(async (trx) => {
         await sql`select pg_advisory_xact_lock(hashtext(${tenantId}))`.execute(trx);
 
-        if (tenantPlan === "free") {
+        const planPolicy = getPlanPolicy(tenantPlan);
+        const warehouseLimit = dependencies.freePlanLimit ?? planPolicy.limits.warehouses;
+
+        if (warehouseLimit !== null) {
           const current = await trx
             .selectFrom("warehouses")
             .select(({ fn }) => fn.countAll<number>().as("count"))
             .where("tenant_id", "=", tenantId)
             .executeTakeFirstOrThrow();
-          if (Number(current.count) >= freePlanLimit) {
+          if (Number(current.count) >= warehouseLimit) {
             return {
               success: false,
               code: "WAREHOUSE_LIMIT_REACHED",
-              message: `Free plan allows at most ${freePlanLimit} warehouses`,
+              message: `${planPolicy.planName} allows at most ${warehouseLimit} warehouses`,
             };
           }
         }

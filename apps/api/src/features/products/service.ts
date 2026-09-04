@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import type {
-  CreateProductRequest,
-  Product,
-  ProductListQuery,
-  ProductListResponse,
+import {
+  getPlanPolicy,
+  type CreateProductRequest,
+  type Product,
+  type ProductListQuery,
+  type ProductListResponse,
 } from "@vlxd/shared";
 import { sql, type Kysely } from "kysely";
 
@@ -46,7 +47,6 @@ function toProduct(row: {
 
 export function createProductService(dependencies: ProductServiceDependencies): ProductService {
   const db = dependencies.database;
-  const freePlanLimit = dependencies.freePlanLimit ?? 80;
 
   return {
     async list(tenantId, query) {
@@ -133,17 +133,20 @@ export function createProductService(dependencies: ProductServiceDependencies): 
       return db.transaction().execute(async (trx) => {
         await sql`select pg_advisory_xact_lock(hashtext(${tenantId}))`.execute(trx);
 
-        if (tenantPlan === "free") {
+        const planPolicy = getPlanPolicy(tenantPlan);
+        const productLimit = dependencies.freePlanLimit ?? planPolicy.limits.products;
+
+        if (productLimit !== null) {
           const current = await trx
             .selectFrom("products")
             .select(({ fn }) => fn.countAll<number>().as("count"))
             .where("tenant_id", "=", tenantId)
             .executeTakeFirstOrThrow();
-          if (Number(current.count) >= freePlanLimit) {
+          if (Number(current.count) >= productLimit) {
             return {
               success: false,
               code: "PRODUCT_LIMIT_REACHED",
-              message: `Gói Free chỉ cho phép tối đa ${freePlanLimit} sản phẩm`,
+              message: `${planPolicy.planName} chỉ cho phép tối đa ${productLimit} sản phẩm`,
             };
           }
         }

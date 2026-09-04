@@ -806,6 +806,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserErrorResponse"
+  /reports/sales-summary:
+    get:
+      operationId: getSalesSummary
+      summary: Get sales and revenue summary with top products and timeline
+      parameters:
+        - in: query
+          name: period
+          required: false
+          schema:
+            $ref: "#/components/schemas/SalesSummaryPeriod"
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
+      responses:
+        "200":
+          description: Sales summary and metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesSummaryResponse"
+        "400":
+          description: Validation error for query parameters (e.g. invalid period)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportErrorResponse"
+        "403":
+          description: Permission denied (requires sales.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
+  /tenants/usage:
+    get:
+      operationId: getTenantPlanUsage
+      summary: Get current tenant plan limits and resource consumption
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
+      responses:
+        "200":
+          description: Tenant plan usage and quotas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantPlanUsageResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportErrorResponse"
+        "403":
+          description: Permission denied (requires users.manage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
 components:
   parameters:
     ExpectedTenantIdHeader:
@@ -1554,4 +1621,101 @@ components:
               IDEMPOTENCY_CONFLICT,
               VALIDATION_ERROR,
             ]
+        message: { type: string }
+    SalesSummaryPeriod:
+      type: string
+      enum: [day, week, month, all]
+      default: month
+    TopProductItem:
+      type: object
+      additionalProperties: false
+      required: [productId, productSku, productName, unitName, quantitySold, totalSales]
+      properties:
+        productId: { type: string }
+        productSku: { type: string }
+        productName: { type: string }
+        unitName: { type: string }
+        quantitySold: { type: integer, minimum: 0 }
+        totalSales: { type: integer, minimum: 0 }
+    SalesChartPoint:
+      type: object
+      additionalProperties: false
+      required: [date, revenue, orderCount]
+      properties:
+        date: { type: string }
+        revenue: { type: integer, minimum: 0 }
+        orderCount: { type: integer, minimum: 0 }
+    SalesFinancialSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          totalRevenue,
+          totalPaid,
+          totalDebt,
+          orderCount,
+          paidOrderCount,
+          partialOrderCount,
+          unpaidOrderCount,
+        ]
+      properties:
+        totalRevenue: { type: integer, minimum: 0 }
+        totalPaid: { type: integer, minimum: 0 }
+        totalDebt: { type: integer, minimum: 0 }
+        orderCount: { type: integer, minimum: 0 }
+        paidOrderCount: { type: integer, minimum: 0 }
+        partialOrderCount: { type: integer, minimum: 0 }
+        unpaidOrderCount: { type: integer, minimum: 0 }
+    SalesSummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [period, summary, chartData, topProducts]
+      properties:
+        period:
+          $ref: "#/components/schemas/SalesSummaryPeriod"
+        summary:
+          $ref: "#/components/schemas/SalesFinancialSummary"
+        chartData:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesChartPoint"
+        topProducts:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopProductItem"
+    TenantPlanUsageResponse:
+      type: object
+      additionalProperties: false
+      required: [plan, planName, limits, usage]
+      properties:
+        plan: { type: string }
+        planName: { type: string }
+        limits:
+          type: object
+          additionalProperties: false
+          required: [products, warehouses]
+          properties:
+            products:
+              type: [integer, "null"]
+              minimum: 1
+            warehouses:
+              type: [integer, "null"]
+              minimum: 1
+        usage:
+          type: object
+          additionalProperties: false
+          required: [products, warehouses, orders, users]
+          properties:
+            products: { type: integer, minimum: 0 }
+            warehouses: { type: integer, minimum: 0 }
+            orders: { type: integer, minimum: 0 }
+            users: { type: integer, minimum: 0 }
+    ReportErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [UNAUTHORIZED, FORBIDDEN, AUTH_CONTEXT_CHANGED, VALIDATION_ERROR]
         message: { type: string }
