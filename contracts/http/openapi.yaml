@@ -425,6 +425,15 @@ paths:
         - in: query
           name: destinationWarehouseId
           schema: { type: string }
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: fromDate
+          schema: { type: string, format: date }
+        - in: query
+          name: toDate
+          schema: { type: string, format: date }
       responses:
         "200":
           description: Paginated list of stock transfers
@@ -1501,6 +1510,7 @@ components:
               WAREHOUSE_NOT_FOUND,
               PRODUCT_NOT_FOUND,
               INSUFFICIENT_STOCK,
+              STOCK_CEILING_EXCEEDED,
               STOCK_TRANSFER_NOT_FOUND,
               INVALID_TRANSFER_LINES,
               AUTH_CONTEXT_CHANGED,

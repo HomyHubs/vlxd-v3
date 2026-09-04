@@ -21,6 +21,9 @@ const ListQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   sourceWarehouseId: z.string().optional(),
   destinationWarehouseId: z.string().optional(),
+  search: z.string().optional(),
+  fromDate: z.string().optional(),
+  toDate: z.string().optional(),
 });
 
 const IdParamSchema = z.object({
@@ -84,7 +87,10 @@ export const stockTransferRoutes: FastifyPluginAsync<StockTransferRoutesOptions>
         let statusCode: 400 | 404 | 422 = 400;
         if (result.code === "WAREHOUSE_NOT_FOUND" || result.code === "PRODUCT_NOT_FOUND") {
           statusCode = 404;
-        } else if (result.code === "INSUFFICIENT_STOCK") {
+        } else if (
+          result.code === "INSUFFICIENT_STOCK" ||
+          result.code === "STOCK_CEILING_EXCEEDED"
+        ) {
           statusCode = 422;
         }
 

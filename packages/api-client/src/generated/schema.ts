@@ -580,7 +580,7 @@ export interface components {
         };
         StockTransferErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "SAME_WAREHOUSE_NOT_ALLOWED" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "STOCK_TRANSFER_NOT_FOUND" | "INVALID_TRANSFER_LINES" | "AUTH_CONTEXT_CHANGED";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "VALIDATION_ERROR" | "SAME_WAREHOUSE_NOT_ALLOWED" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INSUFFICIENT_STOCK" | "STOCK_CEILING_EXCEEDED" | "STOCK_TRANSFER_NOT_FOUND" | "INVALID_TRANSFER_LINES" | "AUTH_CONTEXT_CHANGED";
             message: string;
             details?: {
                 [key: string]: unknown;
@@ -1433,6 +1433,9 @@ export interface operations {
                 pageSize?: number;
                 sourceWarehouseId?: string;
                 destinationWarehouseId?: string;
+                search?: string;
+                fromDate?: string;
+                toDate?: string;
             };
             header?: {
                 /** @description Precondition tenant ID expected by the client. Mandatory at runtime for all authenticated tenant operations; enforced fail-closed (409 AUTH_CONTEXT_CHANGED) by server capability middleware. */

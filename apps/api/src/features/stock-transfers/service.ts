@@ -12,6 +12,8 @@ import { type Kysely, sql } from "kysely";
 
 import type { Database } from "../../platform/database.js";
 
+export const STOCK_CEILING = 1_000_000_000;
+
 export class InsufficientStockError extends Error {
   constructor(
     message: string,
@@ -27,6 +29,22 @@ export class InsufficientStockError extends Error {
   }
 }
 
+export class StockCeilingExceededError extends Error {
+  constructor(
+    message: string,
+    public readonly details?: {
+      productId: string;
+      productName: string;
+      currentQuantity: number;
+      requestedQuantity: number;
+      maxCeiling: number;
+    },
+  ) {
+    super(message);
+    this.name = "StockCeilingExceededError";
+  }
+}
+
 export type CreateStockTransferResult =
   | { success: true; transfer: StockTransferDetailResponse }
   | {
@@ -36,10 +54,21 @@ export type CreateStockTransferResult =
         | "WAREHOUSE_NOT_FOUND"
         | "PRODUCT_NOT_FOUND"
         | "INVALID_TRANSFER_LINES"
-        | "INSUFFICIENT_STOCK";
+        | "INSUFFICIENT_STOCK"
+        | "STOCK_CEILING_EXCEEDED";
       message: string;
       details?: Record<string, unknown> | undefined;
     };
+
+export interface StockTransferListQuery {
+  page?: number | undefined;
+  pageSize?: number | undefined;
+  sourceWarehouseId?: string | undefined;
+  destinationWarehouseId?: string | undefined;
+  search?: string | undefined;
+  fromDate?: string | undefined;
+  toDate?: string | undefined;
+}
 
 export interface StockTransferService {
   create(
@@ -47,15 +76,7 @@ export interface StockTransferService {
     userId: string,
     input: CreateStockTransferRequest,
   ): Promise<CreateStockTransferResult>;
-  list(
-    tenantId: string,
-    query?: {
-      page?: number | undefined;
-      pageSize?: number | undefined;
-      sourceWarehouseId?: string | undefined;
-      destinationWarehouseId?: string | undefined;
-    },
-  ): Promise<StockTransferListResponse>;
+  list(tenantId: string, query?: StockTransferListQuery): Promise<StockTransferListResponse>;
   getById(tenantId: string, id: string): Promise<StockTransferDetailResponse | null>;
 }
 
@@ -151,7 +172,12 @@ export function createStockTransferService(
         requestedQuantities.set(line.productId, nextQty);
       }
 
-      // Deterministic sort product IDs to prevent deadlock on concurrent transfers
+      // Globally deterministic lock order across warehouses and products (B2)
+      // Sort warehouse IDs first, then product IDs to guarantee a canonical global acquisition order
+      const [firstWhId, secondWhId] = [
+        input.sourceWarehouseId,
+        input.destinationWarehouseId,
+      ].sort() as [string, string];
       const sortedProductIds = Array.from(requestedQuantities.keys()).sort();
 
       // Get user name for response
@@ -163,8 +189,8 @@ export function createStockTransferService(
 
       const createdByName = user?.fullName ?? "Người dùng";
 
-      // Execute transaction with retry on unique transfer_number collision
-      const MAX_ATTEMPTS = 3;
+      // Execute transaction with deadlock & unique transfer_number collision retry
+      const MAX_ATTEMPTS = 5;
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         try {
           return await db.transaction().execute(async (trx) => {
@@ -172,56 +198,89 @@ export function createStockTransferService(
             const transferNumber = generateTransferNumber();
             const now = new Date();
 
-            // 1. Deduct stock at source warehouse atomically with sufficiency check
+            // 1. Ensure stock_levels rows exist for both warehouses and all products
+            for (const whId of [firstWhId, secondWhId]) {
+              for (const productId of sortedProductIds) {
+                await sql`
+                  INSERT INTO stock_levels (warehouse_id, product_id, quantity, updated_at)
+                  VALUES (${whId}, ${productId}, 0, ${now})
+                  ON CONFLICT (warehouse_id, product_id) DO NOTHING
+                `.execute(trx);
+              }
+            }
+
+            // 2. Deterministically lock all affected stock rows for BOTH warehouses in canonical order
+            const lockedRows = await sql<{
+              warehouse_id: string;
+              product_id: string;
+              quantity: string | number;
+            }>`
+              SELECT warehouse_id, product_id, quantity
+              FROM stock_levels
+              WHERE warehouse_id IN (${firstWhId}, ${secondWhId})
+                AND product_id IN (${sql.join(sortedProductIds)})
+              ORDER BY warehouse_id ASC, product_id ASC
+              FOR UPDATE
+            `.execute(trx);
+
+            const stockMap = new Map<string, number>();
+            for (const row of lockedRows.rows) {
+              stockMap.set(`${row.warehouse_id}:${row.product_id}`, Number(row.quantity));
+            }
+
+            // 3. Atomically validate source sufficiency and destination ceiling
             for (const productId of sortedProductIds) {
               const reqQty = requestedQuantities.get(productId)!;
-              const updateResult = await trx
-                .updateTable("stock_levels")
-                .set((eb) => ({
-                  quantity: eb("stock_levels.quantity", "-", reqQty),
-                  updated_at: now,
-                }))
-                .where("warehouse_id", "=", input.sourceWarehouseId)
-                .where("product_id", "=", productId)
-                .where("quantity", ">=", reqQty)
-                .executeTakeFirst();
+              const currentSrcQty = stockMap.get(`${input.sourceWarehouseId}:${productId}`) ?? 0;
+              const prod = productMap.get(productId)!;
 
-              if (Number(updateResult.numUpdatedRows ?? 0) === 0) {
-                const currentStockRow = await trx
-                  .selectFrom("stock_levels")
-                  .select("quantity")
-                  .where("warehouse_id", "=", input.sourceWarehouseId)
-                  .where("product_id", "=", productId)
-                  .executeTakeFirst();
-                const currentStock = currentStockRow?.quantity ?? 0;
-                const prod = productMap.get(productId);
+              if (currentSrcQty < reqQty) {
                 throw new InsufficientStockError(
-                  `Sản phẩm "${prod?.name ?? productId}" tại ${sourceWarehouse.name} không đủ tồn kho (cần ${reqQty}, hiện có ${currentStock})`,
+                  `Sản phẩm "${prod.name}" tại ${sourceWarehouse.name} không đủ tồn kho (cần ${reqQty}, hiện có ${currentSrcQty})`,
                   {
                     productId,
-                    productName: prod?.name ?? productId,
-                    availableQuantity: currentStock,
+                    productName: prod.name,
+                    availableQuantity: currentSrcQty,
                     requestedQuantity: reqQty,
+                  },
+                );
+              }
+
+              const currentDstQty =
+                stockMap.get(`${input.destinationWarehouseId}:${productId}`) ?? 0;
+              if (currentDstQty + reqQty > STOCK_CEILING) {
+                throw new StockCeilingExceededError(
+                  `Số lượng tồn kho tại ${destinationWarehouse.name} sau khi nhận sẽ vượt quá hạn mức tối đa cho phép (1 tỷ) cho sản phẩm "${prod.name}"`,
+                  {
+                    productId,
+                    productName: prod.name,
+                    currentQuantity: currentDstQty,
+                    requestedQuantity: reqQty,
+                    maxCeiling: STOCK_CEILING,
                   },
                 );
               }
             }
 
-            // 2. Increment stock at destination warehouse atomically with UPSERT
+            // 4. Update stock levels (now guaranteed safe without deadlock or overflow)
             for (const productId of sortedProductIds) {
               const reqQty = requestedQuantities.get(productId)!;
+
               await sql`
-                INSERT INTO stock_levels (warehouse_id, product_id, quantity, updated_at)
-                VALUES (${input.destinationWarehouseId}, ${productId}, ${reqQty}, ${now})
-                ON CONFLICT (warehouse_id, product_id)
-                DO UPDATE SET
-                  quantity = stock_levels.quantity + EXCLUDED.quantity,
-                  updated_at = EXCLUDED.updated_at
+                UPDATE stock_levels
+                SET quantity = quantity - ${reqQty}, updated_at = ${now}
+                WHERE warehouse_id = ${input.sourceWarehouseId} AND product_id = ${productId}
+              `.execute(trx);
+
+              await sql`
+                UPDATE stock_levels
+                SET quantity = quantity + ${reqQty}, updated_at = ${now}
+                WHERE warehouse_id = ${input.destinationWarehouseId} AND product_id = ${productId}
               `.execute(trx);
             }
 
-            // 3. Create stock transfer record
-            await trx
+            // 5. Create stock transfer record with returning created_at
+            const insertedTransfer = await trx
               .insertInto("stock_transfers")
               .values({
                 id: transferId,
@@ -233,9 +292,10 @@ export function createStockTransferService(
                 note: input.note ?? null,
                 created_by: userId,
               })
-              .execute();
+              .returning(["id", "transfer_number", "created_at"])
+              .executeTakeFirstOrThrow();
 
-            // 4. Create stock transfer lines & stock movements
+            // 6. Create stock transfer lines & stock movements
             const createdLines: StockTransferLine[] = [];
             let totalQuantity = 0;
 
@@ -298,8 +358,8 @@ export function createStockTransferService(
             return {
               success: true,
               transfer: {
-                id: transferId,
-                transferNumber,
+                id: insertedTransfer.id,
+                transferNumber: insertedTransfer.transfer_number,
                 sourceWarehouseId: input.sourceWarehouseId,
                 sourceWarehouseCode: sourceWarehouse.code,
                 sourceWarehouseName: sourceWarehouse.name,
@@ -309,7 +369,7 @@ export function createStockTransferService(
                 status: "completed",
                 note: input.note ?? null,
                 createdByName,
-                createdAt: now.toISOString(),
+                createdAt: new Date(insertedTransfer.created_at).toISOString(),
                 totalQuantity,
                 lines: createdLines,
               },
@@ -321,18 +381,32 @@ export function createStockTransferService(
               success: false,
               code: "INSUFFICIENT_STOCK",
               message: error.message,
-              details: error.details,
+              details: error.details ? { ...error.details } : undefined,
             };
           }
 
-          // Retry on unique violation for transfer_number collision
-          const isUniqueViolation =
-            typeof error === "object" &&
-            error !== null &&
-            "code" in error &&
-            (error as { code: string }).code === "23505";
+          if (error instanceof StockCeilingExceededError) {
+            return {
+              success: false,
+              code: "STOCK_CEILING_EXCEEDED",
+              message: error.message,
+              details: error.details ? { ...error.details } : undefined,
+            };
+          }
 
-          if (isUniqueViolation && attempt < MAX_ATTEMPTS) {
+          // Retry on unique violation (23505), deadlock detected (40P01), or serialization failure (40001)
+          const errCode =
+            typeof error === "object" && error !== null && "code" in error
+              ? (error as { code: string }).code
+              : null;
+
+          const isRetryable =
+            errCode === "23505" || // unique_violation
+            errCode === "40P01" || // deadlock_detected
+            errCode === "40001"; // serialization_failure
+
+          if (isRetryable && attempt < MAX_ATTEMPTS) {
+            await new Promise((resolve) => setTimeout(resolve, Math.random() * 40 + 10));
             continue;
           }
 
@@ -363,6 +437,19 @@ export function createStockTransferService(
           "st.destination_warehouse_id",
           "=",
           query.destinationWarehouseId,
+        );
+      }
+      if (query?.search?.trim()) {
+        baseQuery = baseQuery.where("st.transfer_number", "ilike", `%${query.search.trim()}%`);
+      }
+      if (query?.fromDate) {
+        baseQuery = baseQuery.where("st.created_at", ">=", new Date(query.fromDate));
+      }
+      if (query?.toDate) {
+        baseQuery = baseQuery.where(
+          "st.created_at",
+          "<=",
+          new Date(query.toDate + "T23:59:59.999Z"),
         );
       }
 

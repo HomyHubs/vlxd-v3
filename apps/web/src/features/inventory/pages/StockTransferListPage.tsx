@@ -12,6 +12,7 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
@@ -19,6 +20,7 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
+import SearchIcon from "@mui/icons-material/Search";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
@@ -32,17 +34,22 @@ export function StockTransferListPage() {
   const canManageInventory = useHasCapability("inventory.manage");
   const [sourceWarehouseFilter, setSourceWarehouseFilter] = useState<string>("");
   const [destinationWarehouseFilter, setDestinationWarehouseFilter] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [page, setPage] = useState<number>(0);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   const warehousesQuery = useWarehouses();
   const transfersQuery = useStockTransfers(
-    1,
-    50,
+    page + 1,
+    pageSize,
     sourceWarehouseFilter || undefined,
     destinationWarehouseFilter || undefined,
+    searchQuery || undefined,
   );
 
   const warehouses = warehousesQuery.data?.items ?? [];
   const transfers = transfersQuery.data?.items ?? [];
+  const total = transfersQuery.data?.total ?? 0;
 
   return (
     <>
@@ -76,14 +83,41 @@ export function StockTransferListPage() {
 
           <Card variant="outlined">
             <CardContent sx={{ p: 2 }}>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 2 }}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={2}
+                sx={{ mb: 2 }}
+                alignItems="center"
+              >
+                <TextField
+                  size="small"
+                  placeholder={t("transfers.searchPlaceholder") || "Tìm theo số phiếu..."}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(0);
+                  }}
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <SearchIcon fontSize="small" sx={{ mr: 1, color: "action" }} />
+                      ),
+                    },
+                  }}
+                  sx={{ minWidth: 240 }}
+                  data-testid="search-transfer"
+                />
+
                 <TextField
                   select
                   size="small"
                   label={t("transfers.filterSourceWarehouse")}
                   value={sourceWarehouseFilter}
-                  onChange={(e) => setSourceWarehouseFilter(e.target.value)}
-                  sx={{ minWidth: 200 }}
+                  onChange={(e) => {
+                    setSourceWarehouseFilter(e.target.value);
+                    setPage(0);
+                  }}
+                  sx={{ minWidth: 180 }}
                   data-testid="filter-source-warehouse"
                 >
                   <MenuItem value="">{t("transfers.allWarehouses")}</MenuItem>
@@ -99,8 +133,11 @@ export function StockTransferListPage() {
                   size="small"
                   label={t("transfers.filterDestinationWarehouse")}
                   value={destinationWarehouseFilter}
-                  onChange={(e) => setDestinationWarehouseFilter(e.target.value)}
-                  sx={{ minWidth: 200 }}
+                  onChange={(e) => {
+                    setDestinationWarehouseFilter(e.target.value);
+                    setPage(0);
+                  }}
+                  sx={{ minWidth: 180 }}
                   data-testid="filter-destination-warehouse"
                 >
                   <MenuItem value="">{t("transfers.allWarehouses")}</MenuItem>
@@ -134,74 +171,88 @@ export function StockTransferListPage() {
                   )}
                 </Box>
               ) : (
-                <TableContainer>
-                  <Table size="medium">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>{t("transfers.transferNumber")}</TableCell>
-                        <TableCell>{t("transfers.createdAt")}</TableCell>
-                        <TableCell>{t("transfers.route")}</TableCell>
-                        <TableCell align="right">{t("transfers.itemCount")}</TableCell>
-                        <TableCell align="right">{t("transfers.totalQuantity")}</TableCell>
-                        <TableCell>{t("transfers.createdByName")}</TableCell>
-                        <TableCell>{t("transfers.status")}</TableCell>
-                        <TableCell align="center">{t("common.actions")}</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {transfers.map((item) => (
-                        <TableRow key={item.id} hover data-testid={`transfer-row-${item.id}`}>
-                          <TableCell sx={{ fontWeight: 600 }}>{item.transferNumber}</TableCell>
-                          <TableCell>
-                            {new Date(item.createdAt).toLocaleString(undefined, {
-                              year: "numeric",
-                              month: "2-digit",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                              <Typography variant="body2" fontWeight={500}>
-                                {item.sourceWarehouseName}
-                              </Typography>
-                              <CompareArrowsIcon fontSize="small" color="action" />
-                              <Typography variant="body2" fontWeight={500}>
-                                {item.destinationWarehouseName}
-                              </Typography>
-                            </Stack>
-                          </TableCell>
-                          <TableCell align="right">{item.itemCount.toLocaleString()}</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 600 }}>
-                            {item.totalQuantity.toLocaleString()}
-                          </TableCell>
-                          <TableCell>{item.createdByName}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={t("transfers.statusCompleted")}
-                              color="success"
-                              size="small"
-                              variant="outlined"
-                            />
-                          </TableCell>
-                          <TableCell align="center">
-                            <Button
-                              component={RouterLink}
-                              to={`/inventory/transfers/${item.id}`}
-                              size="small"
-                              variant="outlined"
-                              startIcon={<VisibilityIcon />}
-                              data-testid={`view-transfer-${item.id}`}
-                            >
-                              {t("common.view")}
-                            </Button>
-                          </TableCell>
+                <>
+                  <TableContainer>
+                    <Table size="medium">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>{t("transfers.transferNumber")}</TableCell>
+                          <TableCell>{t("transfers.createdAt")}</TableCell>
+                          <TableCell>{t("transfers.route")}</TableCell>
+                          <TableCell align="right">{t("transfers.itemCount")}</TableCell>
+                          <TableCell align="right">{t("transfers.totalQuantity")}</TableCell>
+                          <TableCell>{t("transfers.createdByName")}</TableCell>
+                          <TableCell>{t("transfers.status")}</TableCell>
+                          <TableCell align="center">{t("common.actions")}</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                      </TableHead>
+                      <TableBody>
+                        {transfers.map((item) => (
+                          <TableRow key={item.id} hover data-testid={`transfer-row-${item.id}`}>
+                            <TableCell sx={{ fontWeight: 600 }}>{item.transferNumber}</TableCell>
+                            <TableCell>
+                              {new Date(item.createdAt).toLocaleString(undefined, {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </TableCell>
+                            <TableCell>
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <Typography variant="body2" fontWeight={500}>
+                                  {item.sourceWarehouseName}
+                                </Typography>
+                                <CompareArrowsIcon fontSize="small" color="action" />
+                                <Typography variant="body2" fontWeight={500}>
+                                  {item.destinationWarehouseName}
+                                </Typography>
+                              </Stack>
+                            </TableCell>
+                            <TableCell align="right">{item.itemCount.toLocaleString()}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }}>
+                              {item.totalQuantity.toLocaleString()}
+                            </TableCell>
+                            <TableCell>{item.createdByName}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={t("transfers.statusCompleted")}
+                                color="success"
+                                size="small"
+                                variant="outlined"
+                              />
+                            </TableCell>
+                            <TableCell align="center">
+                              <Button
+                                component={RouterLink}
+                                to={`/inventory/transfers/${item.id}`}
+                                size="small"
+                                variant="outlined"
+                                startIcon={<VisibilityIcon />}
+                                data-testid={`view-transfer-${item.id}`}
+                              >
+                                {t("common.view")}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  <TablePagination
+                    component="div"
+                    count={total}
+                    page={page}
+                    onPageChange={(_, newPage) => setPage(newPage)}
+                    rowsPerPage={pageSize}
+                    onRowsPerPageChange={(e) => {
+                      setPageSize(parseInt(e.target.value, 10));
+                      setPage(0);
+                    }}
+                    rowsPerPageOptions={[5, 10, 25, 50]}
+                  />
+                </>
               )}
             </CardContent>
           </Card>

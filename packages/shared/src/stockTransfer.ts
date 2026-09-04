@@ -87,6 +87,7 @@ export const StockTransferErrorResponseSchema = z.object({
     "WAREHOUSE_NOT_FOUND",
     "PRODUCT_NOT_FOUND",
     "INSUFFICIENT_STOCK",
+    "STOCK_CEILING_EXCEEDED",
     "STOCK_TRANSFER_NOT_FOUND",
     "INVALID_TRANSFER_LINES",
     "AUTH_CONTEXT_CHANGED",

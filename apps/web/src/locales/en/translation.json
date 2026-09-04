@@ -308,6 +308,9 @@
     "backToList": "Back to Transfers",
     "detailTitle": "Stock Transfer Details",
     "loadDetailFailed": "Failed to load stock transfer details.",
-    "itemsList": "Transferred Items"
+    "itemsList": "Transferred Items",
+    "searchPlaceholder": "Search by transfer number...",
+    "searchProductPlaceholder": "Search products (name/SKU)...",
+    "errorStockCeilingExceeded": "Destination warehouse stock exceeds maximum ceiling (1,000,000,000)."
   }
 }

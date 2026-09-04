@@ -308,6 +308,9 @@
     "backToList": "Quay lại danh sách",
     "detailTitle": "Chi tiết phiếu chuyển kho",
     "loadDetailFailed": "Không thể tải thông tin chi tiết phiếu chuyển kho.",
-    "itemsList": "Danh mục hàng hóa điều chuyển"
+    "itemsList": "Danh mục hàng hóa điều chuyển",
+    "searchPlaceholder": "Tìm theo số phiếu...",
+    "searchProductPlaceholder": "Tìm kiếm sản phẩm (tên/SKU)...",
+    "errorStockCeilingExceeded": "Số lượng tồn kho tại kho đích sau khi chuyển vượt quá hạn mức tối đa cho phép (1 tỷ)."
   }
 }

@@ -20,6 +20,9 @@ export function useStockTransfers(
   pageSize = 20,
   sourceWarehouseId?: string,
   destinationWarehouseId?: string,
+  search?: string,
+  fromDate?: string,
+  toDate?: string,
 ) {
   const { data: session } = useCurrentUser();
   const tenantId = session?.tenant.id ?? null;
@@ -33,8 +36,20 @@ export function useStockTransfers(
           pageSize,
           sourceWarehouseId,
           destinationWarehouseId,
+          search,
+          fromDate,
+          toDate,
         ]
-      : [...STOCK_TRANSFERS_QUERY_KEY, page, pageSize, sourceWarehouseId, destinationWarehouseId],
+      : [
+          ...STOCK_TRANSFERS_QUERY_KEY,
+          page,
+          pageSize,
+          sourceWarehouseId,
+          destinationWarehouseId,
+          search,
+          fromDate,
+          toDate,
+        ],
     queryFn: async () => {
       const { data, error } = await apiClient.GET("/stock-transfers", {
         params: {
@@ -43,6 +58,9 @@ export function useStockTransfers(
             pageSize,
             ...(sourceWarehouseId ? { sourceWarehouseId } : {}),
             ...(destinationWarehouseId ? { destinationWarehouseId } : {}),
+            ...(search ? { search } : {}),
+            ...(fromDate ? { fromDate } : {}),
+            ...(toDate ? { toDate } : {}),
           },
         },
       });

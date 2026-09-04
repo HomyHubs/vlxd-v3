@@ -24,9 +24,11 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import SaveIcon from "@mui/icons-material/Save";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
-import { useEffect, useState } from "react";
+import SearchIcon from "@mui/icons-material/Search";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
+import type { Product } from "@vlxd/shared";
 
 import { AppHeader, getCurrentSessionKey } from "../../auth/index.js";
 import { useProducts } from "../../products/api/useProducts.js";
@@ -43,7 +45,8 @@ export function CreateStockTransferPage() {
   const navigate = useNavigate();
 
   const warehousesQuery = useWarehouses();
-  const productsQuery = useProducts(1, 100, "");
+  const [productSearch, setProductSearch] = useState("");
+  const productsQuery = useProducts(1, 100, productSearch.trim());
   const createMutation = useCreateStockTransfer();
 
   const [sourceWarehouseId, setSourceWarehouseId] = useState("");
@@ -51,9 +54,45 @@ export function CreateStockTransferPage() {
   const [note, setNote] = useState("");
   const [lines, setLines] = useState<TransferLineItem[]>([{ productId: "", quantity: 1 }]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [knownProducts, setKnownProducts] = useState<Map<string, Product>>(new Map());
 
   const warehouses = warehousesQuery.data?.items ?? [];
-  const products = productsQuery.data?.items ?? [];
+
+  // Accumulate known products into persistent map so items selected from previous search remain visible
+  useEffect(() => {
+    const items = productsQuery.data?.items;
+    if (!items || items.length === 0) return;
+
+    setKnownProducts((prev) => {
+      let hasNew = false;
+      for (const item of items) {
+        if (!prev.has(item.id)) {
+          hasNew = true;
+          break;
+        }
+      }
+      if (!hasNew) return prev;
+
+      const next = new Map(prev);
+      for (const item of items) {
+        next.set(item.id, item);
+      }
+      return next;
+    });
+  }, [productsQuery.data?.items]);
+
+  const allSelectableProducts = useMemo(() => {
+    const list = Array.from(knownProducts.values());
+    if (!productSearch.trim()) return list;
+    const term = productSearch.trim().toLowerCase();
+    const selectedIds = new Set(lines.map((l) => l.productId).filter(Boolean));
+    return list.filter(
+      (p) =>
+        selectedIds.has(p.id) ||
+        p.name.toLowerCase().includes(term) ||
+        p.sku.toLowerCase().includes(term),
+    );
+  }, [knownProducts, productSearch, lines]);
 
   // Default selection when warehouses load
   useEffect(() => {
@@ -71,10 +110,15 @@ export function CreateStockTransferPage() {
 
   // Default product selection
   useEffect(() => {
-    if (products.length > 0 && lines.length === 1 && !lines[0]!.productId) {
-      setLines([{ productId: products[0]!.id, quantity: 1 }]);
+    if (allSelectableProducts.length > 0) {
+      setLines((prev) => {
+        if (prev.length === 1 && !prev[0]?.productId) {
+          return [{ productId: allSelectableProducts[0]!.id, quantity: 1 }];
+        }
+        return prev;
+      });
     }
-  }, [products, lines]);
+  }, [allSelectableProducts]);
 
   const handleAddLine = () => {
     setLines([...lines, { productId: "", quantity: 1 }]);
@@ -101,7 +145,7 @@ export function CreateStockTransferPage() {
 
   const getAvailableStock = (productId: string) => {
     if (!productId || !sourceWarehouseId) return 0;
-    const prod = products.find((p) => p.id === productId);
+    const prod = knownProducts.get(productId);
     if (!prod || !prod.stockLevels) return 0;
     const stock = prod.stockLevels.find((sl) => sl.warehouseId === sourceWarehouseId);
     return stock?.quantity ?? 0;
@@ -139,9 +183,8 @@ export function CreateStockTransferPage() {
 
     // Check duplicate products in lines
     const productIds = validLines.map((l) => l.productId);
-    const uniqueProductIds = new Set(productIds);
-    if (uniqueProductIds.size !== productIds.length) {
-      setErrorMessage(t("transfers.duplicateProductError"));
+    if (new Set(productIds).size !== productIds.length) {
+      setErrorMessage(t("transfers.errorDuplicateProductInLines"));
       return;
     }
 
@@ -238,8 +281,8 @@ export function CreateStockTransferPage() {
                     ))}
                   </TextField>
 
-                  <Box sx={{ display: { xs: "none", md: "block" } }}>
-                    <CompareArrowsIcon color="action" fontSize="large" />
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <CompareArrowsIcon color="action" sx={{ fontSize: 32 }} />
                   </Box>
 
                   <TextField
@@ -248,13 +291,13 @@ export function CreateStockTransferPage() {
                     label={t("transfers.destinationWarehouse")}
                     value={destinationWarehouseId}
                     onChange={(e) => setDestinationWarehouseId(e.target.value)}
-                    required
                     error={isWarehouseSame}
-                    helperText={isWarehouseSame ? t("transfers.errorSameWarehouse") : ""}
+                    helperText={isWarehouseSame ? t("transfers.errorSameWarehouse") : undefined}
+                    required
                     inputProps={{ "data-testid": "destination-warehouse-select" }}
                   >
                     {warehouses.map((wh) => (
-                      <MenuItem key={wh.id} value={wh.id} disabled={wh.id === sourceWarehouseId}>
+                      <MenuItem key={wh.id} value={wh.id}>
                         {wh.name} ({wh.code})
                       </MenuItem>
                     ))}
@@ -263,7 +306,8 @@ export function CreateStockTransferPage() {
 
                 <TextField
                   fullWidth
-                  label={t("transfers.noteOptional")}
+                  label={t("transfers.note")}
+                  placeholder={t("transfers.notePlaceholder")}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   multiline
@@ -275,23 +319,45 @@ export function CreateStockTransferPage() {
                 <Divider sx={{ my: 3 }} />
 
                 <Stack
-                  direction="row"
+                  direction={{ xs: "column", sm: "row" }}
                   justifyContent="space-between"
-                  alignItems="center"
+                  alignItems={{ sm: "center" }}
+                  spacing={2}
                   sx={{ mb: 2 }}
                 >
                   <Typography variant="h6" fontWeight={600}>
                     {t("transfers.itemsSection")}
                   </Typography>
-                  <Button
-                    type="button"
-                    variant="outlined"
-                    startIcon={<AddIcon />}
-                    onClick={handleAddLine}
-                    data-testid="add-line-btn"
-                  >
-                    {t("transfers.addLine")}
-                  </Button>
+
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <TextField
+                      size="small"
+                      placeholder={
+                        t("transfers.searchProductPlaceholder") || "Tìm kiếm sản phẩm (tên/SKU)..."
+                      }
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      slotProps={{
+                        input: {
+                          startAdornment: (
+                            <SearchIcon fontSize="small" sx={{ mr: 1, color: "action" }} />
+                          ),
+                        },
+                      }}
+                      sx={{ minWidth: 260 }}
+                      data-testid="search-product-input"
+                    />
+
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      startIcon={<AddIcon />}
+                      onClick={handleAddLine}
+                      data-testid="add-line-btn"
+                    >
+                      {t("transfers.addLine")}
+                    </Button>
+                  </Stack>
                 </Stack>
 
                 <TableContainer>
@@ -309,7 +375,7 @@ export function CreateStockTransferPage() {
                     </TableHead>
                     <TableBody>
                       {lines.map((line, index) => {
-                        const selectedProduct = products.find((p) => p.id === line.productId);
+                        const selectedProduct = knownProducts.get(line.productId);
                         const available = getAvailableStock(line.productId);
                         const isOverStock = line.quantity > available;
 
@@ -327,7 +393,7 @@ export function CreateStockTransferPage() {
                                 required
                                 inputProps={{ "data-testid": `product-select-${index}` }}
                               >
-                                {products.map((p) => (
+                                {allSelectableProducts.map((p) => (
                                   <MenuItem key={p.id} value={p.id}>
                                     [{p.sku}] {p.name}
                                   </MenuItem>
@@ -351,20 +417,20 @@ export function CreateStockTransferPage() {
                               <TextField
                                 type="number"
                                 size="small"
-                                fullWidth
                                 value={line.quantity}
                                 onChange={(e) =>
                                   handleLineChange(index, "quantity", e.target.value)
                                 }
+                                error={isOverStock}
+                                helperText={
+                                  isOverStock ? t("transfers.overStockWarning") : undefined
+                                }
                                 slotProps={{
                                   htmlInput: {
                                     min: 1,
-                                    max: 1000000,
                                     "data-testid": `quantity-input-${index}`,
                                   },
                                 }}
-                                error={isOverStock}
-                                helperText={isOverStock ? t("transfers.warnOverStock") : ""}
                                 required
                               />
                             </TableCell>
@@ -372,8 +438,8 @@ export function CreateStockTransferPage() {
                               <IconButton
                                 size="small"
                                 color="error"
-                                onClick={() => handleRemoveLine(index)}
                                 disabled={lines.length <= 1}
+                                onClick={() => handleRemoveLine(index)}
                                 data-testid={`remove-line-${index}`}
                               >
                                 <DeleteOutlineIcon fontSize="small" />
@@ -397,7 +463,7 @@ export function CreateStockTransferPage() {
                     disabled={createMutation.isPending || isWarehouseSame || warehouses.length < 2}
                     data-testid="submit-transfer-btn"
                   >
-                    {createMutation.isPending ? t("common.saving") : t("transfers.confirmTransfer")}
+                    {createMutation.isPending ? t("common.saving") : t("transfers.submitCreate")}
                   </Button>
                 </Stack>
               </CardContent>

@@ -6,6 +6,7 @@ import { sql } from "kysely";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDatabase, createDatabasePool } from "./database.js";
+import { createStockTransferService } from "../features/stock-transfers/service.js";
 
 function upAndDown(sqlText: string): [string, string] {
   const [upPart, downPart = ""] = sqlText.split("-- migrate:down");
@@ -185,7 +186,128 @@ describe("stock transfer database schema migration", () => {
       `.execute(db);
       expect(Number(checkTables.rows[0]?.count)).toBe(0);
     } finally {
-      await db.destroy();
+      await pool.end();
+    }
+  }, 60000);
+
+  it("executes concurrent opposite-direction transfers (A->B and B->A) safely without deadlock and enforces ceiling", async () => {
+    if (!started) throw new Error("PostgreSQL container did not start");
+
+    const pool = createDatabasePool(started.getConnectionUri());
+    const db = createDatabase(pool);
+
+    try {
+      const stockTransferSql = await readFile(
+        resolve(process.cwd(), "../../db/migrations/202609040009_create_stock_transfer_tables.sql"),
+        "utf8",
+      );
+      const [stockTransferUp, stockTransferDown] = upAndDown(stockTransferSql);
+      await sql.raw(stockTransferUp).execute(db);
+
+      const tenantId = "tenant-dev-001";
+      const userId = "user-dev-owner-001";
+      const wh1Id = "wh-test-001";
+      const wh2Id = "wh-test-002";
+      const prodId = "prod-test-001";
+
+      // Initialize stock: 100 in wh1, 100 in wh2
+      await db
+        .insertInto("stock_levels")
+        .values([
+          { warehouse_id: wh1Id, product_id: prodId, quantity: 100, updated_at: new Date() },
+          { warehouse_id: wh2Id, product_id: prodId, quantity: 100, updated_at: new Date() },
+        ])
+        .onConflict((oc) =>
+          oc.columns(["warehouse_id", "product_id"]).doUpdateSet({ quantity: 100 }),
+        )
+        .execute();
+
+      const service = createStockTransferService({ database: db });
+
+      // 1. Concurrent opposite-direction transfers:
+      // Tx1: WH1 -> WH2 (quantity 30)
+      // Tx2: WH2 -> WH1 (quantity 40)
+      const [res1, res2] = await Promise.all([
+        service.create(tenantId, userId, {
+          sourceWarehouseId: wh1Id,
+          destinationWarehouseId: wh2Id,
+          lines: [{ productId: prodId, quantity: 30 }],
+        }),
+        service.create(tenantId, userId, {
+          sourceWarehouseId: wh2Id,
+          destinationWarehouseId: wh1Id,
+          lines: [{ productId: prodId, quantity: 40 }],
+        }),
+      ]);
+
+      expect(res1.success).toBe(true);
+      expect(res2.success).toBe(true);
+
+      // Verify stock conservation:
+      // WH1: 100 - 30 + 40 = 110
+      // WH2: 100 + 30 - 40 = 90
+      // Total: 200
+      const stock1 = await db
+        .selectFrom("stock_levels")
+        .select("quantity")
+        .where("warehouse_id", "=", wh1Id)
+        .where("product_id", "=", prodId)
+        .executeTakeFirstOrThrow();
+      const stock2 = await db
+        .selectFrom("stock_levels")
+        .select("quantity")
+        .where("warehouse_id", "=", wh2Id)
+        .where("product_id", "=", prodId)
+        .executeTakeFirstOrThrow();
+
+      expect(Number(stock1.quantity)).toBe(110);
+      expect(Number(stock2.quantity)).toBe(90);
+      expect(Number(stock1.quantity) + Number(stock2.quantity)).toBe(200);
+
+      // 2. Test destination stock ceiling enforcement (1_000_000_000)
+      // Set WH2 near ceiling: 999_999_980
+      await db
+        .updateTable("stock_levels")
+        .set({ quantity: 999_999_980 })
+        .where("warehouse_id", "=", wh2Id)
+        .where("product_id", "=", prodId)
+        .execute();
+
+      // Attempt to transfer 30 from WH1 (which has 110) to WH2 (999_999_980 + 30 = 1_000_000_010 > 1B)
+      const ceilingRes = await service.create(tenantId, userId, {
+        sourceWarehouseId: wh1Id,
+        destinationWarehouseId: wh2Id,
+        lines: [{ productId: prodId, quantity: 30 }],
+      });
+
+      expect(ceilingRes.success).toBe(false);
+      if (!ceilingRes.success) {
+        expect(ceilingRes.code).toBe("STOCK_CEILING_EXCEEDED");
+      }
+
+      // Verify no stock mutated
+      const stock1After = await db
+        .selectFrom("stock_levels")
+        .select("quantity")
+        .where("warehouse_id", "=", wh1Id)
+        .where("product_id", "=", prodId)
+        .executeTakeFirstOrThrow();
+      expect(Number(stock1After.quantity)).toBe(110);
+
+      // 3. Test insufficient stock rollback
+      const insufficientRes = await service.create(tenantId, userId, {
+        sourceWarehouseId: wh1Id,
+        destinationWarehouseId: wh2Id,
+        lines: [{ productId: prodId, quantity: 500 }],
+      });
+      expect(insufficientRes.success).toBe(false);
+      if (!insufficientRes.success) {
+        expect(insufficientRes.code).toBe("INSUFFICIENT_STOCK");
+      }
+
+      // Rollback migration
+      await sql.raw(stockTransferDown).execute(db);
+    } finally {
       await pool.end();
     }
   }, 60000);

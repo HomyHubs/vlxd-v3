@@ -451,5 +451,43 @@ describe("stock transfer routes unit tests", () => {
         expect(result.code).toBe("INVALID_TRANSFER_LINES");
       }
     });
+
+    it("returns 422 when destination stock ceiling is exceeded", async () => {
+      const stockTransferService = {
+        create: vi.fn().mockResolvedValue({
+          success: false,
+          code: "STOCK_CEILING_EXCEEDED",
+          message: "Số lượng tồn kho tại kho đích sau khi chuyển vượt quá hạn mức tối đa cho phép",
+          details: { productId: "p-1", maxCeiling: 1_000_000_000 },
+        }),
+        list: vi.fn(),
+        getById: vi.fn(),
+      } as StockTransferService;
+
+      const app = await buildApp({
+        authService: createMockAuthService(),
+        stockTransferService,
+        checkDatabase: vi.fn().mockResolvedValue(true),
+        logger: false,
+        secureCookies: false,
+      });
+
+      const response = await app.inject({
+        method: "POST",
+        url: "/stock-transfers",
+        cookies: { vlxd_session: "valid-token" },
+        headers: { "x-expected-tenant-id": "tenant-1" },
+        payload: {
+          sourceWarehouseId: "wh-1",
+          destinationWarehouseId: "wh-2",
+          lines: [{ productId: "p-1", quantity: 100 }],
+        },
+      });
+
+      expect(response.statusCode).toBe(422);
+      const body = response.json<StockTransferErrorResponse>();
+      expect(body.code).toBe("STOCK_CEILING_EXCEEDED");
+      await app.close();
+    });
   });
 });
