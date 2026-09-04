@@ -777,7 +777,7 @@ describe("sales order routes unit tests", () => {
     });
 
     expect(response.statusCode).toBe(400);
-    expect(response.json()).toMatchObject({ code: "INVALID_PAYMENT_AMOUNT" });
+    expect(response.json()).toMatchObject({ code: "VALIDATION_ERROR" });
     await app.close();
   });
 

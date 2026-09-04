@@ -711,6 +711,89 @@ export function createSalesOrderService(
 
         const totalAmount = Number(order.total_amount);
 
+        // B1: Check idempotency key AFTER acquiring order lock FOR UPDATE.
+        // If a concurrent request with the same key committed right before this one,
+        // we must return the replayed payment immediately rather than failing with ORDER_ALREADY_PAID or 500.
+        if (normalizedKey) {
+          const existingInTrx = await trx
+            .selectFrom("payments")
+            .innerJoin("users", "users.id", "payments.created_by")
+            .select([
+              "payments.id as id",
+              "payments.order_id as orderId",
+              "payments.customer_id as customerId",
+              "payments.amount as amount",
+              "payments.payment_method as paymentMethod",
+              "payments.reference_code as referenceCode",
+              "payments.note as note",
+              "payments.idempotency_key as idempotencyKey",
+              "users.full_name as createdByName",
+              "payments.created_at as createdAt",
+            ])
+            .where("payments.tenant_id", "=", tenantId)
+            .where("payments.idempotency_key", "=", normalizedKey)
+            .executeTakeFirst();
+
+          if (existingInTrx) {
+            if (
+              existingInTrx.orderId !== orderId ||
+              Number(existingInTrx.amount) !== input.amount ||
+              existingInTrx.paymentMethod !== input.paymentMethod
+            ) {
+              return {
+                success: false,
+                code: "IDEMPOTENCY_CONFLICT",
+                message:
+                  "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác với thông tin không khớp",
+              };
+            }
+
+            const paidRow = await trx
+              .selectFrom("payments")
+              .select(({ fn }) => [
+                fn.coalesce(fn.sum<number | string>("amount"), sql`0`).as("totalPaid"),
+              ])
+              .where("order_id", "=", orderId)
+              .where("tenant_id", "=", tenantId)
+              .executeTakeFirst();
+
+            const paidAmount = Number(paidRow?.totalPaid ?? 0);
+            const remainingAmount = Math.max(0, totalAmount - paidAmount);
+            const paymentStatus: "unpaid" | "partial" | "paid" =
+              totalAmount === 0
+                ? "paid"
+                : paidAmount === 0
+                  ? "unpaid"
+                  : remainingAmount === 0
+                    ? "paid"
+                    : "partial";
+
+            return {
+              success: true,
+              response: {
+                payment: {
+                  id: existingInTrx.id,
+                  orderId: existingInTrx.orderId,
+                  customerId: existingInTrx.customerId,
+                  amount: Number(existingInTrx.amount),
+                  paymentMethod: existingInTrx.paymentMethod,
+                  referenceCode: existingInTrx.referenceCode,
+                  note: existingInTrx.note,
+                  idempotencyKey: existingInTrx.idempotencyKey,
+                  createdByName: existingInTrx.createdByName,
+                  createdAt: existingInTrx.createdAt.toISOString(),
+                },
+                summary: {
+                  totalAmount,
+                  paidAmount,
+                  remainingAmount,
+                  paymentStatus,
+                },
+              },
+            };
+          }
+        }
+
         // B4: Zero-due orders are already settled/paid and require no payment
         if (totalAmount === 0) {
           return {
@@ -755,8 +838,9 @@ export function createSalesOrderService(
         const newStatus: "unpaid" | "partial" | "paid" =
           newPaidAmount === 0 ? "unpaid" : newRemainingAmount === 0 ? "paid" : "partial";
 
-        try {
-          await trx
+        let insertedId: string | undefined;
+        if (normalizedKey) {
+          const insertResult = await trx
             .insertInto("payments")
             .values({
               id: paymentId,
@@ -770,12 +854,20 @@ export function createSalesOrderService(
               idempotency_key: normalizedKey,
               created_by: userId,
             })
-            .execute();
-        } catch (insertErr: unknown) {
-          // B2: Atomic handling for concurrent requests with identical idempotencyKey
-          const pgErr = insertErr as { code?: string };
-          if (pgErr.code === "23505" && normalizedKey) {
-            const inserted = await trx
+            .onConflict((oc) =>
+              oc
+                .columns(["tenant_id", "idempotency_key"])
+                .where("idempotency_key", "is not", null)
+                .doNothing(),
+            )
+            .returning("id")
+            .executeTakeFirst();
+
+          insertedId = insertResult?.id;
+
+          if (!insertedId) {
+            // Concurrent race condition: another transaction inserted this key
+            const conflicting = await trx
               .selectFrom("payments")
               .innerJoin("users", "users.id", "payments.created_by")
               .select([
@@ -794,21 +886,21 @@ export function createSalesOrderService(
               .where("payments.idempotency_key", "=", normalizedKey)
               .executeTakeFirst();
 
-            if (inserted) {
+            if (conflicting) {
               if (
-                inserted.orderId !== orderId ||
-                Number(inserted.amount) !== input.amount ||
-                inserted.paymentMethod !== input.paymentMethod
+                conflicting.orderId !== orderId ||
+                Number(conflicting.amount) !== input.amount ||
+                conflicting.paymentMethod !== input.paymentMethod
               ) {
                 return {
                   success: false,
                   code: "IDEMPOTENCY_CONFLICT",
                   message:
-                    "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác",
+                    "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác với thông tin không khớp",
                 };
               }
 
-              const currentPaidAfterRow = await trx
+              const paidRow = await trx
                 .selectFrom("payments")
                 .select(({ fn }) => [
                   fn.coalesce(fn.sum<number | string>("amount"), sql`0`).as("totalPaid"),
@@ -817,14 +909,14 @@ export function createSalesOrderService(
                 .where("tenant_id", "=", tenantId)
                 .executeTakeFirst();
 
-              const currentPaidAfter = Number(currentPaidAfterRow?.totalPaid ?? 0);
-              const remainingAfter = Math.max(0, totalAmount - currentPaidAfter);
+              const paidAmount = Number(paidRow?.totalPaid ?? 0);
+              const remainingAmountAfter = Math.max(0, totalAmount - paidAmount);
               const statusAfter: "unpaid" | "partial" | "paid" =
                 totalAmount === 0
                   ? "paid"
-                  : currentPaidAfter === 0
+                  : paidAmount === 0
                     ? "unpaid"
-                    : remainingAfter === 0
+                    : remainingAmountAfter === 0
                       ? "paid"
                       : "partial";
 
@@ -832,28 +924,53 @@ export function createSalesOrderService(
                 success: true,
                 response: {
                   payment: {
-                    id: inserted.id,
-                    orderId: inserted.orderId,
-                    customerId: inserted.customerId,
-                    amount: Number(inserted.amount),
-                    paymentMethod: inserted.paymentMethod,
-                    referenceCode: inserted.referenceCode,
-                    note: inserted.note,
-                    idempotencyKey: inserted.idempotencyKey,
-                    createdByName: inserted.createdByName,
-                    createdAt: inserted.createdAt.toISOString(),
+                    id: conflicting.id,
+                    orderId: conflicting.orderId,
+                    customerId: conflicting.customerId,
+                    amount: Number(conflicting.amount),
+                    paymentMethod: conflicting.paymentMethod,
+                    referenceCode: conflicting.referenceCode,
+                    note: conflicting.note,
+                    idempotencyKey: conflicting.idempotencyKey,
+                    createdByName: conflicting.createdByName,
+                    createdAt: conflicting.createdAt.toISOString(),
                   },
                   summary: {
                     totalAmount,
-                    paidAmount: currentPaidAfter,
-                    remainingAmount: remainingAfter,
+                    paidAmount,
+                    remainingAmount: remainingAmountAfter,
                     paymentStatus: statusAfter,
                   },
                 },
               };
             }
+
+            return {
+              success: false,
+              code: "IDEMPOTENCY_CONFLICT",
+              message:
+                "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác",
+            };
           }
-          throw insertErr;
+        } else {
+          const insertResult = await trx
+            .insertInto("payments")
+            .values({
+              id: paymentId,
+              tenant_id: tenantId,
+              order_id: orderId,
+              customer_id: order.customer_id,
+              amount: input.amount,
+              payment_method: input.paymentMethod,
+              reference_code: input.referenceCode ?? null,
+              note: input.note ?? null,
+              idempotency_key: null,
+              created_by: userId,
+            })
+            .returning("id")
+            .executeTakeFirstOrThrow();
+
+          insertedId = insertResult.id;
         }
 
         const user = await trx

@@ -54,9 +54,8 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   server.setErrorHandler((error: FastifyError, request, reply) => {
     if (error.validation) {
-      const code = request.url.includes("/payments")
-        ? "INVALID_PAYMENT_AMOUNT"
-        : request.url.startsWith("/sales-orders")
+      const code =
+        request.url.startsWith("/sales-orders") && !request.url.includes("/payments")
           ? "INVALID_ORDER_LINES"
           : request.url.startsWith("/stock-receipts")
             ? "INVALID_RECEIPT_LINES"

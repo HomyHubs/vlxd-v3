@@ -69,6 +69,7 @@ export const PaymentErrorResponseSchema = z.object({
     "INVALID_PAYMENT_AMOUNT",
     "AUTH_CONTEXT_CHANGED",
     "IDEMPOTENCY_CONFLICT",
+    "VALIDATION_ERROR",
   ]),
   message: z.string(),
 });

@@ -659,7 +659,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/PaymentErrorResponse"
         "409":
-          $ref: "#/components/responses/AuthContextChangedResponse"
+          description: Idempotency conflict or authentication context changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentErrorResponse"
         "422":
           description: Payment exceeds remaining amount or order already paid
           content:
@@ -1548,5 +1552,6 @@ components:
               INVALID_PAYMENT_AMOUNT,
               AUTH_CONTEXT_CHANGED,
               IDEMPOTENCY_CONFLICT,
+              VALIDATION_ERROR,
             ]
         message: { type: string }

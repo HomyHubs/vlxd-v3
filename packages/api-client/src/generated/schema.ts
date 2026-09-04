@@ -622,7 +622,7 @@ export interface components {
         };
         PaymentErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "FORBIDDEN" | "ORDER_NOT_FOUND" | "AMOUNT_EXCEEDS_REMAINING" | "ORDER_ALREADY_PAID" | "INVALID_PAYMENT_AMOUNT" | "AUTH_CONTEXT_CHANGED" | "IDEMPOTENCY_CONFLICT";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "ORDER_NOT_FOUND" | "AMOUNT_EXCEEDS_REMAINING" | "ORDER_ALREADY_PAID" | "INVALID_PAYMENT_AMOUNT" | "AUTH_CONTEXT_CHANGED" | "IDEMPOTENCY_CONFLICT" | "VALIDATION_ERROR";
             message: string;
         };
     };
@@ -1655,7 +1655,15 @@ export interface operations {
                     "application/json": components["schemas"]["PaymentErrorResponse"];
                 };
             };
-            409: components["responses"]["AuthContextChangedResponse"];
+            /** @description Idempotency conflict or authentication context changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentErrorResponse"];
+                };
+            };
             /** @description Payment exceeds remaining amount or order already paid */
             422: {
                 headers: {

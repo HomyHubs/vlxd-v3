@@ -5,6 +5,7 @@ import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDatabase, createDatabasePool } from "./database.js";
+import { createSalesOrderService } from "../features/sales-orders/service.js";
 
 function upAndDown(sql: string): [string, string] {
   const [upPart, downPart = ""] = sql.split("-- migrate:down");
@@ -159,12 +160,109 @@ describe("payment database schema migration", () => {
         `),
       ).rejects.toThrow();
 
-      // 5. Test foreign key RESTRICT: cannot delete sales_order while payment exists
+      // 5. Test concurrent idempotent retries with real PostgreSQL
+      const service = createSalesOrderService({ database: db });
+
+      // 5a. Two concurrent partial payments with identical idempotencyKey
+      // Both must succeed with the identical payment, exactly one payment inserted, and no 500
+      const [partial1, partial2] = await Promise.all([
+        service.recordPayment("tenant-dev-001", "user-dev-owner-001", "order-pay-01", {
+          amount: 100000,
+          paymentMethod: "cash",
+          idempotencyKey: "concurrent-partial-01",
+        }),
+        service.recordPayment("tenant-dev-001", "user-dev-owner-001", "order-pay-01", {
+          amount: 100000,
+          paymentMethod: "cash",
+          idempotencyKey: "concurrent-partial-01",
+        }),
+      ]);
+
+      expect(partial1.success).toBe(true);
+      expect(partial2.success).toBe(true);
+      if (partial1.success && partial2.success) {
+        expect(partial1.response.payment.id).toBe(partial2.response.payment.id);
+        expect(partial1.response.summary.paidAmount).toBe(300000);
+        expect(partial2.response.summary.paidAmount).toBe(300000);
+      }
+
+      const countPartialRows = await db
+        .selectFrom("payments")
+        .selectAll()
+        .where("idempotency_key", "=", "concurrent-partial-01")
+        .execute();
+      expect(countPartialRows).toHaveLength(1);
+
+      // 5b. Two concurrent full/final payments with identical idempotencyKey
+      // Remaining was 200,000. Both pay 200,000.
+      // Second request must replay the success rather than return ORDER_ALREADY_PAID (422)
+      const [full1, full2] = await Promise.all([
+        service.recordPayment("tenant-dev-001", "user-dev-owner-001", "order-pay-01", {
+          amount: 200000,
+          paymentMethod: "bank_transfer",
+          idempotencyKey: "concurrent-full-01",
+        }),
+        service.recordPayment("tenant-dev-001", "user-dev-owner-001", "order-pay-01", {
+          amount: 200000,
+          paymentMethod: "bank_transfer",
+          idempotencyKey: "concurrent-full-01",
+        }),
+      ]);
+
+      expect(full1.success).toBe(true);
+      expect(full2.success).toBe(true);
+      if (full1.success && full2.success) {
+        expect(full1.response.payment.id).toBe(full2.response.payment.id);
+        expect(full1.response.summary.paymentStatus).toBe("paid");
+        expect(full2.response.summary.paymentStatus).toBe("paid");
+        expect(full1.response.summary.remainingAmount).toBe(0);
+        expect(full2.response.summary.remainingAmount).toBe(0);
+      }
+
+      const countFullRows = await db
+        .selectFrom("payments")
+        .selectAll()
+        .where("idempotency_key", "=", "concurrent-full-01")
+        .execute();
+      expect(countFullRows).toHaveLength(1);
+
+      // 5c. Concurrent same-tenant/same-key across DIFFERENT orders
+      // Loser must return 409 IDEMPOTENCY_CONFLICT, not transaction-aborted 500
+      await pool.query(`
+        INSERT INTO sales_orders (id, tenant_id, order_number, customer_id, warehouse_id, status, total_amount, created_by)
+        VALUES ('order-pay-02', 'tenant-dev-001', 'DH-PAY-002', 'cust-retail-tenant-dev-001', 'wh-pay-01', 'confirmed', 500000, 'user-dev-owner-001');
+      `);
+
+      const [cross1, cross2] = await Promise.all([
+        service.recordPayment("tenant-dev-001", "user-dev-owner-001", "order-pay-02", {
+          amount: 50000,
+          paymentMethod: "cash",
+          idempotencyKey: "cross-order-key-01",
+        }),
+        service.recordPayment("tenant-dev-001", "user-dev-owner-001", "order-pay-01", {
+          amount: 50000,
+          paymentMethod: "cash",
+          idempotencyKey: "cross-order-key-01",
+        }),
+      ]);
+
+      const successes = [cross1, cross2].filter((r) => r.success);
+      const conflicts = [cross1, cross2].filter(
+        (r) => !r.success && r.code === "IDEMPOTENCY_CONFLICT",
+      );
+      expect(successes).toHaveLength(1);
+      expect(conflicts).toHaveLength(1);
+
+      // 6. Test foreign key RESTRICT: cannot delete sales_order while payment exists
       await expect(
         db.deleteFrom("sales_orders").where("id", "=", "order-pay-01").execute(),
       ).rejects.toThrow();
 
-      // 6. Test down migration rollback cleanly
+      // Clean up order-pay-02 payments and order
+      await db.deleteFrom("payments").where("order_id", "=", "order-pay-02").execute();
+      await db.deleteFrom("sales_orders").where("id", "=", "order-pay-02").execute();
+
+      // 7. Test down migration rollback cleanly
       await pool.query(paymentDown);
 
       const tablesResult = await pool.query(`
