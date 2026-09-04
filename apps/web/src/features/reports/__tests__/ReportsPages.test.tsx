@@ -125,7 +125,7 @@ describe("PlanUsagePage", () => {
     expect(screen.getByTestId("plan-orders-count")).toHaveTextContent("45");
     expect(screen.getByTestId("plan-users-count")).toHaveTextContent("3");
     expect(screen.getByTestId("plan-upgrade-card")).toBeInTheDocument();
-    expect(screen.queryByTestId("plan-pro-card")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("plan-unlimited-card")).not.toBeInTheDocument();
   });
 
   it("renders unlimited resources correctly for Pro plan", () => {
@@ -160,7 +160,45 @@ describe("PlanUsagePage", () => {
     expect(screen.getByTestId("plan-product-ratio")).toHaveTextContent("150 / Không giới hạn");
     expect(screen.getByTestId("plan-warehouse-ratio")).toHaveTextContent("5 / Không giới hạn");
     expect(screen.queryByTestId("plan-usage-product-progress")).not.toBeInTheDocument();
-    expect(screen.getByTestId("plan-pro-card")).toBeInTheDocument();
+    expect(screen.getByTestId("plan-unlimited-card")).toBeInTheDocument();
+    expect(screen.getByText("Gói Nâng cao (Pro) đang hoạt động")).toBeInTheDocument();
+    expect(screen.queryByTestId("plan-upgrade-card")).not.toBeInTheDocument();
+  });
+
+  it("renders unlimited resources correctly for Enterprise / custom plan", () => {
+    vi.mocked(usePlanUsage).mockReturnValueOnce({
+      data: {
+        plan: "enterprise",
+        planName: "Gói Doanh Nghiệp (Enterprise)",
+        limits: {
+          products: null,
+          warehouses: null,
+        },
+        usage: {
+          products: 500,
+          warehouses: 20,
+          orders: 2000,
+          users: 50,
+        },
+      },
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <PlanUsagePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("plan-tier-chip")).toHaveTextContent("Gói Doanh Nghiệp (Enterprise)");
+    expect(screen.getByTestId("plan-product-ratio")).toHaveTextContent("500 / Không giới hạn");
+    expect(screen.getByTestId("plan-warehouse-ratio")).toHaveTextContent("20 / Không giới hạn");
+    expect(screen.queryByTestId("plan-usage-product-progress")).not.toBeInTheDocument();
+    expect(screen.getByTestId("plan-unlimited-card")).toBeInTheDocument();
+    expect(screen.getByText("Gói cước không giới hạn đang hoạt động")).toBeInTheDocument();
     expect(screen.queryByTestId("plan-upgrade-card")).not.toBeInTheDocument();
   });
 });

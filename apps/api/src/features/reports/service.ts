@@ -70,126 +70,132 @@ export function createReportService(dependencies: ReportServiceDependencies): Re
       const period: SalesSummaryPeriod = query?.period ?? "month";
       const startDate = calculateCalendarStartDate(period);
 
-      // 1. Pure SQL aggregation for financial metrics and order statuses using CTE
-      const summaryResult = await sql<{
-        orderCount: number;
-        totalRevenue: string | number;
-        totalPaid: string | number;
-        totalDebt: string | number;
-        paidOrderCount: number;
-        partialOrderCount: number;
-        unpaidOrderCount: number;
-      }>`
-        WITH order_payments AS (
-          SELECT 
-            o.id,
-            o.total_amount,
-            COALESCE(SUM(p.amount), 0)::bigint AS paid_amount
-          FROM sales_orders o
-          LEFT JOIN payments p ON p.order_id = o.id AND p.tenant_id = o.tenant_id
-          WHERE o.tenant_id = ${tenantId}
-            ${startDate ? sql`AND o.created_at >= ${startDate}` : sql``}
-          GROUP BY o.id, o.total_amount
-        ),
-        period_payments AS (
-          SELECT COALESCE(SUM(amount), 0)::bigint AS total_cash_collected
-          FROM payments
-          WHERE tenant_id = ${tenantId}
-            ${startDate ? sql`AND created_at >= ${startDate}` : sql``}
-        )
-        SELECT
-          COUNT(*)::int AS "orderCount",
-          COALESCE(SUM(total_amount), 0)::bigint AS "totalRevenue",
-          COALESCE((SELECT total_cash_collected FROM period_payments), 0)::bigint AS "totalPaid",
-          COALESCE(SUM(GREATEST(0::bigint, total_amount - paid_amount)), 0)::bigint AS "totalDebt",
-          COUNT(*) FILTER (WHERE total_amount = 0 OR paid_amount >= total_amount)::int AS "paidOrderCount",
-          COUNT(*) FILTER (WHERE total_amount > 0 AND paid_amount > 0 AND paid_amount < total_amount)::int AS "partialOrderCount",
-          COUNT(*) FILTER (WHERE total_amount > 0 AND paid_amount = 0)::int AS "unpaidOrderCount"
-        FROM order_payments;
-      `.execute(db);
+      return await db
+        .transaction()
+        .setIsolationLevel("repeatable read")
+        .execute(async (trx) => {
+          await sql`SET TRANSACTION READ ONLY`.execute(trx);
+          // 1. Pure SQL aggregation for financial metrics and order statuses using CTE
+          const summaryResult = await sql<{
+            orderCount: number;
+            totalRevenue: string | number;
+            totalPaid: string | number;
+            totalDebt: string | number;
+            paidOrderCount: number;
+            partialOrderCount: number;
+            unpaidOrderCount: number;
+          }>`
+            WITH order_payments AS (
+              SELECT 
+                o.id,
+                o.total_amount,
+                COALESCE(SUM(p.amount), 0)::bigint AS paid_amount
+              FROM sales_orders o
+              LEFT JOIN payments p ON p.order_id = o.id AND p.tenant_id = o.tenant_id
+              WHERE o.tenant_id = ${tenantId}
+                ${startDate ? sql`AND o.created_at >= ${startDate}` : sql``}
+              GROUP BY o.id, o.total_amount
+            ),
+            period_payments AS (
+              SELECT COALESCE(SUM(amount), 0)::bigint AS total_cash_collected
+              FROM payments
+              WHERE tenant_id = ${tenantId}
+                ${startDate ? sql`AND created_at >= ${startDate}` : sql``}
+            )
+            SELECT
+              COUNT(*)::int AS "orderCount",
+              COALESCE(SUM(total_amount), 0)::bigint AS "totalRevenue",
+              COALESCE((SELECT total_cash_collected FROM period_payments), 0)::bigint AS "totalPaid",
+              COALESCE(SUM(GREATEST(0::bigint, total_amount - paid_amount)), 0)::bigint AS "totalDebt",
+              COUNT(*) FILTER (WHERE total_amount = 0 OR paid_amount >= total_amount)::int AS "paidOrderCount",
+              COUNT(*) FILTER (WHERE total_amount > 0 AND paid_amount > 0 AND paid_amount < total_amount)::int AS "partialOrderCount",
+              COUNT(*) FILTER (WHERE total_amount > 0 AND paid_amount = 0)::int AS "unpaidOrderCount"
+            FROM order_payments;
+          `.execute(trx);
 
-      const summaryRow = summaryResult.rows[0];
-      const orderCount = Number(summaryRow?.orderCount ?? 0);
-      const totalRevenue = Number(summaryRow?.totalRevenue ?? 0);
-      const totalPaid = Number(summaryRow?.totalPaid ?? 0);
-      const totalDebt = Number(summaryRow?.totalDebt ?? 0);
-      const paidOrderCount = Number(summaryRow?.paidOrderCount ?? 0);
-      const partialOrderCount = Number(summaryRow?.partialOrderCount ?? 0);
-      const unpaidOrderCount = Number(summaryRow?.unpaidOrderCount ?? 0);
+          const summaryRow = summaryResult.rows[0];
+          const orderCount = Number(summaryRow?.orderCount ?? 0);
+          const totalRevenue = Number(summaryRow?.totalRevenue ?? 0);
+          const totalPaid = Number(summaryRow?.totalPaid ?? 0);
+          const totalDebt = Number(summaryRow?.totalDebt ?? 0);
+          const paidOrderCount = Number(summaryRow?.paidOrderCount ?? 0);
+          const partialOrderCount = Number(summaryRow?.partialOrderCount ?? 0);
+          const unpaidOrderCount = Number(summaryRow?.unpaidOrderCount ?? 0);
 
-      // 2. Pure SQL aggregation for daily timeline points (using Vietnam timezone)
-      const timelineResult = await sql<{
-        date: string;
-        revenue: string | number;
-        orderCount: number;
-      }>`
-        SELECT 
-          to_char(created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD') AS "date",
-          COALESCE(SUM(total_amount), 0)::bigint AS "revenue",
-          COUNT(*)::int AS "orderCount"
-        FROM sales_orders
-        WHERE tenant_id = ${tenantId}
-          ${startDate ? sql`AND created_at >= ${startDate}` : sql``}
-        GROUP BY to_char(created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD')
-        ORDER BY "date" ASC;
-      `.execute(db);
+          // 2. Pure SQL aggregation for daily timeline points (using Vietnam timezone)
+          const timelineResult = await sql<{
+            date: string;
+            revenue: string | number;
+            orderCount: number;
+          }>`
+            SELECT 
+              to_char(created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD') AS "date",
+              COALESCE(SUM(total_amount), 0)::bigint AS "revenue",
+              COUNT(*)::int AS "orderCount"
+            FROM sales_orders
+            WHERE tenant_id = ${tenantId}
+              ${startDate ? sql`AND created_at >= ${startDate}` : sql``}
+            GROUP BY to_char(created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD')
+            ORDER BY "date" ASC;
+          `.execute(trx);
 
-      const chartData = timelineResult.rows.map((r) => ({
-        date: r.date,
-        revenue: Number(r.revenue),
-        orderCount: Number(r.orderCount),
-      }));
+          const chartData = timelineResult.rows.map((r) => ({
+            date: r.date,
+            revenue: Number(r.revenue),
+            orderCount: Number(r.orderCount),
+          }));
 
-      // 3. Pure SQL aggregation for top 5 products sold
-      const topProductsResult = await sql<{
-        productId: string;
-        productSku: string;
-        productName: string;
-        unitName: string;
-        quantitySold: string | number;
-        totalSales: string | number;
-      }>`
-        SELECT 
-          sol.product_id AS "productId",
-          p.sku AS "productSku",
-          p.name AS "productName",
-          u.name AS "unitName",
-          COALESCE(SUM(sol.quantity), 0)::bigint AS "quantitySold",
-          COALESCE(SUM(sol.line_total), 0)::bigint AS "totalSales"
-        FROM sales_order_lines sol
-        JOIN sales_orders so ON so.id = sol.order_id
-        JOIN products p ON p.id = sol.product_id AND p.tenant_id = so.tenant_id
-        JOIN units u ON u.id = p.unit_id
-        WHERE so.tenant_id = ${tenantId}
-          ${startDate ? sql`AND so.created_at >= ${startDate}` : sql``}
-        GROUP BY sol.product_id, p.sku, p.name, u.name
-        ORDER BY "quantitySold" DESC, "totalSales" DESC
-        LIMIT 5;
-      `.execute(db);
+          // 3. Pure SQL aggregation for top 5 products sold
+          const topProductsResult = await sql<{
+            productId: string;
+            productSku: string;
+            productName: string;
+            unitName: string;
+            quantitySold: string | number;
+            totalSales: string | number;
+          }>`
+            SELECT 
+              sol.product_id AS "productId",
+              p.sku AS "productSku",
+              p.name AS "productName",
+              u.name AS "unitName",
+              COALESCE(SUM(sol.quantity), 0)::bigint AS "quantitySold",
+              COALESCE(SUM(sol.line_total), 0)::bigint AS "totalSales"
+            FROM sales_order_lines sol
+            JOIN sales_orders so ON so.id = sol.order_id
+            JOIN products p ON p.id = sol.product_id AND p.tenant_id = so.tenant_id
+            JOIN units u ON u.id = p.unit_id
+            WHERE so.tenant_id = ${tenantId}
+              ${startDate ? sql`AND so.created_at >= ${startDate}` : sql``}
+            GROUP BY sol.product_id, p.sku, p.name, u.name
+            ORDER BY "quantitySold" DESC, "totalSales" DESC
+            LIMIT 5;
+          `.execute(trx);
 
-      const topProducts = topProductsResult.rows.map((r) => ({
-        productId: r.productId,
-        productSku: r.productSku,
-        productName: r.productName,
-        unitName: r.unitName,
-        quantitySold: Number(r.quantitySold),
-        totalSales: Number(r.totalSales),
-      }));
+          const topProducts = topProductsResult.rows.map((r) => ({
+            productId: r.productId,
+            productSku: r.productSku,
+            productName: r.productName,
+            unitName: r.unitName,
+            quantitySold: Number(r.quantitySold),
+            totalSales: Number(r.totalSales),
+          }));
 
-      return {
-        period,
-        summary: {
-          totalRevenue,
-          totalPaid,
-          totalDebt,
-          orderCount,
-          paidOrderCount,
-          partialOrderCount,
-          unpaidOrderCount,
-        },
-        chartData,
-        topProducts,
-      };
+          return {
+            period,
+            summary: {
+              totalRevenue,
+              totalPaid,
+              totalDebt,
+              orderCount,
+              paidOrderCount,
+              partialOrderCount,
+              unpaidOrderCount,
+            },
+            chartData,
+            topProducts,
+          };
+        });
     },
 
     async getPlanUsage(tenantId: string): Promise<TenantPlanUsageResponse> {

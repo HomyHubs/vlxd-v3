@@ -468,4 +468,57 @@ describe("reports integration (PostgreSQL)", () => {
       await pool.end();
     }
   }, 60000);
+
+  it("maintains single snapshot consistency under concurrent order commits via REPEATABLE READ transaction", async () => {
+    if (!started) throw new Error("PostgreSQL container did not start");
+
+    const pool = createDatabasePool(started.getConnectionUri());
+    const database = createDatabase(pool);
+
+    try {
+      const reportService = createReportService({ database });
+      const tenantFreeId = "tenant-dev-001";
+      const userIdFree = "user-dev-owner-001";
+      const warehouseIdFree = "wh-report-free-001";
+      const customerIdFree = "cust-report-free-001";
+
+      // Baseline read
+      const initialSummary = await reportService.getSalesSummary(tenantFreeId, { period: "all" });
+      const initialOrders = initialSummary.summary.orderCount;
+
+      // Concurrent order insert
+      const concurrentOrderId = randomUUID();
+      const insertPromise = database
+        .insertInto("sales_orders")
+        .values({
+          id: concurrentOrderId,
+          tenant_id: tenantFreeId,
+          order_number: `SO-CONCURRENT-${Date.now()}`,
+          customer_id: customerIdFree,
+          warehouse_id: warehouseIdFree,
+          created_by: userIdFree,
+          total_amount: 500000,
+          note: "Concurrent order",
+          created_at: new Date(),
+        })
+        .execute();
+
+      // Read report during concurrent write
+      const [concurrentSummary] = await Promise.all([
+        reportService.getSalesSummary(tenantFreeId, { period: "all" }),
+        insertPromise,
+      ]);
+
+      // Verify that concurrentSummary is completely internally consistent across snapshot:
+      // total orders in chartData timeline matches summary.orderCount exactly
+      const totalTimelineOrders = concurrentSummary.chartData.reduce(
+        (acc, c) => acc + c.orderCount,
+        0,
+      );
+      expect(concurrentSummary.summary.orderCount).toBe(totalTimelineOrders);
+      expect(concurrentSummary.summary.orderCount).toBeGreaterThanOrEqual(initialOrders);
+    } finally {
+      await pool.end();
+    }
+  }, 60000);
 });

@@ -69,14 +69,16 @@ export function PlanUsagePage() {
               </Typography>
             </Stack>
 
-            <Chip
-              icon={<WorkspacePremiumIcon />}
-              label={data?.planName ?? t("plan.defaultPlanName", "Gói Miễn phí (Free)")}
-              color="primary"
-              variant="filled"
-              sx={{ fontWeight: 700, px: 1 }}
-              data-testid="plan-tier-chip"
-            />
+            {data?.planName && (
+              <Chip
+                icon={<WorkspacePremiumIcon />}
+                label={data.planName}
+                color="primary"
+                variant="filled"
+                sx={{ fontWeight: 700, px: 1 }}
+                data-testid="plan-tier-chip"
+              />
+            )}
           </Stack>
 
           {usageQuery.isError && (
@@ -247,30 +249,7 @@ export function PlanUsagePage() {
               </Grid>
 
               {/* Upgrade Info Card */}
-              {data?.plan === "pro" ? (
-                <Card
-                  sx={{ bgcolor: "success.50", borderColor: "success.200" }}
-                  variant="outlined"
-                  data-testid="plan-pro-card"
-                >
-                  <CardContent>
-                    <Typography
-                      variant="subtitle1"
-                      fontWeight={700}
-                      color="success.dark"
-                      gutterBottom
-                    >
-                      {t("plan.proActiveTitle", "Gói Nâng cao (Pro) đang hoạt động")}
-                    </Typography>
-                    <Typography variant="body2" color="success.dark">
-                      {t(
-                        "plan.proActiveDesc",
-                        "Cửa hàng của bạn đang sử dụng gói Pro với không giới hạn sản phẩm và kho hàng. Cảm ơn bạn đã tin tưởng đồng hành cùng chúng tôi!",
-                      )}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              ) : (
+              {data?.plan === "free" ? (
                 <Card
                   sx={{ bgcolor: "info.50", borderColor: "info.200" }}
                   variant="outlined"
@@ -285,6 +264,36 @@ export function PlanUsagePage() {
                         "plan.upgradeDesc",
                         "Gói Miễn phí (Free) được thiết kế cho các cửa hàng vật liệu xây dựng quy mô khởi đầu. Khi quy mô của bạn mở rộng vượt quá 80 sản phẩm hoặc 3 chi nhánh kho, vui lòng liên hệ đội ngũ hỗ trợ để nâng cấp gói không giới hạn.",
                       )}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card
+                  sx={{ bgcolor: "success.50", borderColor: "success.200" }}
+                  variant="outlined"
+                  data-testid="plan-unlimited-card"
+                >
+                  <CardContent>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={700}
+                      color="success.dark"
+                      gutterBottom
+                    >
+                      {data?.plan === "pro"
+                        ? t("plan.proActiveTitle", "Gói Nâng cao (Pro) đang hoạt động")
+                        : t("plan.unlimitedActiveTitle", "Gói cước không giới hạn đang hoạt động")}
+                    </Typography>
+                    <Typography variant="body2" color="success.dark">
+                      {data?.plan === "pro"
+                        ? t(
+                            "plan.proActiveDesc",
+                            "Cửa hàng của bạn đang sử dụng gói Pro với không giới hạn sản phẩm và kho hàng. Cảm ơn bạn đã tin tưởng đồng hành cùng chúng tôi!",
+                          )
+                        : t(
+                            "plan.unlimitedActiveDesc",
+                            "Cửa hàng của bạn đang sử dụng gói cước nâng cao với tài nguyên sản phẩm và kho hàng không giới hạn.",
+                          )}
                     </Typography>
                   </CardContent>
                 </Card>
