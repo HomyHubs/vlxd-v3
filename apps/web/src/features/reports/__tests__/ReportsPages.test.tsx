@@ -124,6 +124,8 @@ describe("PlanUsagePage", () => {
     expect(screen.getByTestId("plan-warehouse-ratio")).toHaveTextContent("2 / 3 (67%)");
     expect(screen.getByTestId("plan-orders-count")).toHaveTextContent("45");
     expect(screen.getByTestId("plan-users-count")).toHaveTextContent("3");
+    expect(screen.getByTestId("plan-upgrade-card")).toBeInTheDocument();
+    expect(screen.queryByTestId("plan-pro-card")).not.toBeInTheDocument();
   });
 
   it("renders unlimited resources correctly for Pro plan", () => {
@@ -158,5 +160,7 @@ describe("PlanUsagePage", () => {
     expect(screen.getByTestId("plan-product-ratio")).toHaveTextContent("150 / Không giới hạn");
     expect(screen.getByTestId("plan-warehouse-ratio")).toHaveTextContent("5 / Không giới hạn");
     expect(screen.queryByTestId("plan-usage-product-progress")).not.toBeInTheDocument();
+    expect(screen.getByTestId("plan-pro-card")).toBeInTheDocument();
+    expect(screen.queryByTestId("plan-upgrade-card")).not.toBeInTheDocument();
   });
 });

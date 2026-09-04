@@ -211,6 +211,7 @@
     "errorPasswordLength": "Mật khẩu phải từ 6 ký tự",
     "errorTitleRequired": "Vui lòng chọn chức danh",
     "errorEmailExists": "Email này đã được sử dụng trong hệ thống",
+    "errorCreateFailed": "Không thể tạo tài khoản nhân viên",
     "forbidden": "Bạn không có quyền truy cập trang quản lý người dùng",
     "errorLoading": "Lỗi khi tải danh sách người dùng"
   },
@@ -254,6 +255,8 @@
     "usersActive": "Tài khoản nhân viên",
     "unlimited": "Không giới hạn",
     "upgradeTitle": "Nâng cấp gói cước Doanh Nghiệp",
-    "upgradeDesc": "Gói Miễn phí (Free) được thiết kế cho các cửa hàng vật liệu xây dựng quy mô khởi đầu. Khi quy mô của bạn mở rộng vượt quá 80 sản phẩm hoặc 3 chi nhánh kho, vui lòng liên hệ đội ngũ hỗ trợ để nâng cấp gói không giới hạn."
+    "upgradeDesc": "Gói Miễn phí (Free) được thiết kế cho các cửa hàng vật liệu xây dựng quy mô khởi đầu. Khi quy mô của bạn mở rộng vượt quá 80 sản phẩm hoặc 3 chi nhánh kho, vui lòng liên hệ đội ngũ hỗ trợ để nâng cấp gói không giới hạn.",
+    "proActiveTitle": "Gói Nâng cao (Pro) đang hoạt động",
+    "proActiveDesc": "Cửa hàng của bạn đang sử dụng gói Pro với không giới hạn sản phẩm và kho hàng. Cảm ơn bạn đã tin tưởng đồng hành cùng chúng tôi!"
   }
 }

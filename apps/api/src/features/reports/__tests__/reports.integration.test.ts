@@ -337,6 +337,21 @@ describe("reports integration (PostgreSQL)", () => {
         })
         .execute();
 
+      // Payment for Order 4 received TODAY (B1: Cash collected today for past order)
+      await database
+        .insertInto("payments")
+        .values({
+          id: randomUUID(),
+          tenant_id: tenantFreeId,
+          order_id: order4Id,
+          customer_id: customerIdFree,
+          created_by: userIdFree,
+          amount: 1000000,
+          payment_method: "cash",
+          created_at: now,
+        })
+        .execute();
+
       // Order 5: Pro Tenant (Cross-tenant isolation check)
       const order5Id = randomUUID();
       await database
@@ -367,17 +382,17 @@ describe("reports integration (PostgreSQL)", () => {
         .execute();
 
       // Verification A: Sales summary for "day" (Period today)
-      // Orders: Order 1 (1M paid), Order 2 (2M, 500k paid), Order 3 (0 VND paid)
+      // In-period Orders: Order 1 (1M paid), Order 2 (2M, 500k paid), Order 3 (0 VND paid)
       // Total Revenue: 1M + 2M + 0 = 3,000,000 VND
-      // Total Paid: 1M + 500k = 1,500,000 VND
-      // Total Debt: 1,500,000 VND
+      // Total Cash Collected (p.created_at >= today): Order 1 (1M) + Order 2 (500k) + Order 4 payment (1M) = 2,500,000 VND!
+      // Total Debt on today's orders: 1,500,000 VND
       // Total Orders: 3
       // Paid Orders: 2 (Order 1 + Order 3 zero-total)
       // Partial Orders: 1 (Order 2)
       // Unpaid Orders: 0
       const todaySummary = await reportService.getSalesSummary(tenantFreeId, { period: "day" });
       expect(todaySummary.summary.totalRevenue).toBe(3000000);
-      expect(todaySummary.summary.totalPaid).toBe(1500000);
+      expect(todaySummary.summary.totalPaid).toBe(2500000);
       expect(todaySummary.summary.totalDebt).toBe(1500000);
       expect(todaySummary.summary.orderCount).toBe(3);
       expect(todaySummary.summary.paidOrderCount).toBe(2);
@@ -385,23 +400,34 @@ describe("reports integration (PostgreSQL)", () => {
       expect(todaySummary.summary.unpaidOrderCount).toBe(0);
       expect(todaySummary.chartData.length).toBeGreaterThanOrEqual(1);
 
+      // Verification A2: Week & Month boundaries
+      const weekSummary = await reportService.getSalesSummary(tenantFreeId, { period: "week" });
+      expect(weekSummary.summary.totalRevenue).toBe(3000000);
+      expect(weekSummary.summary.totalPaid).toBe(2500000);
+      expect(weekSummary.summary.orderCount).toBe(3);
+
+      const monthSummary = await reportService.getSalesSummary(tenantFreeId, { period: "month" });
+      expect(monthSummary.summary.totalRevenue).toBe(3000000);
+      expect(monthSummary.summary.totalPaid).toBe(2500000);
+      expect(monthSummary.summary.orderCount).toBe(3);
+
       // Verification B: Sales summary for "all"
-      // Orders: Order 1 (1M), Order 2 (2M), Order 3 (0), Order 4 (5M unpaid)
+      // Orders: Order 1 (1M), Order 2 (2M), Order 3 (0), Order 4 (5M with 1M paid)
       // Total Revenue: 8,000,000 VND
-      // Total Paid: 1,500,000 VND
-      // Total Debt: 6,500,000 VND
+      // Total Paid: 2,500,000 VND
+      // Total Debt: 5,500,000 VND (Order 2 has 1.5M debt, Order 4 has 4M debt)
       // Total Orders: 4
       // Paid Orders: 2 (Order 1, Order 3)
-      // Partial Orders: 1 (Order 2)
-      // Unpaid Orders: 1 (Order 4)
+      // Partial Orders: 2 (Order 2, Order 4)
+      // Unpaid Orders: 0
       const allSummary = await reportService.getSalesSummary(tenantFreeId, { period: "all" });
       expect(allSummary.summary.totalRevenue).toBe(8000000);
-      expect(allSummary.summary.totalPaid).toBe(1500000);
-      expect(allSummary.summary.totalDebt).toBe(6500000);
+      expect(allSummary.summary.totalPaid).toBe(2500000);
+      expect(allSummary.summary.totalDebt).toBe(5500000);
       expect(allSummary.summary.orderCount).toBe(4);
       expect(allSummary.summary.paidOrderCount).toBe(2);
-      expect(allSummary.summary.partialOrderCount).toBe(1);
-      expect(allSummary.summary.unpaidOrderCount).toBe(1);
+      expect(allSummary.summary.partialOrderCount).toBe(2);
+      expect(allSummary.summary.unpaidOrderCount).toBe(0);
 
       // Top Products Ranking Check
       // Gạch: 2,000 units sold

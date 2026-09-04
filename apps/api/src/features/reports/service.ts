@@ -90,11 +90,17 @@ export function createReportService(dependencies: ReportServiceDependencies): Re
           WHERE o.tenant_id = ${tenantId}
             ${startDate ? sql`AND o.created_at >= ${startDate}` : sql``}
           GROUP BY o.id, o.total_amount
+        ),
+        period_payments AS (
+          SELECT COALESCE(SUM(amount), 0)::bigint AS total_cash_collected
+          FROM payments
+          WHERE tenant_id = ${tenantId}
+            ${startDate ? sql`AND created_at >= ${startDate}` : sql``}
         )
         SELECT
           COUNT(*)::int AS "orderCount",
           COALESCE(SUM(total_amount), 0)::bigint AS "totalRevenue",
-          COALESCE(SUM(paid_amount), 0)::bigint AS "totalPaid",
+          COALESCE((SELECT total_cash_collected FROM period_payments), 0)::bigint AS "totalPaid",
           COALESCE(SUM(GREATEST(0::bigint, total_amount - paid_amount)), 0)::bigint AS "totalDebt",
           COUNT(*) FILTER (WHERE total_amount = 0 OR paid_amount >= total_amount)::int AS "paidOrderCount",
           COUNT(*) FILTER (WHERE total_amount > 0 AND paid_amount > 0 AND paid_amount < total_amount)::int AS "partialOrderCount",
@@ -152,7 +158,7 @@ export function createReportService(dependencies: ReportServiceDependencies): Re
           COALESCE(SUM(sol.line_total), 0)::bigint AS "totalSales"
         FROM sales_order_lines sol
         JOIN sales_orders so ON so.id = sol.order_id
-        JOIN products p ON p.id = sol.product_id
+        JOIN products p ON p.id = sol.product_id AND p.tenant_id = so.tenant_id
         JOIN units u ON u.id = p.unit_id
         WHERE so.tenant_id = ${tenantId}
           ${startDate ? sql`AND so.created_at >= ${startDate}` : sql``}

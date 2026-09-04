@@ -230,4 +230,75 @@ describe("UsersPage", () => {
       await screen.findByText("Bạn không có quyền truy cập trang quản lý người dùng"),
     ).toBeInTheDocument();
   });
+
+  it("displays English error message when employee creation fails", async () => {
+    const { i18n } = await import("../../../i18n.js");
+    await i18n.changeLanguage("en");
+
+    const fetchMock = vi.fn().mockImplementation((req: Request | string) => {
+      const url = typeof req === "string" ? req : req.url;
+      const method = typeof req === "string" ? "GET" : req.method;
+      if (url.includes("/auth/me")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(mockSession), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      if (url.includes("/titles")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(mockTitles), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      if (url.includes("/users") && method === "GET") {
+        return Promise.resolve(
+          new Response(JSON.stringify(mockUsers), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      if (url.includes("/users") && method === "POST") {
+        return Promise.resolve(
+          new Response(JSON.stringify({ code: "INTERNAL_ERROR", message: "Server error" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    queryClient.setQueryData(AUTH_QUERY_KEY, mockSession);
+    resetTenantTracker("tenant-dev-001:user-1");
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <UsersPage />
+      </QueryClientProvider>,
+    );
+
+    const openDialogBtn = await screen.findByTestId("add-user-btn");
+    await userEvent.click(openDialogBtn);
+
+    const nameInput = await screen.findByTestId("user-fullname-input");
+    await userEvent.type(nameInput, "John Doe");
+    await userEvent.type(screen.getByTestId("user-email-input"), "johndoe@vlxd.local");
+    await userEvent.type(screen.getByTestId("user-password-input"), "Secret123");
+
+    await userEvent.click(screen.getByTestId("submit-user-btn"));
+
+    expect(await screen.findByText("Failed to create employee account")).toBeInTheDocument();
+
+    // Reset language back to vi
+    await i18n.changeLanguage("vi");
+  });
 });
