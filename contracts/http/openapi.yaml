@@ -1497,7 +1497,7 @@ components:
     RecordPaymentRequest:
       type: object
       additionalProperties: false
-      required: [amount, paymentMethod]
+      required: [amount, paymentMethod, idempotencyKey]
       properties:
         amount:
           type: integer
@@ -1512,7 +1512,7 @@ components:
           type: [string, "null"]
           maxLength: 500
         idempotencyKey:
-          type: [string, "null"]
+          type: string
           minLength: 1
           maxLength: 100
     RecordPaymentResponse:

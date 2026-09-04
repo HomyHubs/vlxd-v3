@@ -16,12 +16,10 @@ export const RecordPaymentRequestSchema = z.object({
   referenceCode: z.string().trim().max(100).optional().nullable(),
   note: z.string().trim().max(500).optional().nullable(),
   idempotencyKey: z
-    .string()
+    .string({ message: "Mã idempotency key là bắt buộc" })
     .trim()
     .min(1, "Mã idempotency key không được để trống")
-    .max(100)
-    .optional()
-    .nullable(),
+    .max(100),
 });
 export type RecordPaymentRequest = z.infer<typeof RecordPaymentRequestSchema>;
 

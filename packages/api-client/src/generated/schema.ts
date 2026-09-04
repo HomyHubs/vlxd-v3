@@ -610,7 +610,7 @@ export interface components {
             paymentMethod: components["schemas"]["PaymentMethod"];
             referenceCode?: string | null;
             note?: string | null;
-            idempotencyKey?: string | null;
+            idempotencyKey: string;
         };
         RecordPaymentResponse: {
             payment: components["schemas"]["PaymentItem"];

@@ -587,19 +587,12 @@ export function createSalesOrderService(
         };
       }
 
-      const rawKey = input.idempotencyKey?.trim();
-      const normalizedKey = rawKey && rawKey.length > 0 ? rawKey : null;
-
-      // Reject empty or whitespace-only key if provided
-      if (
-        input.idempotencyKey !== undefined &&
-        input.idempotencyKey !== null &&
-        normalizedKey === null
-      ) {
+      const normalizedKey = input.idempotencyKey ? input.idempotencyKey.trim() : "";
+      if (!normalizedKey || normalizedKey.length === 0) {
         return {
           success: false,
           code: "INVALID_PAYMENT_AMOUNT",
-          message: "Mã idempotencyKey không được để trống",
+          message: "Mã idempotencyKey là bắt buộc và không được để trống",
         };
       }
 
@@ -838,139 +831,117 @@ export function createSalesOrderService(
         const newStatus: "unpaid" | "partial" | "paid" =
           newPaidAmount === 0 ? "unpaid" : newRemainingAmount === 0 ? "paid" : "partial";
 
-        let insertedId: string | undefined;
-        if (normalizedKey) {
-          const insertResult = await trx
-            .insertInto("payments")
-            .values({
-              id: paymentId,
-              tenant_id: tenantId,
-              order_id: orderId,
-              customer_id: order.customer_id,
-              amount: input.amount,
-              payment_method: input.paymentMethod,
-              reference_code: input.referenceCode ?? null,
-              note: input.note ?? null,
-              idempotency_key: normalizedKey,
-              created_by: userId,
-            })
-            .onConflict((oc) =>
-              oc
-                .columns(["tenant_id", "idempotency_key"])
-                .where("idempotency_key", "is not", null)
-                .doNothing(),
-            )
-            .returning("id")
+        const insertResult = await trx
+          .insertInto("payments")
+          .values({
+            id: paymentId,
+            tenant_id: tenantId,
+            order_id: orderId,
+            customer_id: order.customer_id,
+            amount: input.amount,
+            payment_method: input.paymentMethod,
+            reference_code: input.referenceCode ?? null,
+            note: input.note ?? null,
+            idempotency_key: normalizedKey,
+            created_by: userId,
+          })
+          .onConflict((oc) =>
+            oc
+              .columns(["tenant_id", "idempotency_key"])
+              .where("idempotency_key", "is not", null)
+              .doNothing(),
+          )
+          .returning("id")
+          .executeTakeFirst();
+
+        const insertedId = insertResult?.id;
+
+        if (!insertedId) {
+          // Concurrent race condition: another transaction inserted this key
+          const conflicting = await trx
+            .selectFrom("payments")
+            .innerJoin("users", "users.id", "payments.created_by")
+            .select([
+              "payments.id as id",
+              "payments.order_id as orderId",
+              "payments.customer_id as customerId",
+              "payments.amount as amount",
+              "payments.payment_method as paymentMethod",
+              "payments.reference_code as referenceCode",
+              "payments.note as note",
+              "payments.idempotency_key as idempotencyKey",
+              "users.full_name as createdByName",
+              "payments.created_at as createdAt",
+            ])
+            .where("payments.tenant_id", "=", tenantId)
+            .where("payments.idempotency_key", "=", normalizedKey)
             .executeTakeFirst();
 
-          insertedId = insertResult?.id;
-
-          if (!insertedId) {
-            // Concurrent race condition: another transaction inserted this key
-            const conflicting = await trx
-              .selectFrom("payments")
-              .innerJoin("users", "users.id", "payments.created_by")
-              .select([
-                "payments.id as id",
-                "payments.order_id as orderId",
-                "payments.customer_id as customerId",
-                "payments.amount as amount",
-                "payments.payment_method as paymentMethod",
-                "payments.reference_code as referenceCode",
-                "payments.note as note",
-                "payments.idempotency_key as idempotencyKey",
-                "users.full_name as createdByName",
-                "payments.created_at as createdAt",
-              ])
-              .where("payments.tenant_id", "=", tenantId)
-              .where("payments.idempotency_key", "=", normalizedKey)
-              .executeTakeFirst();
-
-            if (conflicting) {
-              if (
-                conflicting.orderId !== orderId ||
-                Number(conflicting.amount) !== input.amount ||
-                conflicting.paymentMethod !== input.paymentMethod
-              ) {
-                return {
-                  success: false,
-                  code: "IDEMPOTENCY_CONFLICT",
-                  message:
-                    "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác với thông tin không khớp",
-                };
-              }
-
-              const paidRow = await trx
-                .selectFrom("payments")
-                .select(({ fn }) => [
-                  fn.coalesce(fn.sum<number | string>("amount"), sql`0`).as("totalPaid"),
-                ])
-                .where("order_id", "=", orderId)
-                .where("tenant_id", "=", tenantId)
-                .executeTakeFirst();
-
-              const paidAmount = Number(paidRow?.totalPaid ?? 0);
-              const remainingAmountAfter = Math.max(0, totalAmount - paidAmount);
-              const statusAfter: "unpaid" | "partial" | "paid" =
-                totalAmount === 0
-                  ? "paid"
-                  : paidAmount === 0
-                    ? "unpaid"
-                    : remainingAmountAfter === 0
-                      ? "paid"
-                      : "partial";
-
+          if (conflicting) {
+            if (
+              conflicting.orderId !== orderId ||
+              Number(conflicting.amount) !== input.amount ||
+              conflicting.paymentMethod !== input.paymentMethod
+            ) {
               return {
-                success: true,
-                response: {
-                  payment: {
-                    id: conflicting.id,
-                    orderId: conflicting.orderId,
-                    customerId: conflicting.customerId,
-                    amount: Number(conflicting.amount),
-                    paymentMethod: conflicting.paymentMethod,
-                    referenceCode: conflicting.referenceCode,
-                    note: conflicting.note,
-                    idempotencyKey: conflicting.idempotencyKey,
-                    createdByName: conflicting.createdByName,
-                    createdAt: conflicting.createdAt.toISOString(),
-                  },
-                  summary: {
-                    totalAmount,
-                    paidAmount,
-                    remainingAmount: remainingAmountAfter,
-                    paymentStatus: statusAfter,
-                  },
-                },
+                success: false,
+                code: "IDEMPOTENCY_CONFLICT",
+                message:
+                  "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác với thông tin không khớp",
               };
             }
 
+            const paidRow = await trx
+              .selectFrom("payments")
+              .select(({ fn }) => [
+                fn.coalesce(fn.sum<number | string>("amount"), sql`0`).as("totalPaid"),
+              ])
+              .where("order_id", "=", orderId)
+              .where("tenant_id", "=", tenantId)
+              .executeTakeFirst();
+
+            const paidAmount = Number(paidRow?.totalPaid ?? 0);
+            const remainingAmountAfter = Math.max(0, totalAmount - paidAmount);
+            const statusAfter: "unpaid" | "partial" | "paid" =
+              totalAmount === 0
+                ? "paid"
+                : paidAmount === 0
+                  ? "unpaid"
+                  : remainingAmountAfter === 0
+                    ? "paid"
+                    : "partial";
+
             return {
-              success: false,
-              code: "IDEMPOTENCY_CONFLICT",
-              message:
-                "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác",
+              success: true,
+              response: {
+                payment: {
+                  id: conflicting.id,
+                  orderId: conflicting.orderId,
+                  customerId: conflicting.customerId,
+                  amount: Number(conflicting.amount),
+                  paymentMethod: conflicting.paymentMethod,
+                  referenceCode: conflicting.referenceCode,
+                  note: conflicting.note,
+                  idempotencyKey: conflicting.idempotencyKey,
+                  createdByName: conflicting.createdByName,
+                  createdAt: conflicting.createdAt.toISOString(),
+                },
+                summary: {
+                  totalAmount,
+                  paidAmount,
+                  remainingAmount: remainingAmountAfter,
+                  paymentStatus: statusAfter,
+                },
+              },
             };
           }
-        } else {
-          const insertResult = await trx
-            .insertInto("payments")
-            .values({
-              id: paymentId,
-              tenant_id: tenantId,
-              order_id: orderId,
-              customer_id: order.customer_id,
-              amount: input.amount,
-              payment_method: input.paymentMethod,
-              reference_code: input.referenceCode ?? null,
-              note: input.note ?? null,
-              idempotency_key: null,
-              created_by: userId,
-            })
-            .returning("id")
-            .executeTakeFirstOrThrow();
 
-          insertedId = insertResult.id;
+          return {
+            success: false,
+            code: "IDEMPOTENCY_CONFLICT",
+            message:
+              "Mã idempotencyKey đã được sử dụng cho một đơn hàng hoặc khoản thanh toán khác",
+          };
         }
 
         const user = await trx

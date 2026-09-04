@@ -560,6 +560,7 @@ describe("sales order routes unit tests", () => {
         amount: 50000,
         paymentMethod: "cash",
         note: "Thanh toán đợt 1",
+        idempotencyKey: "pmt-key-1",
       },
     });
 
@@ -611,6 +612,7 @@ describe("sales order routes unit tests", () => {
       payload: {
         amount: 200000,
         paymentMethod: "bank_transfer",
+        idempotencyKey: "pmt-key-2",
       },
     });
 
@@ -651,6 +653,7 @@ describe("sales order routes unit tests", () => {
       payload: {
         amount: 50000,
         paymentMethod: "cash",
+        idempotencyKey: "pmt-key-3",
       },
     });
 
@@ -853,11 +856,45 @@ describe("sales order routes unit tests", () => {
       payload: {
         amount: 50000,
         paymentMethod: "cash",
+        idempotencyKey: "pmt-key-4",
       },
     });
 
     expect(response.statusCode).toBe(422);
     expect(response.json()).toMatchObject({ code: "ORDER_ALREADY_PAID" });
+    await app.close();
+  });
+
+  it("POST /sales-orders/:id/payments returns 400 when idempotencyKey is omitted", async () => {
+    const salesOrderService = {
+      create: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
+      recordPayment: vi.fn(),
+      listPayments: vi.fn(),
+    } as unknown as SalesOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      salesOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/sales-orders/order-1/payments",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: {
+        amount: 50000,
+        paymentMethod: "cash",
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: "VALIDATION_ERROR" });
     await app.close();
   });
 });
