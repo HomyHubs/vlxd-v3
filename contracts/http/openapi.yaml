@@ -406,6 +406,148 @@ paths:
                 $ref: "#/components/schemas/StockReceiptErrorResponse"
         "409":
           $ref: "#/components/responses/AuthContextChangedResponse"
+  /stock-transfers:
+    get:
+      operationId: listStockTransfers
+      summary: List internal stock transfers for the authenticated tenant
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: sourceWarehouseId
+          schema: { type: string }
+        - in: query
+          name: destinationWarehouseId
+          schema: { type: string }
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: fromDate
+          schema: { type: string, format: date }
+        - in: query
+          name: toDate
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Paginated list of stock transfers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferListResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
+    post:
+      operationId: createStockTransfer
+      summary: Create an internal stock transfer between warehouses
+      parameters:
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStockTransferRequest"
+      responses:
+        "201":
+          description: Stock transfer completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferDetailResponse"
+        "400":
+          description: Validation error or invalid transfer lines
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.manage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferErrorResponse"
+        "404":
+          description: Warehouse or product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferErrorResponse"
+        "409":
+          description: Authentication context mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferErrorResponse"
+        "422":
+          description: Insufficient stock at source warehouse
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferErrorResponse"
+  /stock-transfers/{id}:
+    get:
+      operationId: getStockTransfer
+      summary: Get details of a single stock transfer
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/ExpectedTenantIdHeader"
+        - $ref: "#/components/parameters/ExpectedSessionContextHeader"
+      responses:
+        "200":
+          description: Stock transfer details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferDetailResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferErrorResponse"
+        "403":
+          description: Permission denied (requires inventory.view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferErrorResponse"
+        "404":
+          description: Stock transfer not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockTransferErrorResponse"
+        "409":
+          $ref: "#/components/responses/AuthContextChangedResponse"
   /customers:
     get:
       operationId: listCustomers
@@ -1236,6 +1378,147 @@ components:
               AUTH_CONTEXT_CHANGED,
             ]
         message: { type: string }
+    CreateStockTransferLineInput:
+      type: object
+      additionalProperties: false
+      required: [productId, quantity]
+      properties:
+        productId: { type: string }
+        quantity: { type: integer, minimum: 1, maximum: 1000000 }
+    CreateStockTransferRequest:
+      type: object
+      additionalProperties: false
+      required: [sourceWarehouseId, destinationWarehouseId, lines]
+      properties:
+        sourceWarehouseId: { type: string }
+        destinationWarehouseId: { type: string }
+        note: { type: string, maxLength: 500 }
+        lines:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CreateStockTransferLineInput"
+    StockTransferLine:
+      type: object
+      additionalProperties: false
+      required: [id, productId, productSku, productName, unitName, quantity]
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        productSku: { type: string }
+        productName: { type: string }
+        unitName: { type: string }
+        quantity: { type: integer, minimum: 1 }
+    StockTransferListItem:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          transferNumber,
+          sourceWarehouseId,
+          sourceWarehouseCode,
+          sourceWarehouseName,
+          destinationWarehouseId,
+          destinationWarehouseCode,
+          destinationWarehouseName,
+          status,
+          createdByName,
+          createdAt,
+          itemCount,
+          totalQuantity,
+        ]
+      properties:
+        id: { type: string }
+        transferNumber: { type: string }
+        sourceWarehouseId: { type: string }
+        sourceWarehouseCode: { type: string }
+        sourceWarehouseName: { type: string }
+        destinationWarehouseId: { type: string }
+        destinationWarehouseCode: { type: string }
+        destinationWarehouseName: { type: string }
+        status: { type: string }
+        note:
+          type: [string, "null"]
+        createdByName: { type: string }
+        createdAt: { type: string, format: date-time }
+        itemCount: { type: integer }
+        totalQuantity: { type: integer }
+    StockTransferListResponse:
+      type: object
+      additionalProperties: false
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockTransferListItem"
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+    StockTransferDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          transferNumber,
+          sourceWarehouseId,
+          sourceWarehouseCode,
+          sourceWarehouseName,
+          destinationWarehouseId,
+          destinationWarehouseCode,
+          destinationWarehouseName,
+          status,
+          createdByName,
+          createdAt,
+          totalQuantity,
+          lines,
+        ]
+      properties:
+        id: { type: string }
+        transferNumber: { type: string }
+        sourceWarehouseId: { type: string }
+        sourceWarehouseCode: { type: string }
+        sourceWarehouseName: { type: string }
+        destinationWarehouseId: { type: string }
+        destinationWarehouseCode: { type: string }
+        destinationWarehouseName: { type: string }
+        status: { type: string }
+        note:
+          type: [string, "null"]
+        createdByName: { type: string }
+        createdAt: { type: string, format: date-time }
+        totalQuantity: { type: integer }
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockTransferLine"
+    StockTransferErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            [
+              UNAUTHORIZED,
+              FORBIDDEN,
+              VALIDATION_ERROR,
+              SAME_WAREHOUSE_NOT_ALLOWED,
+              WAREHOUSE_NOT_FOUND,
+              PRODUCT_NOT_FOUND,
+              INSUFFICIENT_STOCK,
+              STOCK_CEILING_EXCEEDED,
+              STOCK_TRANSFER_NOT_FOUND,
+              INVALID_TRANSFER_LINES,
+              AUTH_CONTEXT_CHANGED,
+            ]
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
     Customer:
       type: object
       additionalProperties: false

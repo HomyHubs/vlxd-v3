@@ -15,6 +15,9 @@ import {
   CreateStockReceiptPage,
   StockReceiptDetailPage,
   StockReceiptListPage,
+  CreateStockTransferPage,
+  StockTransferDetailPage,
+  StockTransferListPage,
 } from "./features/inventory/index.js";
 import {
   CreateSalesOrderPage,
@@ -77,6 +80,16 @@ function DashboardLayout() {
                 data-testid="nav-receipts-btn"
               >
                 {t("inventory.listTitle")}
+              </Button>
+            )}
+            {canViewInventory && (
+              <Button
+                component={RouterLink}
+                to="/inventory/transfers"
+                variant="outlined"
+                data-testid="nav-transfers-btn"
+              >
+                {t("transfers.navTitle", "Chuyển kho")}
               </Button>
             )}
             {canViewSales && (
@@ -145,9 +158,12 @@ export function App() {
               <Route path="/warehouses" element={<WarehousesPage />} />
               <Route path="/inventory/receipts" element={<StockReceiptListPage />} />
               <Route path="/inventory/receipts/:id" element={<StockReceiptDetailPage />} />
+              <Route path="/inventory/transfers" element={<StockTransferListPage />} />
+              <Route path="/inventory/transfers/:id" element={<StockTransferDetailPage />} />
             </Route>
             <Route element={<ProtectedRoute requiredCapability="inventory.manage" />}>
               <Route path="/inventory/receipts/new" element={<CreateStockReceiptPage />} />
+              <Route path="/inventory/transfers/new" element={<CreateStockTransferPage />} />
             </Route>
             <Route element={<ProtectedRoute requiredCapability="sales.view" />}>
               <Route path="/orders" element={<SalesOrderListPage />} />
