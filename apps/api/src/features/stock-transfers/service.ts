@@ -443,13 +443,17 @@ export function createStockTransferService(
         baseQuery = baseQuery.where("st.transfer_number", "ilike", `%${query.search.trim()}%`);
       }
       if (query?.fromDate) {
-        baseQuery = baseQuery.where("st.created_at", ">=", new Date(query.fromDate));
+        baseQuery = baseQuery.where(
+          "st.created_at",
+          ">=",
+          new Date(`${query.fromDate}T00:00:00+07:00`),
+        );
       }
       if (query?.toDate) {
         baseQuery = baseQuery.where(
           "st.created_at",
           "<=",
-          new Date(query.toDate + "T23:59:59.999Z"),
+          new Date(`${query.toDate}T23:59:59.999+07:00`),
         );
       }
 

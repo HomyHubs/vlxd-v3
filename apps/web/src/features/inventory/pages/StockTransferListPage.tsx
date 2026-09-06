@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -153,6 +154,26 @@ export function StockTransferListPage() {
                 <Typography color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
                   {t("common.loading")}
                 </Typography>
+              ) : transfersQuery.isError ? (
+                <Alert
+                  severity="error"
+                  data-testid="transfers-error-state"
+                  action={
+                    <Button
+                      color="inherit"
+                      size="small"
+                      onClick={() => {
+                        void transfersQuery.refetch();
+                      }}
+                      data-testid="retry-transfers-button"
+                    >
+                      {t("common.retry", "Thử lại")}
+                    </Button>
+                  }
+                  sx={{ my: 2 }}
+                >
+                  {t("transfers.loadError")}
+                </Alert>
               ) : transfers.length === 0 ? (
                 <Box sx={{ py: 6, textAlign: "center" }}>
                   <Typography color="text.secondary" variant="body1">

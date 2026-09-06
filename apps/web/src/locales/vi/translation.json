@@ -311,6 +311,8 @@
     "itemsList": "Danh mục hàng hóa điều chuyển",
     "searchPlaceholder": "Tìm theo số phiếu...",
     "searchProductPlaceholder": "Tìm kiếm sản phẩm (tên/SKU)...",
-    "errorStockCeilingExceeded": "Số lượng tồn kho tại kho đích sau khi chuyển vượt quá hạn mức tối đa cho phép (1 tỷ)."
+    "errorStockCeilingExceeded": "Số lượng tồn kho tại kho đích sau khi chuyển vượt quá hạn mức tối đa cho phép (1 tỷ).",
+    "loadError": "Không thể tải danh sách phiếu chuyển kho. Vui lòng thử lại.",
+    "overStockError": "Số lượng chuyển vượt quá tồn kho khả dụng tại kho xuất."
   }
 }

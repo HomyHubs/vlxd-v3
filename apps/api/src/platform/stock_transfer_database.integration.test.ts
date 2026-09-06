@@ -305,6 +305,90 @@ describe("stock transfer database schema migration", () => {
         expect(insufficientRes.code).toBe("INSUFFICIENT_STOCK");
       }
 
+      // 4. Test multi-product concurrent opposite-direction transfers with reverse input order
+      const prodId2 = "prod-test-002";
+      await db
+        .insertInto("products")
+        .values({
+          id: prodId2,
+          tenant_id: tenantId,
+          sku: "SAT-002",
+          name: "Sắt xây dựng phi 10",
+          unit_id: "unit-bao",
+        })
+        .onConflict((oc) => oc.column("id").doNothing())
+        .execute();
+
+      await db
+        .insertInto("stock_levels")
+        .values([
+          { warehouse_id: wh1Id, product_id: prodId, quantity: 200, updated_at: new Date() },
+          { warehouse_id: wh2Id, product_id: prodId, quantity: 200, updated_at: new Date() },
+          { warehouse_id: wh1Id, product_id: prodId2, quantity: 200, updated_at: new Date() },
+          { warehouse_id: wh2Id, product_id: prodId2, quantity: 200, updated_at: new Date() },
+        ])
+        .onConflict((oc) =>
+          oc.columns(["warehouse_id", "product_id"]).doUpdateSet({ quantity: 200 }),
+        )
+        .execute();
+
+      // Tx A: WH1 -> WH2, lines: [prodId (50), prodId2 (60)]
+      // Tx B: WH2 -> WH1, lines: [prodId2 (70), prodId (40)] (opposite warehouse direction and reverse product order)
+      const [multiRes1, multiRes2] = await Promise.all([
+        service.create(tenantId, userId, {
+          sourceWarehouseId: wh1Id,
+          destinationWarehouseId: wh2Id,
+          lines: [
+            { productId: prodId, quantity: 50 },
+            { productId: prodId2, quantity: 60 },
+          ],
+        }),
+        service.create(tenantId, userId, {
+          sourceWarehouseId: wh2Id,
+          destinationWarehouseId: wh1Id,
+          lines: [
+            { productId: prodId2, quantity: 70 },
+            { productId: prodId, quantity: 40 },
+          ],
+        }),
+      ]);
+
+      expect(multiRes1.success).toBe(true);
+      expect(multiRes2.success).toBe(true);
+
+      const p1Wh1 = await db
+        .selectFrom("stock_levels")
+        .select("quantity")
+        .where("warehouse_id", "=", wh1Id)
+        .where("product_id", "=", prodId)
+        .executeTakeFirstOrThrow();
+      const p1Wh2 = await db
+        .selectFrom("stock_levels")
+        .select("quantity")
+        .where("warehouse_id", "=", wh2Id)
+        .where("product_id", "=", prodId)
+        .executeTakeFirstOrThrow();
+      const p2Wh1 = await db
+        .selectFrom("stock_levels")
+        .select("quantity")
+        .where("warehouse_id", "=", wh1Id)
+        .where("product_id", "=", prodId2)
+        .executeTakeFirstOrThrow();
+      const p2Wh2 = await db
+        .selectFrom("stock_levels")
+        .select("quantity")
+        .where("warehouse_id", "=", wh2Id)
+        .where("product_id", "=", prodId2)
+        .executeTakeFirstOrThrow();
+
+      expect(Number(p1Wh1.quantity)).toBe(190);
+      expect(Number(p1Wh2.quantity)).toBe(210);
+      expect(Number(p1Wh1.quantity) + Number(p1Wh2.quantity)).toBe(400);
+
+      expect(Number(p2Wh1.quantity)).toBe(210);
+      expect(Number(p2Wh2.quantity)).toBe(190);
+      expect(Number(p2Wh1.quantity) + Number(p2Wh2.quantity)).toBe(400);
+
       // Rollback migration
       await sql.raw(stockTransferDown).execute(db);
     } finally {

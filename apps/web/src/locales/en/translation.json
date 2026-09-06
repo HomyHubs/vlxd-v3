@@ -311,6 +311,8 @@
     "itemsList": "Transferred Items",
     "searchPlaceholder": "Search by transfer number...",
     "searchProductPlaceholder": "Search products (name/SKU)...",
-    "errorStockCeilingExceeded": "Destination warehouse stock exceeds maximum ceiling (1,000,000,000)."
+    "errorStockCeilingExceeded": "Destination warehouse stock exceeds maximum ceiling (1,000,000,000).",
+    "loadError": "Failed to load stock transfer history. Please try again.",
+    "overStockError": "Transfer quantity exceeds available stock at source warehouse."
   }
 }

@@ -151,6 +151,22 @@ export function CreateStockTransferPage() {
     return stock?.quantity ?? 0;
   };
 
+  const destinationOptions = warehouses.filter((wh) => wh.id !== sourceWarehouseId);
+
+  const handleSourceWarehouseChange = (newSourceId: string) => {
+    setSourceWarehouseId(newSourceId);
+    if (destinationWarehouseId === newSourceId) {
+      const otherWh = warehouses.find((w) => w.id !== newSourceId);
+      setDestinationWarehouseId(otherWh ? otherWh.id : "");
+    }
+  };
+
+  const hasOverStockLine = lines.some((line) => {
+    if (!line.productId) return false;
+    const available = getAvailableStock(line.productId);
+    return line.quantity > available;
+  });
+
   const isWarehouseSame =
     Boolean(sourceWarehouseId) &&
     Boolean(destinationWarehouseId) &&
@@ -172,6 +188,11 @@ export function CreateStockTransferPage() {
 
     if (isWarehouseSame) {
       setErrorMessage(t("transfers.errorSameWarehouse"));
+      return;
+    }
+
+    if (hasOverStockLine) {
+      setErrorMessage(t("transfers.overStockError"));
       return;
     }
 
@@ -270,7 +291,7 @@ export function CreateStockTransferPage() {
                     fullWidth
                     label={t("transfers.sourceWarehouse")}
                     value={sourceWarehouseId}
-                    onChange={(e) => setSourceWarehouseId(e.target.value)}
+                    onChange={(e) => handleSourceWarehouseChange(e.target.value)}
                     required
                     inputProps={{ "data-testid": "source-warehouse-select" }}
                   >
@@ -296,7 +317,7 @@ export function CreateStockTransferPage() {
                     required
                     inputProps={{ "data-testid": "destination-warehouse-select" }}
                   >
-                    {warehouses.map((wh) => (
+                    {destinationOptions.map((wh) => (
                       <MenuItem key={wh.id} value={wh.id}>
                         {wh.name} ({wh.code})
                       </MenuItem>
@@ -460,7 +481,12 @@ export function CreateStockTransferPage() {
                     type="submit"
                     variant="contained"
                     startIcon={<SaveIcon />}
-                    disabled={createMutation.isPending || isWarehouseSame || warehouses.length < 2}
+                    disabled={
+                      createMutation.isPending ||
+                      isWarehouseSame ||
+                      warehouses.length < 2 ||
+                      hasOverStockLine
+                    }
                     data-testid="submit-transfer-btn"
                   >
                     {createMutation.isPending ? t("common.saving") : t("transfers.submitCreate")}

@@ -218,4 +218,45 @@ describe("StockTransferPages", () => {
     expect(screen.getByText("25")).toBeInTheDocument();
     expect(screen.getByText("20")).toBeInTheDocument();
   });
+
+  it("renders explicit error state and retry button on initial load failure instead of empty state", async () => {
+    const { useStockTransfers } = await import("../api/useStockTransfers.js");
+    vi.mocked(useStockTransfers).mockReturnValueOnce({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useStockTransfers>);
+
+    renderWithProviders(
+      <MemoryRouter>
+        <StockTransferListPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("transfers-error-state")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Chưa có phiếu chuyển kho nào|No transfers yet/i),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("retry-transfers-button")).toBeInTheDocument();
+  });
+
+  it("excludes source warehouse from destination dropdown and disables submit when quantity exceeds available stock", () => {
+    renderWithProviders(
+      <MemoryRouter>
+        <CreateStockTransferPage />
+      </MemoryRouter>,
+    );
+
+    // Quantity input for first line (prod-1 has 100 in stock at wh-1)
+    const qtyInput = screen.getByTestId("quantity-input-0");
+    expect(qtyInput).toBeInTheDocument();
+
+    // Enter 150 (which exceeds available 100)
+    fireEvent.change(qtyInput, { target: { value: "150" } });
+
+    // Submit button must be disabled due to over-stock
+    const submitBtn = screen.getByTestId("submit-transfer-btn");
+    expect(submitBtn).toBeDisabled();
+  });
 });

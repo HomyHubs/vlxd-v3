@@ -16,14 +16,29 @@ export interface StockTransferRoutesOptions {
   stockTransferService: StockTransferService;
 }
 
+const CalendarDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Date must be in YYYY-MM-DD format" })
+  .refine(
+    (val) => {
+      const parts = val.split("-").map(Number);
+      const year = parts[0]!;
+      const month = parts[1]!;
+      const day = parts[2]!;
+      const d = new Date(Date.UTC(year, month - 1, day));
+      return d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day;
+    },
+    { message: "Invalid calendar date" },
+  );
+
 const ListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   sourceWarehouseId: z.string().optional(),
   destinationWarehouseId: z.string().optional(),
   search: z.string().optional(),
-  fromDate: z.string().optional(),
-  toDate: z.string().optional(),
+  fromDate: CalendarDateSchema.optional(),
+  toDate: CalendarDateSchema.optional(),
 });
 
 const IdParamSchema = z.object({

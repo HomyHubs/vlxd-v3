@@ -489,5 +489,91 @@ describe("stock transfer routes unit tests", () => {
       expect(body.code).toBe("STOCK_CEILING_EXCEEDED");
       await app.close();
     });
+
+    it("returns 400 when fromDate is not in YYYY-MM-DD format", async () => {
+      const list = vi.fn();
+      const stockTransferService = {
+        list,
+      } as unknown as StockTransferService;
+
+      const app = await buildApp({
+        authService: createMockAuthService(),
+        stockTransferService,
+        checkDatabase: vi.fn().mockResolvedValue(true),
+        logger: false,
+        secureCookies: false,
+      });
+
+      const response = await app.inject({
+        method: "GET",
+        url: "/stock-transfers?fromDate=not-a-date",
+        cookies: { vlxd_session: "valid-token" },
+        headers: { "x-expected-tenant-id": "tenant-1" },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(list).not.toHaveBeenCalled();
+      await app.close();
+    });
+
+    it("returns 400 when toDate is an invalid calendar date like 2026-02-31", async () => {
+      const list = vi.fn();
+      const stockTransferService = {
+        list,
+      } as unknown as StockTransferService;
+
+      const app = await buildApp({
+        authService: createMockAuthService(),
+        stockTransferService,
+        checkDatabase: vi.fn().mockResolvedValue(true),
+        logger: false,
+        secureCookies: false,
+      });
+
+      const response = await app.inject({
+        method: "GET",
+        url: "/stock-transfers?toDate=2026-02-31",
+        cookies: { vlxd_session: "valid-token" },
+        headers: { "x-expected-tenant-id": "tenant-1" },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(list).not.toHaveBeenCalled();
+      await app.close();
+    });
+
+    it("passes valid calendar dates to stockTransferService.list", async () => {
+      const list = vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+      const stockTransferService = {
+        list,
+      } as unknown as StockTransferService;
+
+      const app = await buildApp({
+        authService: createMockAuthService(),
+        stockTransferService,
+        checkDatabase: vi.fn().mockResolvedValue(true),
+        logger: false,
+        secureCookies: false,
+      });
+
+      const response = await app.inject({
+        method: "GET",
+        url: "/stock-transfers?fromDate=2026-09-01&toDate=2026-09-30&search=TRF-001",
+        cookies: { vlxd_session: "valid-token" },
+        headers: { "x-expected-tenant-id": "tenant-1" },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(list).toHaveBeenCalledWith("tenant-1", {
+        page: 1,
+        pageSize: 20,
+        fromDate: "2026-09-01",
+        toDate: "2026-09-30",
+        search: "TRF-001",
+        sourceWarehouseId: undefined,
+        destinationWarehouseId: undefined,
+      });
+      await app.close();
+    });
   });
 });
