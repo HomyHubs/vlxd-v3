@@ -427,6 +427,7 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR** theo 
 | 2026-09-04 | Thêm | Slice 7 | Thanh toán và công nợ tối giản: migration `payments` (thuận nghịch); API `POST /sales-orders/{id}/payments`, `GET /sales-orders/{id}/payments`, tính `paid_amount`, `remaining_amount`, `payment_status`, chặn thanh toán vượt nợ `AMOUNT_EXCEEDS_REMAINING`; UI trang chi tiết đơn hàng `/orders/:id` hiển thị badge thanh toán, lịch sử thanh toán, dialog ghi nhận thanh toán tiền mặt/chuyển khoản; i18n vi/en. | Lát cắt nghiệp vụ tiếp theo trong lộ trình Vertical Slice. | docs/adr/ADR-0007-sales-order-payments-and-debt-tracking.md |
 | 2026-09-04 | Thêm | Slice 8 | Báo cáo đầu tiên & Quản lý hạn mức gói: API `GET /reports/sales-summary` (theo ngày/tuần/tháng/toàn bộ), `GET /tenants/usage` (hạn mức gói Free 80 sản phẩm, 3 kho); UI `/reports` (thẻ doanh thu, đã thu, công nợ, đơn hàng, bảng top sản phẩm), UI `/settings/plan` (tiến trình quota); i18n vi/en; phân quyền RBAC `sales.view` và `users.manage`. | Hoàn thiện góc nhìn quản trị và theo dõi dung lượng gói. | docs/adr/ADR-0008-sales-reporting-and-plan-usage.md |
 | 2026-09-04 | Thêm | Slice 9 | Chuyển kho nội bộ: migration `stock_transfers`, `stock_transfer_lines`; API `POST /stock-transfers`, `GET /stock-transfers`, `GET /stock-transfers/{id}`; ghi nhận `stock_movements` (`transfer_out` và `transfer_in`), trừ tồn kho xuất, cộng tồn kho nhập nguyên tử; kiểm tra tồn `INSUFFICIENT_STOCK`; UI `/inventory/transfers`, `/inventory/transfers/new`, `/inventory/transfers/:id`; i18n vi/en; phân quyền RBAC `inventory.manage` và `inventory.view`. | Nghiệp vụ luân chuyển hàng hoá giữa các kho/bãi của cùng tenant. | docs/adr/ADR-0009-internal-stock-transfers.md |
+| 2026-09-07 | Sửa | Tài liệu tiến độ | Chốt `AGENTS.md` là nguồn sự thật duy nhất cho trạng thái và phạm vi các slice; tài liệu Vertical Slice chỉ giữ phương pháp triển khai, không giữ roadmap/task/status chi tiết. | Loại bỏ tình trạng hai bảng tiến độ lệch nhau. | — |
 
 ### 17.6 Thứ tự thao tác bắt buộc
 
@@ -455,14 +456,12 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Slice 9 — Chuyển kho nội bộ (Internal Stock Transfer): Đang triển khai trên nhánh `feature/slice-9`.
-- [ ] Task 9.1: DB migration `202609040009_create_stock_transfer_tables.sql` (bảng `stock_transfers`, `stock_transfer_lines`), DB types và rollback test.
-- [ ] Task 9.2: Contract-first OpenAPI 3.1 & generate `@vlxd/api-client`.
-- [ ] Task 9.3: Backend Fastify Feature Module `stock-transfers` (routes, deterministic locking transaction, movement logging `transfer_out`/`transfer_in`, unit & integration tests).
-- [ ] Task 9.4: Web UI Frontend (`/inventory/transfers`, `/inventory/transfers/new`, `/inventory/transfers/:id`), route guards, i18n vi/en, component tests.
+Không có. Slice 9 đã hoàn thành và PR #10 đã squash-merge vào `dev` (`89261c6`).
 
 
 ### Đã xong
+
+- [x] Slice 9 — Chuyển kho nội bộ: PR #10 squash-merge vào `dev` (`89261c6`), review round 2 `APPROVED_TO_MERGE`, CI exact-head pass; branch `feature/slice-9` đã xoá trên remote.
 
 - [x] Slice 8 — Báo cáo đầu tiên & Quản lý hạn mức gói: PR #9 merge vào `dev` (`d616946`).
   - [x] Task 8.1 — Shared schema, OpenAPI 3.1 contract cho `GET /reports/sales-summary` và `GET /tenants/usage`, sinh TypeScript client (`@vlxd/api-client`).
@@ -561,5 +560,3 @@ Slice 9 — Chuyển kho nội bộ (Internal Stock Transfer): Đang triển kha
 ```
 
 [Web App Template — Chỉ dẫn vận hành cho AI Coding Agent](https://app.notion.com/p/Web-App-Template-Ch-d-n-v-n-h-nh-cho-AI-Coding-Agent-6a8c6bef3f2b47e795ba8258bf3f42fc?pvs=21)
-
-Slice 3 status (2026-09-02): Tasks 3.1-3.3 implemented on feature/slice-3; generated client and final gate remain before review.

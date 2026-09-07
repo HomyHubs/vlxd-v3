@@ -1,6 +1,6 @@
 # Decision Backlog
 
-Không có blocking gate đang mở cho Slice 0.
+Không có blocking gate đang mở. Trạng thái và phạm vi slice được quản lý duy nhất trong [`AGENTS.md`](../AGENTS.md).
 
 ## Quyết định đã chốt
 
@@ -11,4 +11,4 @@ Không có blocking gate đang mở cho Slice 0.
 
 ## Câu hỏi đang mở
 
-- Slice 3: giới hạn số kho của gói Free chưa được định nghĩa. Tạm chọn cấu hình `freePlanLimit` với giá trị 3 cho implementation; cần xác nhận trước khi merge.
+Chưa có câu hỏi đang mở được ghi nhận tại thời điểm cập nhật này. Các câu hỏi mới phải được ghi tại đây; trạng thái thực hiện tương ứng chỉ ghi trong `AGENTS.md`.
