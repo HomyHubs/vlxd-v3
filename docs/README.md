@@ -2,12 +2,10 @@
 
 ## Thứ tự đọc
 
-1. `../AGENTS.md`
-2. `ai-workflow/README.md`
-3. `tasks/CURRENT.md`
-4. `tasks/MVP-BACKLOG.md`
-5. `decision-backlog.md`
-6. `../Lat cat doc (Vertical Slice) — Lo trinh trien khai.md`
-7. ADR liên quan trong `adr/`
+1. `../AGENTS.md` — nguồn sự thật duy nhất về phạm vi, trạng thái và lịch sử slice.
+2. `ai-workflow/README.md` — quy trình ghi log phiên làm việc.
+3. `decision-backlog.md` — các quyết định hoặc câu hỏi kiến trúc đang mở.
+4. ADR liên quan trong `adr/` — lý do của các quyết định đã chốt.
+5. `../Lat cat doc (Vertical Slice) — Lo trinh trien khai.md` — nguyên tắc phương pháp, không chứa roadmap hoặc trạng thái slice.
 
-Slice hiện tại: xem mục "Trạng thái tiến độ" trong `../AGENTS.md` (nguồn sự thật duy nhất, tránh lệch thông tin).
+`tasks/CURRENT.md` và `tasks/MVP-BACKLOG.md` chỉ còn là điểm tương thích cho liên kết cũ; không dùng chúng để xác định tiến độ.
