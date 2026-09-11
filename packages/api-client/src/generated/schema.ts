@@ -106,6 +106,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List suppliers for the authenticated tenant */
+        get: operations["listSuppliers"];
+        put?: never;
+        /** Create a supplier */
+        post: operations["createSupplier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/purchase-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List purchase orders for the authenticated tenant */
+        get: operations["listPurchaseOrders"];
+        put?: never;
+        /** Create a purchase order */
+        post: operations["createPurchaseOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/purchase-orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a purchase order */
+        get: operations["getPurchaseOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/products": {
         parameters: {
             query?: never;
@@ -807,6 +860,81 @@ export interface components {
                 users: number;
             };
         };
+        Supplier: {
+            id: string;
+            code: string;
+            name: string;
+            phone: string | null;
+            address: string | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        SupplierListResponse: {
+            items: components["schemas"]["Supplier"][];
+            total: number;
+        };
+        CreateSupplierRequest: {
+            code: string;
+            name: string;
+            phone?: string;
+            address?: string;
+            note?: string;
+        };
+        SupplierErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "SUPPLIER_CODE_EXISTS" | "VALIDATION_ERROR" | "AUTH_CONTEXT_CHANGED";
+            message: string;
+        };
+        CreatePurchaseOrderLine: {
+            productId: string;
+            quantity: number;
+            unitCost: number;
+        };
+        CreatePurchaseOrderRequest: {
+            supplierId: string;
+            warehouseId: string;
+            note?: string;
+            lines: components["schemas"]["CreatePurchaseOrderLine"][];
+        };
+        PurchaseOrderLine: {
+            id: string;
+            productId: string;
+            productSku: string;
+            productName: string;
+            unitName: string;
+            quantity: number;
+            unitCost: number;
+            lineTotal: number;
+        };
+        PurchaseOrder: {
+            id: string;
+            orderNumber: string;
+            supplierId: string;
+            supplierCode: string;
+            supplierName: string;
+            warehouseId: string;
+            warehouseCode: string;
+            warehouseName: string;
+            status: string;
+            totalAmount: number;
+            note: string | null;
+            createdByName: string;
+            /** Format: date-time */
+            createdAt: string;
+            lines: components["schemas"]["PurchaseOrderLine"][];
+        };
+        PurchaseOrderListResponse: {
+            items: components["schemas"]["PurchaseOrder"][];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        PurchaseOrderErrorResponse: {
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "SUPPLIER_NOT_FOUND" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INVALID_ORDER_LINES" | "AUTH_CONTEXT_CHANGED";
+            message: string;
+        };
         ReportErrorResponse: {
             /** @enum {string} */
             code: "UNAUTHORIZED" | "FORBIDDEN" | "AUTH_CONTEXT_CHANGED" | "VALIDATION_ERROR";
@@ -1005,6 +1133,254 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthErrorResponse"];
+                };
+            };
+        };
+    };
+    listSuppliers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Supplier list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierErrorResponse"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierErrorResponse"];
+                };
+            };
+        };
+    };
+    createSupplier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSupplierRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Supplier"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierErrorResponse"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierErrorResponse"];
+                };
+            };
+            /** @description Duplicate code */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierErrorResponse"];
+                };
+            };
+        };
+    };
+    listPurchaseOrders: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Purchase order list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderErrorResponse"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderErrorResponse"];
+                };
+            };
+        };
+    };
+    createPurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePurchaseOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrder"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderErrorResponse"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderErrorResponse"];
+                };
+            };
+            /** @description Related resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderErrorResponse"];
+                };
+            };
+        };
+    };
+    getPurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Purchase order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrder"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderErrorResponse"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderErrorResponse"];
                 };
             };
         };

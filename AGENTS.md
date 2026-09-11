@@ -456,7 +456,9 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Không có. Slice 9 đã hoàn thành và PR #10 đã squash-merge vào `dev` (`89261c6`).
+Slice 10 — Nhà cung cấp & mua hàng (đang làm).
+- Phạm vi: quản lý nhà cung cấp và lập/tra cứu đơn mua hàng theo tenant.
+- Chưa bao gồm trả hàng hoặc công nợ khách hàng nâng cao; các phần này sẽ là slice riêng.
 
 
 ### Đã xong
@@ -520,11 +522,11 @@ Không có. Slice 9 đã hoàn thành và PR #10 đã squash-merge vào `dev` (`
 
 ### Đang làm dở
 
-- Không có.
+- [ ] Slice 10 — Nhà cung cấp & mua hàng: đã có migration, shared/OpenAPI contract, API nhà cung cấp + đơn mua, RBAC và UI danh bạ nhà cung cấp; còn thiếu test riêng cho Slice 10 và UI thao tác đơn mua đầy đủ.
 
 ### Bước tiếp theo
 
-- [ ] Lên kế hoạch và triển khai Slice tiếp theo.
+- [ ] Hoàn tất Slice 10, chạy `pnpm check` và `pnpm contracts:check`, sau đó lên phạm vi Slice 11 (trả hàng).
 
 ---
 

@@ -28,6 +28,7 @@ import { ProductsPage } from "./features/products/index.js";
 import { WarehousesPage } from "./features/warehouses/index.js";
 import { UsersPage } from "./features/users/index.js";
 import { PlanUsagePage, ReportsPage } from "./features/reports/index.js";
+import { PurchasingPage } from "./features/purchasing/index.js";
 
 function DashboardLayout() {
   const { t } = useTranslation();
@@ -36,6 +37,7 @@ function DashboardLayout() {
   const canViewInventory = useHasCapability("inventory.view");
   const canViewSales = useHasCapability("sales.view");
   const canManageUsers = useHasCapability("users.manage");
+  const canViewPurchasing = useHasCapability("purchasing.view");
 
   return (
     <>
@@ -100,6 +102,11 @@ function DashboardLayout() {
                 data-testid="nav-orders-btn"
               >
                 {t("orders.title", "Bán hàng")}
+              </Button>
+            )}
+            {canViewPurchasing && (
+              <Button component={RouterLink} to="/purchasing" variant="outlined" color="warning">
+                {t("purchasing.navTitle", "Mua hàng")}
               </Button>
             )}
             {canViewSales && (
@@ -176,6 +183,9 @@ export function App() {
             <Route element={<ProtectedRoute requiredCapability="users.manage" />}>
               <Route path="/settings/users" element={<UsersPage />} />
               <Route path="/settings/plan" element={<PlanUsagePage />} />
+            </Route>
+            <Route element={<ProtectedRoute requiredCapability="purchasing.view" />}>
+              <Route path="/purchasing" element={<PurchasingPage />} />
             </Route>
           </Route>
           <Route path="*" element={<LoginPage />} />
