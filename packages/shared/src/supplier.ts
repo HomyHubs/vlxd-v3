@@ -32,3 +32,4 @@ export const SupplierErrorResponseSchema = z.object({
 });
 export type CreateSupplierRequest = z.infer<typeof CreateSupplierRequestSchema>;
 export type Supplier = z.infer<typeof SupplierSchema>;
+export type SupplierListResponse = z.infer<typeof SupplierListResponseSchema>;

@@ -58,3 +58,5 @@ export const PurchaseOrderErrorResponseSchema = z.object({
 });
 export type CreatePurchaseOrderRequest = z.infer<typeof CreatePurchaseOrderRequestSchema>;
 export type PurchaseOrder = z.infer<typeof PurchaseOrderSchema>;
+export type PurchaseOrderLine = z.infer<typeof PurchaseOrderLineSchema>;
+export type PurchaseOrderListResponse = z.infer<typeof PurchaseOrderListResponseSchema>;

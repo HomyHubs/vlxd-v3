@@ -28,7 +28,12 @@ import { ProductsPage } from "./features/products/index.js";
 import { WarehousesPage } from "./features/warehouses/index.js";
 import { UsersPage } from "./features/users/index.js";
 import { PlanUsagePage, ReportsPage } from "./features/reports/index.js";
-import { PurchasingPage } from "./features/purchasing/index.js";
+import {
+  CreatePurchaseOrderPage,
+  PurchaseOrderDetailPage,
+  PurchaseOrderListPage,
+  PurchasingPage,
+} from "./features/purchasing/index.js";
 
 function DashboardLayout() {
   const { t } = useTranslation();
@@ -186,6 +191,11 @@ export function App() {
             </Route>
             <Route element={<ProtectedRoute requiredCapability="purchasing.view" />}>
               <Route path="/purchasing" element={<PurchasingPage />} />
+              <Route path="/purchasing/orders" element={<PurchaseOrderListPage />} />
+              <Route path="/purchasing/orders/:id" element={<PurchaseOrderDetailPage />} />
+            </Route>
+            <Route element={<ProtectedRoute requiredCapability="purchasing.manage" />}>
+              <Route path="/purchasing/orders/new" element={<CreatePurchaseOrderPage />} />
             </Route>
           </Route>
           <Route path="*" element={<LoginPage />} />

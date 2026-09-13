@@ -180,6 +180,7 @@ export {
   SupplierErrorResponseSchema,
   type CreateSupplierRequest,
   type Supplier,
+  type SupplierListResponse,
 } from "./supplier.js";
 export {
   CreatePurchaseOrderLineSchema,
@@ -190,4 +191,6 @@ export {
   PurchaseOrderErrorResponseSchema,
   type CreatePurchaseOrderRequest,
   type PurchaseOrder,
+  type PurchaseOrderLine,
+  type PurchaseOrderListResponse,
 } from "./purchaseOrder.js";
