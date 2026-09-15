@@ -85,7 +85,9 @@ export const purchaseOrderRoutes: FastifyPluginAsync<PurchaseOrderRoutesOptions>
     async (req, rep) => {
       const r = await options.purchaseOrderService.getById(req.session!.tenant.id, req.params.id);
       if (!r)
-        return rep.code(404).send({ code: "PRODUCT_NOT_FOUND", message: "Đơn mua không tồn tại" });
+        return rep
+          .code(404)
+          .send({ code: "PURCHASE_ORDER_NOT_FOUND", message: "Đơn mua không tồn tại" });
       return rep.send(r);
     },
   );

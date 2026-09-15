@@ -498,6 +498,45 @@ describe("purchase order routes unit tests", () => {
     });
 
     expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ code: "PURCHASE_ORDER_NOT_FOUND" });
+    await app.close();
+  });
+
+  it("maps INVALID_ORDER_LINES (line-total overflow) to 400", async () => {
+    const create = vi.fn().mockResolvedValue({
+      success: false,
+      code: "INVALID_ORDER_LINES",
+      message: "Tổng tiền vượt giới hạn an toàn",
+    });
+
+    const purchaseOrderService = {
+      create,
+      list: vi.fn(),
+      getById: vi.fn(),
+    } as unknown as PurchaseOrderService;
+
+    const app = await buildApp({
+      authService: createMockAuthService(),
+      purchaseOrderService,
+      checkDatabase: vi.fn().mockResolvedValue(true),
+      logger: false,
+      secureCookies: false,
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/purchase-orders",
+      cookies: { [SESSION_COOKIE_NAME]: "token" },
+      headers: { "x-expected-tenant-id": "tenant-1" },
+      payload: {
+        supplierId: "sup-1",
+        warehouseId: "wh-1",
+        lines: [{ productId: "prod-1", quantity: 1, unitCost: 100000 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: "INVALID_ORDER_LINES" });
     await app.close();
   });
 });

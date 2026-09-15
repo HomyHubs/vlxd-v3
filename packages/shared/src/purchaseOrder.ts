@@ -51,6 +51,7 @@ export const PurchaseOrderErrorResponseSchema = z.object({
     "SUPPLIER_NOT_FOUND",
     "WAREHOUSE_NOT_FOUND",
     "PRODUCT_NOT_FOUND",
+    "PURCHASE_ORDER_NOT_FOUND",
     "INVALID_ORDER_LINES",
     "AUTH_CONTEXT_CHANGED",
   ]),

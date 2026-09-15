@@ -932,7 +932,7 @@ export interface components {
         };
         PurchaseOrderErrorResponse: {
             /** @enum {string} */
-            code: "UNAUTHORIZED" | "FORBIDDEN" | "SUPPLIER_NOT_FOUND" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "INVALID_ORDER_LINES" | "AUTH_CONTEXT_CHANGED";
+            code: "UNAUTHORIZED" | "FORBIDDEN" | "SUPPLIER_NOT_FOUND" | "WAREHOUSE_NOT_FOUND" | "PRODUCT_NOT_FOUND" | "PURCHASE_ORDER_NOT_FOUND" | "INVALID_ORDER_LINES" | "AUTH_CONTEXT_CHANGED";
             message: string;
         };
         ReportErrorResponse: {

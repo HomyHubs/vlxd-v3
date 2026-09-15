@@ -143,7 +143,7 @@ export function createPurchaseOrderService({
         };
       const totals = input.lines.map((l) => l.quantity * l.unitCost);
       const total = totals.reduce((a, b) => a + b, 0);
-      if (!Number.isSafeInteger(total))
+      if (!totals.every((t) => Number.isSafeInteger(t)) || !Number.isSafeInteger(total))
         return {
           success: false,
           code: "INVALID_ORDER_LINES",
