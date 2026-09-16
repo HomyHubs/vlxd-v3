@@ -208,6 +208,42 @@ export interface StockTransferLineTable {
   created_at: Generated<Date>;
 }
 
+export interface SupplierTable {
+  id: string;
+  tenant_id: string;
+  code: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+  note: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface PurchaseOrderTable {
+  id: string;
+  tenant_id: string;
+  supplier_id: string;
+  warehouse_id: string;
+  order_number: string;
+  status: Generated<string>;
+  total_amount: number | string;
+  note: string | null;
+  created_by: string;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface PurchaseOrderLineTable {
+  id: string;
+  purchase_order_id: string;
+  product_id: string;
+  quantity: number | string;
+  unit_cost: number | string;
+  line_total: number | string;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   app_meta: AppMetaTable;
   tenants: TenantTable;
@@ -232,6 +268,9 @@ export interface Database {
   payments: PaymentTable;
   stock_transfers: StockTransferTable;
   stock_transfer_lines: StockTransferLineTable;
+  suppliers: SupplierTable;
+  purchase_orders: PurchaseOrderTable;
+  purchase_order_lines: PurchaseOrderLineTable;
 }
 
 export interface DatabaseLogger {

@@ -428,6 +428,7 @@ Nếu câu 1, 2, 3 hoặc 4 trả lời "có" → **bắt buộc ghi ADR** theo 
 | 2026-09-04 | Thêm | Slice 8 | Báo cáo đầu tiên & Quản lý hạn mức gói: API `GET /reports/sales-summary` (theo ngày/tuần/tháng/toàn bộ), `GET /tenants/usage` (hạn mức gói Free 80 sản phẩm, 3 kho); UI `/reports` (thẻ doanh thu, đã thu, công nợ, đơn hàng, bảng top sản phẩm), UI `/settings/plan` (tiến trình quota); i18n vi/en; phân quyền RBAC `sales.view` và `users.manage`. | Hoàn thiện góc nhìn quản trị và theo dõi dung lượng gói. | docs/adr/ADR-0008-sales-reporting-and-plan-usage.md |
 | 2026-09-04 | Thêm | Slice 9 | Chuyển kho nội bộ: migration `stock_transfers`, `stock_transfer_lines`; API `POST /stock-transfers`, `GET /stock-transfers`, `GET /stock-transfers/{id}`; ghi nhận `stock_movements` (`transfer_out` và `transfer_in`), trừ tồn kho xuất, cộng tồn kho nhập nguyên tử; kiểm tra tồn `INSUFFICIENT_STOCK`; UI `/inventory/transfers`, `/inventory/transfers/new`, `/inventory/transfers/:id`; i18n vi/en; phân quyền RBAC `inventory.manage` và `inventory.view`. | Nghiệp vụ luân chuyển hàng hoá giữa các kho/bãi của cùng tenant. | docs/adr/ADR-0009-internal-stock-transfers.md |
 | 2026-09-07 | Sửa | Tài liệu tiến độ | Chốt `AGENTS.md` là nguồn sự thật duy nhất cho trạng thái và phạm vi các slice; tài liệu Vertical Slice chỉ giữ phương pháp triển khai, không giữ roadmap/task/status chi tiết. | Loại bỏ tình trạng hai bảng tiến độ lệch nhau. | — |
+| 2026-09-13 | Thêm | Slice 10 | Nhà cung cấp & mua hàng: migration `suppliers`, `purchase_orders`, `purchase_order_lines`; API `GET/POST /suppliers`, `GET/POST /purchase-orders`, `GET /purchase-orders/{id}` (tạo đơn mua nguyên tử với nhiều dòng hàng, kiểm tra tồn tại nhà cung cấp/kho/sản phẩm, chặn trùng dòng sản phẩm `INVALID_ORDER_LINES`, tổng tiền an toàn số nguyên); phân quyền RBAC `purchasing.view` và `purchasing.manage`; UI `/purchasing` (danh bạ nhà cung cấp), `/purchasing/orders`, `/purchasing/orders/new`, `/purchasing/orders/:id`; i18n vi/en. Bổ sung ánh xạ lỗi validation `/purchase-orders` → 400 `INVALID_ORDER_LINES` trong error handler. | Lát cắt nghiệp vụ mua hàng theo lộ trình Vertical Slice. | Không cần — tương thích schema, tuân thủ contract-first. |
 
 ### 17.6 Thứ tự thao tác bắt buộc
 
@@ -456,10 +457,20 @@ Khu vực bộ nhớ chung. Luôn cập nhật mục này. Đây là phần thay
 
 ### Task hiện tại
 
-Không có. Slice 9 đã hoàn thành và PR #10 đã squash-merge vào `dev` (`89261c6`).
+Slice 11 — Trả hàng (chưa bắt đầu). Xem mục Bước tiếp theo.
+- Slice 10 (Nhà cung cấp & mua hàng) đã hoàn tất trên nhánh `feature/slice-10` (xem mục Đã xong).
 
 
 ### Đã xong
+
+- [x] Slice 10 — Nhà cung cấp & mua hàng: hoàn tất trên nhánh `feature/slice-10` (chưa mở PR).
+  - [x] Migration `202609110010_create_purchasing_tables.sql` (`suppliers`, `purchase_orders`, `purchase_order_lines`), shared schema + OpenAPI 3.1 contract, sinh lại `@vlxd/api-client`.
+  - [x] API nhà cung cấp: `GET /suppliers`, `POST /suppliers` (chặn trùng mã `SUPPLIER_CODE_EXISTS`, cô lập theo tenant), RBAC `purchasing.view` / `purchasing.manage`.
+  - [x] API đơn mua hàng: `GET /purchase-orders` (phân trang), `POST /purchase-orders` (tạo nguyên tử nhiều dòng trong transaction, kiểm tra nhà cung cấp/kho/sản phẩm, chặn trùng dòng `INVALID_ORDER_LINES`, tổng tiền an toàn số nguyên, sinh `orderNumber`), `GET /purchase-orders/{id}` (kèm dòng hàng); RBAC `purchasing.view` (đọc) / `purchasing.manage` (tạo).
+  - [x] Fix error handler `app.ts`: ánh xạ lỗi validation `/purchase-orders` → 400 `INVALID_ORDER_LINES` (khớp enum error schema, tránh 500 khi body sai schema).
+  - [x] UI Web: `/purchasing` (danh bạ + form thêm nhà cung cấp), `/purchasing/orders` (danh sách đơn mua phân trang), `/purchasing/orders/new` (tạo đơn: chọn NCC/kho, nhiều dòng sản phẩm, tính tổng, chặn trùng sản phẩm, ánh xạ lỗi API), `/purchasing/orders/:id` (chi tiết + dòng hàng); route guards RBAC (`purchasing.view` cho đọc, `purchasing.manage` cho tạo); i18n vi/en đầy đủ (block `purchasing`).
+  - [x] Tests: unit routes nhà cung cấp + đơn mua (RBAC 401/403, tạo/list/get, 400 trùng dòng & vượt giới hạn schema, 404 not-found) và integration testcontainers PostgreSQL (full flow, validation refs, tenant isolation, atomicity, RBAC); component tests cho 4 trang web.
+  - [x] Cổng gác cục bộ xanh: `format:check`, `lint`, `typecheck`, `build`, `contracts:lint`, `contracts:check`, unit + component tests. Integration tests chạy ở CI (yêu cầu Docker, không có cục bộ trong phiên này).
 
 - [x] Slice 9 — Chuyển kho nội bộ: PR #10 squash-merge vào `dev` (`89261c6`), review round 2 `APPROVED_TO_MERGE`, CI exact-head pass; branch `feature/slice-9` đã xoá trên remote.
 
@@ -520,11 +531,12 @@ Không có. Slice 9 đã hoàn thành và PR #10 đã squash-merge vào `dev` (`
 
 ### Đang làm dở
 
-- Không có.
+- (Không có mục nào đang làm dở — Slice 10 đã hoàn tất, xem mục Đã xong.)
 
 ### Bước tiếp theo
 
-- [ ] Lên kế hoạch và triển khai Slice tiếp theo.
+- [ ] Mở PR cho `feature/slice-10` vào `dev` và chạy đầy đủ `pnpm check` (gồm integration tests với Docker) trên CI.
+- [ ] Lên phạm vi Slice 11 (Trả hàng): trả hàng bán cho khách và/hoặc trả hàng mua cho nhà cung cấp, hoàn/điều chỉnh tồn kho và công nợ tương ứng; ghi ADR nếu là quyết định cross-cutting.
 
 ---
 

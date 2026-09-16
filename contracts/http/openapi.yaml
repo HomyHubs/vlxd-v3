@@ -119,6 +119,215 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthErrorResponse"
+  /suppliers:
+    get:
+      operationId: listSuppliers
+      summary: List suppliers for the authenticated tenant
+      responses:
+        "200":
+          description: Supplier list
+          content:
+            { application/json: { schema: { $ref: "#/components/schemas/SupplierListResponse" } } }
+        "401":
+          {
+            description: Unauthorized,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/SupplierErrorResponse" } },
+              },
+          }
+        "403":
+          {
+            description: Permission denied,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/SupplierErrorResponse" } },
+              },
+          }
+    post:
+      operationId: createSupplier
+      summary: Create a supplier
+      requestBody:
+        required: true
+        content:
+          { application/json: { schema: { $ref: "#/components/schemas/CreateSupplierRequest" } } }
+      responses:
+        "201":
+          {
+            description: Created,
+            content: { application/json: { schema: { $ref: "#/components/schemas/Supplier" } } },
+          }
+        "400":
+          {
+            description: Invalid request,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/SupplierErrorResponse" } },
+              },
+          }
+        "401":
+          {
+            description: Unauthorized,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/SupplierErrorResponse" } },
+              },
+          }
+        "403":
+          {
+            description: Permission denied,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/SupplierErrorResponse" } },
+              },
+          }
+        "409":
+          {
+            description: Duplicate code,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/SupplierErrorResponse" } },
+              },
+          }
+  /purchase-orders:
+    get:
+      operationId: listPurchaseOrders
+      summary: List purchase orders for the authenticated tenant
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - {
+            in: query,
+            name: pageSize,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 20 },
+          }
+      responses:
+        "200":
+          {
+            description: Purchase order list,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/PurchaseOrderListResponse" } },
+              },
+          }
+        "401":
+          {
+            description: Unauthorized,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/PurchaseOrderErrorResponse" } },
+              },
+          }
+        "403":
+          {
+            description: Permission denied,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/PurchaseOrderErrorResponse" } },
+              },
+          }
+    post:
+      operationId: createPurchaseOrder
+      summary: Create a purchase order
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                { schema: { $ref: "#/components/schemas/CreatePurchaseOrderRequest" } },
+            },
+        }
+      responses:
+        "201":
+          {
+            description: Created,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/PurchaseOrder" } } },
+          }
+        "400":
+          {
+            description: Invalid request,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/PurchaseOrderErrorResponse" } },
+              },
+          }
+        "401":
+          {
+            description: Unauthorized,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/PurchaseOrderErrorResponse" } },
+              },
+          }
+        "403":
+          {
+            description: Permission denied,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/PurchaseOrderErrorResponse" } },
+              },
+          }
+        "404":
+          {
+            description: Related resource not found,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/PurchaseOrderErrorResponse" } },
+              },
+          }
+  /purchase-orders/{id}:
+    get:
+      operationId: getPurchaseOrder
+      summary: Get a purchase order
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          {
+            description: Purchase order,
+            content:
+              { application/json: { schema: { $ref: "#/components/schemas/PurchaseOrder" } } },
+          }
+        "401":
+          {
+            description: Unauthorized,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/PurchaseOrderErrorResponse" } },
+              },
+          }
+        "403":
+          {
+            description: Permission denied,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/PurchaseOrderErrorResponse" } },
+              },
+          }
+        "404":
+          {
+            description: Not found,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/PurchaseOrderErrorResponse" } },
+              },
+          }
   /products:
     get:
       operationId: listProducts
@@ -1993,6 +2202,149 @@ components:
             warehouses: { type: integer, minimum: 0 }
             orders: { type: integer, minimum: 0 }
             users: { type: integer, minimum: 0 }
+    Supplier:
+      type: object
+      additionalProperties: false
+      required: [id, code, name, phone, address, note, createdAt]
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+        phone: { type: [string, "null"] }
+        address: { type: [string, "null"] }
+        note: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+    SupplierListResponse:
+      type: object
+      additionalProperties: false
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Supplier" } }
+        total: { type: integer, minimum: 0 }
+    CreateSupplierRequest:
+      type: object
+      additionalProperties: false
+      required: [code, name]
+      properties:
+        code: { type: string, minLength: 1, maxLength: 50 }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        phone: { type: string, maxLength: 50 }
+        address: { type: string, maxLength: 300 }
+        note: { type: string, maxLength: 500 }
+    SupplierErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          {
+            type: string,
+            enum:
+              [
+                UNAUTHORIZED,
+                FORBIDDEN,
+                SUPPLIER_CODE_EXISTS,
+                VALIDATION_ERROR,
+                AUTH_CONTEXT_CHANGED,
+              ],
+          }
+        message: { type: string }
+    CreatePurchaseOrderLine:
+      type: object
+      additionalProperties: false
+      required: [productId, quantity, unitCost]
+      properties:
+        productId: { type: string }
+        quantity: { type: integer, minimum: 1, maximum: 1000000 }
+        unitCost: { type: integer, minimum: 0, maximum: 9007199254740991 }
+    CreatePurchaseOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [supplierId, warehouseId, lines]
+      properties:
+        supplierId: { type: string }
+        warehouseId: { type: string }
+        note: { type: string, maxLength: 500 }
+        lines:
+          {
+            type: array,
+            minItems: 1,
+            items: { $ref: "#/components/schemas/CreatePurchaseOrderLine" },
+          }
+    PurchaseOrderLine:
+      type: object
+      required: [id, productId, productSku, productName, unitName, quantity, unitCost, lineTotal]
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        productSku: { type: string }
+        productName: { type: string }
+        unitName: { type: string }
+        quantity: { type: integer }
+        unitCost: { type: integer }
+        lineTotal: { type: integer }
+    PurchaseOrder:
+      type: object
+      required:
+        [
+          id,
+          orderNumber,
+          supplierId,
+          supplierCode,
+          supplierName,
+          warehouseId,
+          warehouseCode,
+          warehouseName,
+          status,
+          totalAmount,
+          note,
+          createdByName,
+          createdAt,
+          lines,
+        ]
+      properties:
+        id: { type: string }
+        orderNumber: { type: string }
+        supplierId: { type: string }
+        supplierCode: { type: string }
+        supplierName: { type: string }
+        warehouseId: { type: string }
+        warehouseCode: { type: string }
+        warehouseName: { type: string }
+        status: { type: string }
+        totalAmount: { type: integer }
+        note: { type: [string, "null"] }
+        createdByName: { type: string }
+        createdAt: { type: string, format: date-time }
+        lines: { type: array, items: { $ref: "#/components/schemas/PurchaseOrderLine" } }
+    PurchaseOrderListResponse:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/PurchaseOrder" } }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+    PurchaseOrderErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          {
+            type: string,
+            enum:
+              [
+                UNAUTHORIZED,
+                FORBIDDEN,
+                SUPPLIER_NOT_FOUND,
+                WAREHOUSE_NOT_FOUND,
+                PRODUCT_NOT_FOUND,
+                PURCHASE_ORDER_NOT_FOUND,
+                INVALID_ORDER_LINES,
+                AUTH_CONTEXT_CHANGED,
+              ],
+          }
+        message: { type: string }
     ReportErrorResponse:
       type: object
       additionalProperties: false
